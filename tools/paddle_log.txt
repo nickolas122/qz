@@ -1,0 +1,374 @@
+# sessao iniciada 2026-08-01T12:02:45
+# alvo: B8:F8:62:6D:A8:D6
+[    1.556] conectado
+
+--- caracteristicas do servico FTMS ---
+  00002acc-0000-1000-8000-00805f9b34fb  props=read
+  00002ad3-0000-1000-8000-00805f9b34fb  props=read,notify
+  00002ad4-0000-1000-8000-00805f9b34fb  props=read
+  00002ad6-0000-1000-8000-00805f9b34fb  props=read
+  00002ad8-0000-1000-8000-00805f9b34fb  props=read
+  00002ad9-0000-1000-8000-00805f9b34fb  props=indicate,write
+  00002ada-0000-1000-8000-00805f9b34fb  props=notify
+  00002ad2-0000-1000-8000-00805f9b34fb  props=notify
+  d18d2c10-c44c-11e8-a355-529269fb1459  props=write
+---
+
+[    1.731] 0x2ACC raw = 86-52-00-00-04-00-00-00
+[    1.732] machine_features=0x00005286 target_features=0x00000004
+[    1.732] bit13 (Indoor Bike Simulation) = NAO
+[    1.732] bit12 (Power Target)           = NAO
+[    1.732] bit11 (Resistance Target)      = NAO
+[    1.852] notify ON: 0x2AD2 (Indoor Bike Data)
+[    1.970] notify ON: 0x2ADA (Machine Status)
+
+=== PEDALE E APERTE OS PADDLES. Ctrl+C para encerrar. ===
+=== sugestao: 1 toque, espere 3s, 1 toque, espere 3s,
+===           depois 3 toques rapidos seguidos.
+
+[    2.330] IBD  f5-01-00-00-00-00-00-01-00-00-00-00-00-00-00-ff-ff-ff  | cadence=0.0 distance=0 resistance=1 power=0 avg_power=0 energy_total=0 energy_hour=65535 energy_min=255
+[    2.330] BASELINE nivel=1 (via 0x2AD2)
+[    2.330] IBD  00-2a-00-00-00-00-00-00-00-00  | speed=0.0 hr=0 elapsed=0
+[    3.350] IBD  f5-01-00-00-00-00-00-01-00-00-00-00-00-00-00-ff-ff-ff  | cadence=0.0 distance=0 resistance=1 power=0 avg_power=0 energy_total=0 energy_hour=65535 energy_min=255
+[    3.350] IBD  00-2a-00-00-00-00-00-00-00-00  | speed=0.0 hr=0 elapsed=0
+[    4.310] IBD  f5-01-00-00-00-00-00-01-00-00-00-00-00-00-00-ff-ff-ff  | cadence=0.0 distance=0 resistance=1 power=0 avg_power=0 energy_total=0 energy_hour=65535 energy_min=255
+[    4.310] IBD  00-2a-00-00-00-00-00-00-00-00  | speed=0.0 hr=0 elapsed=0
+[    5.330] IBD  f5-01-00-00-00-00-00-01-00-00-00-00-00-00-00-ff-ff-ff  | cadence=0.0 distance=0 resistance=1 power=0 avg_power=0 energy_total=0 energy_hour=65535 energy_min=255
+[    5.330] IBD  00-2a-00-00-00-00-00-00-00-00  | speed=0.0 hr=0 elapsed=0
+[    6.350] IBD  f5-01-00-00-00-00-00-01-00-00-00-00-00-00-00-ff-ff-ff  | cadence=0.0 distance=0 resistance=1 power=0 avg_power=0 energy_total=0 energy_hour=65535 energy_min=255
+[    6.350] IBD  00-2a-00-00-00-00-00-00-00-00  | speed=0.0 hr=0 elapsed=0
+[    7.310] IBD  f5-01-00-00-00-00-00-01-00-00-00-00-00-00-00-ff-ff-ff  | cadence=0.0 distance=0 resistance=1 power=0 avg_power=0 energy_total=0 energy_hour=65535 energy_min=255
+[    7.310] IBD  00-2a-00-00-00-00-00-00-00-00  | speed=0.0 hr=0 elapsed=0
+[    7.370] STAT 04  | Iniciado ou retomado
+[    8.330] IBD  f5-01-00-00-00-00-00-01-00-00-00-00-00-00-00-ff-ff-ff  | cadence=0.0 distance=0 resistance=1 power=0 avg_power=0 energy_total=0 energy_hour=65535 energy_min=255
+[    8.330] IBD  00-2a-00-00-00-00-00-00-00-00  | speed=0.0 hr=0 elapsed=0
+[    9.350] IBD  f5-01-00-00-00-00-00-01-00-00-00-00-00-00-00-ff-ff-ff  | cadence=0.0 distance=0 resistance=1 power=0 avg_power=0 energy_total=0 energy_hour=65535 energy_min=255
+[    9.350] IBD  00-2a-00-00-00-00-00-00-00-00  | speed=0.0 hr=0 elapsed=0
+[   10.310] IBD  f5-01-00-00-00-00-00-01-00-00-00-00-00-00-00-ff-ff-ff  | cadence=0.0 distance=0 resistance=1 power=0 avg_power=0 energy_total=0 energy_hour=65535 energy_min=255
+[   10.310] IBD  00-2a-00-00-00-00-00-00-00-00  | speed=0.0 hr=0 elapsed=0
+[   11.330] IBD  f5-01-16-00-01-00-00-01-00-00-00-00-00-00-00-ff-ff-ff  | cadence=11.0 distance=1 resistance=1 power=0 avg_power=0 energy_total=0 energy_hour=65535 energy_min=255
+[   11.330] IBD  00-2a-6e-01-00-01-00-00-00-00  | speed=3.66 hr=0 elapsed=1
+[   12.350] IBD  f5-01-36-00-03-00-00-01-00-11-00-02-00-00-00-ff-ff-ff  | cadence=27.0 distance=3 resistance=1 power=17 avg_power=2 energy_total=0 energy_hour=65535 energy_min=255
+[   12.350] IBD  00-2a-84-03-00-02-00-01-00-00  | speed=9.0 hr=0 elapsed=2
+[   13.310] IBD  f5-01-4c-00-07-00-00-01-00-1e-00-07-00-00-00-ff-ff-ff  | cadence=38.0 distance=7 resistance=1 power=30 avg_power=7 energy_total=0 energy_hour=65535 energy_min=255
+[   13.310] IBD  00-2a-f2-04-00-03-00-02-00-00  | speed=12.66 hr=0 elapsed=3
+[   13.430] STAT 07-02  | RESISTANCE LEVEL ALTERADO -> nivel=2
+[   13.430] >>> MUDANCA 1 -> 2 (delta=+1) via 0x2ADA
+[   14.330] IBD  f5-01-58-00-0b-00-00-02-00-25-00-0e-00-00-00-ff-ff-ff  | cadence=44.0 distance=11 resistance=2 power=37 avg_power=14 energy_total=0 energy_hour=65535 energy_min=255
+[   14.330] IBD  00-2a-ba-05-00-04-00-04-00-00  | speed=14.66 hr=0 elapsed=4
+[   15.350] IBD  f5-01-62-00-0f-00-00-02-00-2b-00-15-00-00-00-ff-ff-ff  | cadence=49.0 distance=15 resistance=2 power=43 avg_power=21 energy_total=0 energy_hour=65535 energy_min=255
+[   15.350] IBD  00-2a-61-06-00-05-00-05-00-00  | speed=16.33 hr=0 elapsed=5
+[   16.310] IBD  f5-01-68-00-14-00-00-02-00-2f-00-1d-00-00-00-ff-ff-ff  | cadence=52.0 distance=20 resistance=2 power=47 avg_power=29 energy_total=0 energy_hour=65535 energy_min=255
+[   16.310] IBD  00-2a-c5-06-00-06-00-07-00-00  | speed=17.33 hr=0 elapsed=6
+[   17.330] IBD  f5-01-6c-00-19-00-00-02-00-31-00-25-00-00-00-ff-ff-ff  | cadence=54.0 distance=25 resistance=2 power=49 avg_power=37 energy_total=0 energy_hour=65535 energy_min=255
+[   17.330] IBD  00-2a-08-07-00-07-00-09-00-00  | speed=18.0 hr=0 elapsed=7
+[   18.350] IBD  f5-01-6c-00-1e-00-00-02-00-31-00-2a-00-00-00-ff-ff-ff  | cadence=54.0 distance=30 resistance=2 power=49 avg_power=42 energy_total=0 energy_hour=65535 energy_min=255
+[   18.350] IBD  00-2a-08-07-00-08-00-0b-00-00  | speed=18.0 hr=0 elapsed=8
+[   18.470] STAT 07-01  | RESISTANCE LEVEL ALTERADO -> nivel=1
+[   18.470] >>> MUDANCA 2 -> 1 (delta=-1) via 0x2ADA | 5040 ms desde a anterior
+[   19.310] IBD  f5-01-70-00-23-00-00-01-00-33-00-2e-00-00-00-ff-ff-ff  | cadence=56.0 distance=35 resistance=1 power=51 avg_power=46 energy_total=0 energy_hour=65535 energy_min=255
+[   19.310] IBD  00-2a-4a-07-00-09-00-0d-00-00  | speed=18.66 hr=0 elapsed=9
+[   19.970] STAT 07-02  | RESISTANCE LEVEL ALTERADO -> nivel=2
+[   19.970] >>> MUDANCA 1 -> 2 (delta=+1) via 0x2ADA | 1500 ms desde a anterior
+[   20.330] IBD  f5-01-72-00-28-00-00-02-00-35-00-30-00-00-00-ff-ff-ff  | cadence=57.0 distance=40 resistance=2 power=53 avg_power=48 energy_total=0 energy_hour=65535 energy_min=255
+[   20.330] IBD  00-2a-6c-07-00-0a-00-0f-00-00  | speed=19.0 hr=0 elapsed=10
+[   21.350] IBD  f5-01-74-00-2e-00-00-02-00-37-00-32-00-00-00-ff-ff-ff  | cadence=58.0 distance=46 resistance=2 power=55 avg_power=50 energy_total=0 energy_hour=65535 energy_min=255
+[   21.350] IBD  00-2a-8d-07-00-0b-00-11-00-00  | speed=19.33 hr=0 elapsed=11
+[   22.310] IBD  f5-01-74-00-33-00-00-02-00-37-00-34-00-00-00-ff-ff-ff  | cadence=58.0 distance=51 resistance=2 power=55 avg_power=52 energy_total=0 energy_hour=65535 energy_min=255
+[   22.310] IBD  00-2a-8d-07-00-0c-00-13-00-00  | speed=19.33 hr=0 elapsed=12
+[   23.330] IBD  f5-01-76-00-39-00-00-02-00-38-00-35-00-00-00-ff-ff-ff  | cadence=59.0 distance=57 resistance=2 power=56 avg_power=53 energy_total=0 energy_hour=65535 energy_min=255
+[   23.330] IBD  00-2a-ae-07-00-0d-00-15-00-00  | speed=19.66 hr=0 elapsed=13
+[   24.230] STAT 07-03  | RESISTANCE LEVEL ALTERADO -> nivel=3
+[   24.230] >>> MUDANCA 2 -> 3 (delta=+1) via 0x2ADA | 4260 ms desde a anterior
+[   24.350] IBD  f5-01-74-00-3e-00-00-03-00-38-00-36-00-00-00-ff-ff-ff  | cadence=58.0 distance=62 resistance=3 power=56 avg_power=54 energy_total=0 energy_hour=65535 energy_min=255
+[   24.350] IBD  00-2a-8d-07-00-0e-00-17-00-00  | speed=19.33 hr=0 elapsed=14
+[   25.310] IBD  f5-01-76-00-43-00-00-03-00-39-00-37-00-00-00-ff-ff-ff  | cadence=59.0 distance=67 resistance=3 power=57 avg_power=55 energy_total=0 energy_hour=65535 energy_min=255
+[   25.310] IBD  00-2a-ae-07-00-0f-00-19-00-00  | speed=19.66 hr=0 elapsed=15
+[   26.330] IBD  f5-01-76-00-49-00-00-03-00-39-00-38-00-01-00-ff-ff-ff  | cadence=59.0 distance=73 resistance=3 power=57 avg_power=56 energy_total=1 energy_hour=65535 energy_min=255
+[   26.330] IBD  00-2a-ae-07-00-10-00-1b-00-00  | speed=19.66 hr=0 elapsed=16
+[   26.930] STAT 07-04  | RESISTANCE LEVEL ALTERADO -> nivel=4
+[   26.930] >>> MUDANCA 3 -> 4 (delta=+1) via 0x2ADA | 2700 ms desde a anterior
+[   27.350] IBD  f5-01-74-00-4e-00-00-04-00-39-00-38-00-01-00-ff-ff-ff  | cadence=58.0 distance=78 resistance=4 power=57 avg_power=56 energy_total=1 energy_hour=65535 energy_min=255
+[   27.350] IBD  00-2a-8d-07-00-11-00-1d-00-00  | speed=19.33 hr=0 elapsed=17
+[   28.310] IBD  f5-01-76-00-54-00-00-04-00-3a-00-38-00-01-00-ff-ff-ff  | cadence=59.0 distance=84 resistance=4 power=58 avg_power=56 energy_total=1 energy_hour=65535 energy_min=255
+[   28.310] IBD  00-2a-ae-07-00-12-00-1f-00-00  | speed=19.66 hr=0 elapsed=18
+[   29.330] IBD  f5-01-76-00-59-00-00-04-00-3a-00-39-00-01-00-ff-ff-ff  | cadence=59.0 distance=89 resistance=4 power=58 avg_power=57 energy_total=1 energy_hour=65535 energy_min=255
+[   29.330] IBD  00-2a-ae-07-00-13-00-21-00-00  | speed=19.66 hr=0 elapsed=19
+[   29.570] STAT 07-03  | RESISTANCE LEVEL ALTERADO -> nivel=3
+[   29.570] >>> MUDANCA 4 -> 3 (delta=-1) via 0x2ADA | 2640 ms desde a anterior
+[   30.350] IBD  f5-01-78-00-5f-00-00-03-00-3a-00-39-00-01-00-ff-ff-ff  | cadence=60.0 distance=95 resistance=3 power=58 avg_power=57 energy_total=1 energy_hour=65535 energy_min=255
+[   30.350] IBD  00-2a-d0-07-00-14-00-23-00-00  | speed=20.0 hr=0 elapsed=20
+[   31.310] IBD  f5-01-78-00-64-00-00-03-00-3a-00-39-00-01-00-ff-ff-ff  | cadence=60.0 distance=100 resistance=3 power=58 avg_power=57 energy_total=1 energy_hour=65535 energy_min=255
+[   31.310] IBD  00-2a-d0-07-00-15-00-25-00-00  | speed=20.0 hr=0 elapsed=21
+[   31.970] STAT 07-04  | RESISTANCE LEVEL ALTERADO -> nivel=4
+[   31.970] >>> MUDANCA 3 -> 4 (delta=+1) via 0x2ADA | 2400 ms desde a anterior
+[   32.330] IBD  f5-01-78-00-6a-00-00-04-00-3c-00-3a-00-01-00-ff-ff-ff  | cadence=60.0 distance=106 resistance=4 power=60 avg_power=58 energy_total=1 energy_hour=65535 energy_min=255
+[   32.330] IBD  00-2a-d0-07-00-16-00-27-00-00  | speed=20.0 hr=0 elapsed=22
+[   33.350] IBD  f5-01-7a-00-6f-00-00-04-00-3d-00-3a-00-01-00-ff-ff-ff  | cadence=61.0 distance=111 resistance=4 power=61 avg_power=58 energy_total=1 energy_hour=65535 energy_min=255
+[   33.350] IBD  00-2a-f1-07-00-17-00-29-00-00  | speed=20.33 hr=0 elapsed=23
+[   34.071] STAT 07-05  | RESISTANCE LEVEL ALTERADO -> nivel=5
+[   34.071] >>> MUDANCA 4 -> 5 (delta=+1) via 0x2ADA | 2101 ms desde a anterior
+[   34.310] IBD  f5-01-7c-00-75-00-00-05-00-40-00-3b-00-01-00-ff-ff-ff  | cadence=62.0 distance=117 resistance=5 power=64 avg_power=59 energy_total=1 energy_hour=65535 energy_min=255
+[   34.310] IBD  00-2a-12-08-00-18-00-2c-00-00  | speed=20.66 hr=0 elapsed=24
+[   35.150] STAT 07-06  | RESISTANCE LEVEL ALTERADO -> nivel=6
+[   35.150] >>> MUDANCA 5 -> 6 (delta=+1) via 0x2ADA | 1080 ms desde a anterior
+[   35.330] IBD  f5-01-7a-00-7b-00-00-06-00-41-00-3d-00-01-00-ff-ff-ff  | cadence=61.0 distance=123 resistance=6 power=65 avg_power=61 energy_total=1 energy_hour=65535 energy_min=255
+[   35.330] IBD  00-2a-f1-07-00-19-00-2e-00-00  | speed=20.33 hr=0 elapsed=25
+[   36.350] IBD  f5-01-7c-00-81-00-00-06-00-42-00-3e-00-01-00-ff-ff-ff  | cadence=62.0 distance=129 resistance=6 power=66 avg_power=62 energy_total=1 energy_hour=65535 energy_min=255
+[   36.350] IBD  00-2a-12-08-00-1a-00-30-00-00  | speed=20.66 hr=0 elapsed=26
+[   37.310] IBD  f5-01-7e-00-86-00-00-06-00-44-00-40-00-02-00-ff-ff-ff  | cadence=63.0 distance=134 resistance=6 power=68 avg_power=64 energy_total=2 energy_hour=65535 energy_min=255
+[   37.310] IBD  00-2a-34-08-00-1b-00-32-00-00  | speed=21.0 hr=0 elapsed=27
+[   37.790] STAT 07-07  | RESISTANCE LEVEL ALTERADO -> nivel=7
+[   37.790] >>> MUDANCA 6 -> 7 (delta=+1) via 0x2ADA | 2640 ms desde a anterior
+[   38.330] IBD  f5-01-7e-00-8c-00-00-07-00-46-00-41-00-02-00-ff-ff-ff  | cadence=63.0 distance=140 resistance=7 power=70 avg_power=65 energy_total=2 energy_hour=65535 energy_min=255
+[   38.330] IBD  00-2a-34-08-00-1c-00-34-00-00  | speed=21.0 hr=0 elapsed=28
+[   39.350] IBD  f5-01-7e-00-92-00-00-07-00-46-00-43-00-02-00-ff-ff-ff  | cadence=63.0 distance=146 resistance=7 power=70 avg_power=67 energy_total=2 energy_hour=65535 energy_min=255
+[   39.350] IBD  00-2a-34-08-00-1d-00-36-00-00  | speed=21.0 hr=0 elapsed=29
+[   40.310] IBD  f5-01-80-00-98-00-00-07-00-48-00-44-00-02-00-ff-ff-ff  | cadence=64.0 distance=152 resistance=7 power=72 avg_power=68 energy_total=2 energy_hour=65535 energy_min=255
+[   40.310] IBD  00-2a-55-08-00-1e-00-39-00-00  | speed=21.33 hr=0 elapsed=30
+[   40.790] STAT 07-06  | RESISTANCE LEVEL ALTERADO -> nivel=6
+[   40.790] >>> MUDANCA 7 -> 6 (delta=-1) via 0x2ADA | 3000 ms desde a anterior
+[   41.330] IBD  f5-01-82-00-9e-00-00-06-00-47-00-45-00-02-00-ff-ff-ff  | cadence=65.0 distance=158 resistance=6 power=71 avg_power=69 energy_total=2 energy_hour=65535 energy_min=255
+[   41.330] IBD  00-2a-76-08-00-1f-00-3b-00-00  | speed=21.66 hr=0 elapsed=31
+[   42.350] IBD  f5-01-80-00-a4-00-00-06-00-45-00-46-00-02-00-ff-ff-ff  | cadence=64.0 distance=164 resistance=6 power=69 avg_power=70 energy_total=2 energy_hour=65535 energy_min=255
+[   42.350] IBD  00-2a-55-08-00-20-00-3d-00-00  | speed=21.33 hr=0 elapsed=32
+[   42.590] STAT 07-07  | RESISTANCE LEVEL ALTERADO -> nivel=7
+[   42.590] >>> MUDANCA 6 -> 7 (delta=+1) via 0x2ADA | 1800 ms desde a anterior
+[   43.310] IBD  f5-01-80-00-aa-00-00-07-00-48-00-46-00-02-00-ff-ff-ff  | cadence=64.0 distance=170 resistance=7 power=72 avg_power=70 energy_total=2 energy_hour=65535 energy_min=255
+[   43.310] IBD  00-2a-55-08-00-21-00-3f-00-00  | speed=21.33 hr=0 elapsed=33
+[   43.970] STAT 07-08  | RESISTANCE LEVEL ALTERADO -> nivel=8
+[   43.970] >>> MUDANCA 7 -> 8 (delta=+1) via 0x2ADA | 1380 ms desde a anterior
+[   44.330] IBD  f5-01-80-00-b0-00-00-08-00-4b-00-47-00-02-00-ff-ff-ff  | cadence=64.0 distance=176 resistance=8 power=75 avg_power=71 energy_total=2 energy_hour=65535 energy_min=255
+[   44.330] IBD  00-2a-55-08-00-22-00-42-00-00  | speed=21.33 hr=0 elapsed=34
+[   45.350] IBD  f5-01-80-00-b6-00-00-08-00-4b-00-48-00-02-00-ff-ff-ff  | cadence=64.0 distance=182 resistance=8 power=75 avg_power=72 energy_total=2 energy_hour=65535 energy_min=255
+[   45.350] IBD  00-2a-55-08-00-23-00-44-00-00  | speed=21.33 hr=0 elapsed=35
+[   45.770] STAT 07-09  | RESISTANCE LEVEL ALTERADO -> nivel=9
+[   45.770] >>> MUDANCA 8 -> 9 (delta=+1) via 0x2ADA | 1800 ms desde a anterior
+[   46.310] IBD  f5-01-80-00-bc-00-00-09-00-4d-00-49-00-02-00-ff-ff-ff  | cadence=64.0 distance=188 resistance=9 power=77 avg_power=73 energy_total=2 energy_hour=65535 energy_min=255
+[   46.310] IBD  00-2a-55-08-00-24-00-46-00-00  | speed=21.33 hr=0 elapsed=36
+[   47.330] IBD  f5-01-80-00-c1-00-00-09-00-4d-00-4a-00-02-00-ff-ff-ff  | cadence=64.0 distance=193 resistance=9 power=77 avg_power=74 energy_total=2 energy_hour=65535 energy_min=255
+[   47.330] IBD  00-2a-55-08-00-25-00-48-00-00  | speed=21.33 hr=0 elapsed=37
+[   48.170] STAT 07-0a  | RESISTANCE LEVEL ALTERADO -> nivel=10
+[   48.170] >>> MUDANCA 9 -> 10 (delta=+1) via 0x2ADA | 2400 ms desde a anterior
+[   48.350] IBD  f5-01-7e-00-c7-00-00-0a-00-4e-00-4b-00-03-00-ff-ff-ff  | cadence=63.0 distance=199 resistance=10 power=78 avg_power=75 energy_total=3 energy_hour=65535 energy_min=255
+[   48.350] IBD  00-2a-34-08-00-26-00-4a-00-00  | speed=21.0 hr=0 elapsed=38
+[   49.310] IBD  f5-01-80-00-cd-00-00-0a-00-4f-00-4c-00-03-00-ff-ff-ff  | cadence=64.0 distance=205 resistance=10 power=79 avg_power=76 energy_total=3 energy_hour=65535 energy_min=255
+[   49.310] IBD  00-2a-55-08-00-27-00-4d-00-00  | speed=21.33 hr=0 elapsed=39
+[   50.330] IBD  f5-01-80-00-d3-00-00-0a-00-4f-00-4d-00-03-00-ff-ff-ff  | cadence=64.0 distance=211 resistance=10 power=79 avg_power=77 energy_total=3 energy_hour=65535 energy_min=255
+[   50.330] IBD  00-2a-55-08-00-28-00-4f-00-00  | speed=21.33 hr=0 elapsed=40
+[   50.990] STAT 07-0b  | RESISTANCE LEVEL ALTERADO -> nivel=11
+[   50.990] >>> MUDANCA 10 -> 11 (delta=+1) via 0x2ADA | 2820 ms desde a anterior
+[   51.170] STAT 07-0c  | RESISTANCE LEVEL ALTERADO -> nivel=12
+[   51.170] >>> MUDANCA 11 -> 12 (delta=+1) via 0x2ADA | 180 ms desde a anterior
+[   51.350] IBD  f5-01-7e-00-d9-00-00-0c-00-53-00-4e-00-03-00-ff-ff-ff  | cadence=63.0 distance=217 resistance=12 power=83 avg_power=78 energy_total=3 energy_hour=65535 energy_min=255
+[   51.350] IBD  00-2a-34-08-00-29-00-51-00-00  | speed=21.0 hr=0 elapsed=41
+[   52.310] IBD  f5-01-82-00-df-00-00-0c-00-56-00-50-00-03-00-ff-ff-ff  | cadence=65.0 distance=223 resistance=12 power=86 avg_power=80 energy_total=3 energy_hour=65535 energy_min=255
+[   52.310] IBD  00-2a-76-08-00-2a-00-53-00-00  | speed=21.66 hr=0 elapsed=42
+[   53.270] STAT 07-0b  | RESISTANCE LEVEL ALTERADO -> nivel=11
+[   53.270] >>> MUDANCA 12 -> 11 (delta=-1) via 0x2ADA | 2100 ms desde a anterior
+[   53.330] IBD  f5-01-82-00-e5-00-00-0b-00-54-00-51-00-03-00-ff-ff-ff  | cadence=65.0 distance=229 resistance=11 power=84 avg_power=81 energy_total=3 energy_hour=65535 energy_min=255
+[   53.330] IBD  00-2a-76-08-00-2b-00-55-00-00  | speed=21.66 hr=0 elapsed=43
+[   53.450] STAT 07-0a  | RESISTANCE LEVEL ALTERADO -> nivel=10
+[   53.450] >>> MUDANCA 11 -> 10 (delta=-1) via 0x2ADA | 180 ms desde a anterior
+[   54.350] IBD  f5-01-82-00-eb-00-00-0a-00-51-00-52-00-03-00-ff-ff-ff  | cadence=65.0 distance=235 resistance=10 power=81 avg_power=82 energy_total=3 energy_hour=65535 energy_min=255
+[   54.350] IBD  00-2a-76-08-00-2c-00-58-00-00  | speed=21.66 hr=0 elapsed=44
+[   55.310] IBD  f5-01-84-00-f1-00-00-0a-00-53-00-52-00-03-00-ff-ff-ff  | cadence=66.0 distance=241 resistance=10 power=83 avg_power=82 energy_total=3 energy_hour=65535 energy_min=255
+[   55.310] IBD  00-2a-98-08-00-2d-00-5a-00-00  | speed=22.0 hr=0 elapsed=45
+[   55.970] STAT 07-09  | RESISTANCE LEVEL ALTERADO -> nivel=9
+[   55.970] >>> MUDANCA 10 -> 9 (delta=-1) via 0x2ADA | 2520 ms desde a anterior
+[   56.330] IBD  f5-01-86-00-f7-00-00-09-00-52-00-53-00-03-00-ff-ff-ff  | cadence=67.0 distance=247 resistance=9 power=82 avg_power=83 energy_total=3 energy_hour=65535 energy_min=255
+[   56.330] IBD  00-2a-b9-08-00-2e-00-5c-00-00  | speed=22.33 hr=0 elapsed=46
+[   57.350] IBD  f5-01-88-00-fe-00-00-09-00-54-00-53-00-04-00-ff-ff-ff  | cadence=68.0 distance=254 resistance=9 power=84 avg_power=83 energy_total=4 energy_hour=65535 energy_min=255
+[   57.350] IBD  00-2a-da-08-00-2f-00-5f-00-00  | speed=22.66 hr=0 elapsed=47
+[   57.470] STAT 07-08  | RESISTANCE LEVEL ALTERADO -> nivel=8
+[   57.470] >>> MUDANCA 9 -> 8 (delta=-1) via 0x2ADA | 1500 ms desde a anterior
+[   58.310] IBD  f5-01-88-00-04-01-00-08-00-51-00-52-00-04-00-ff-ff-ff  | cadence=68.0 distance=260 resistance=8 power=81 avg_power=82 energy_total=4 energy_hour=65535 energy_min=255
+[   58.310] IBD  00-2a-da-08-00-30-00-61-00-00  | speed=22.66 hr=0 elapsed=48
+[   59.330] IBD  f5-01-88-00-0a-01-00-08-00-51-00-52-00-04-00-ff-ff-ff  | cadence=68.0 distance=266 resistance=8 power=81 avg_power=82 energy_total=4 energy_hour=65535 energy_min=255
+[   59.330] IBD  00-2a-da-08-00-31-00-63-00-00  | speed=22.66 hr=0 elapsed=49
+[   60.350] IBD  f5-01-88-00-10-01-00-08-00-51-00-52-00-04-00-ff-ff-ff  | cadence=68.0 distance=272 resistance=8 power=81 avg_power=82 energy_total=4 energy_hour=65535 energy_min=255
+[   60.350] IBD  00-2a-da-08-00-32-00-66-00-00  | speed=22.66 hr=0 elapsed=50
+[   60.950] STAT 07-07  | RESISTANCE LEVEL ALTERADO -> nivel=7
+[   60.950] >>> MUDANCA 8 -> 7 (delta=-1) via 0x2ADA | 3480 ms desde a anterior
+[   61.310] IBD  f5-01-88-00-17-01-00-07-00-4e-00-51-00-04-00-ff-ff-ff  | cadence=68.0 distance=279 resistance=7 power=78 avg_power=81 energy_total=4 energy_hour=65535 energy_min=255
+[   61.310] IBD  00-2a-da-08-00-33-00-68-00-00  | speed=22.66 hr=0 elapsed=51
+[   62.330] IBD  f5-01-8a-00-1d-01-00-07-00-50-00-50-00-04-00-ff-ff-ff  | cadence=69.0 distance=285 resistance=7 power=80 avg_power=80 energy_total=4 energy_hour=65535 energy_min=255
+[   62.330] IBD  00-2a-fc-08-00-34-00-6a-00-00  | speed=23.0 hr=0 elapsed=52
+[   62.870] STAT 07-08  | RESISTANCE LEVEL ALTERADO -> nivel=8
+[   62.870] >>> MUDANCA 7 -> 8 (delta=+1) via 0x2ADA | 1920 ms desde a anterior
+[   63.170] STAT 07-09  | RESISTANCE LEVEL ALTERADO -> nivel=9
+[   63.170] >>> MUDANCA 8 -> 9 (delta=+1) via 0x2ADA | 300 ms desde a anterior
+[   63.350] IBD  f5-01-8e-00-24-01-00-09-00-59-00-51-00-04-00-ff-ff-ff  | cadence=71.0 distance=292 resistance=9 power=89 avg_power=81 energy_total=4 energy_hour=65535 energy_min=255
+[   63.350] IBD  00-2a-3e-09-00-35-00-6d-00-00  | speed=23.66 hr=0 elapsed=53
+[   64.310] IBD  f5-01-92-00-2a-01-00-09-00-5c-00-53-00-04-00-ff-ff-ff  | cadence=73.0 distance=298 resistance=9 power=92 avg_power=83 energy_total=4 energy_hour=65535 energy_min=255
+[   64.311] IBD  00-2a-81-09-00-36-00-6f-00-00  | speed=24.33 hr=0 elapsed=54
+[   65.330] IBD  f5-01-90-00-31-01-00-09-00-5b-00-55-00-04-00-ff-ff-ff  | cadence=72.0 distance=305 resistance=9 power=91 avg_power=85 energy_total=4 energy_hour=65535 energy_min=255
+[   65.330] IBD  00-2a-60-09-00-37-00-72-00-00  | speed=24.0 hr=0 elapsed=55
+[   66.290] STAT 07-0a  | RESISTANCE LEVEL ALTERADO -> nivel=10
+[   66.290] >>> MUDANCA 9 -> 10 (delta=+1) via 0x2ADA | 3120 ms desde a anterior
+[   66.350] IBD  f5-01-8a-00-38-01-00-0a-00-58-00-56-00-05-00-ff-ff-ff  | cadence=69.0 distance=312 resistance=10 power=88 avg_power=86 energy_total=5 energy_hour=65535 energy_min=255
+[   66.350] IBD  00-2a-fc-08-00-38-00-74-00-00  | speed=23.0 hr=0 elapsed=56
+[   67.310] IBD  f5-01-8a-00-3e-01-00-0a-00-58-00-58-00-05-00-ff-ff-ff  | cadence=69.0 distance=318 resistance=10 power=88 avg_power=88 energy_total=5 energy_hour=65535 energy_min=255
+[   67.310] IBD  00-2a-fc-08-00-39-00-77-00-00  | speed=23.0 hr=0 elapsed=57
+[   68.090] STAT 07-0b  | RESISTANCE LEVEL ALTERADO -> nivel=11
+[   68.090] >>> MUDANCA 10 -> 11 (delta=+1) via 0x2ADA | 1799 ms desde a anterior
+[   68.330] IBD  f5-01-88-00-44-01-00-0b-00-59-00-59-00-05-00-ff-ff-ff  | cadence=68.0 distance=324 resistance=11 power=89 avg_power=89 energy_total=5 energy_hour=65535 energy_min=255
+[   68.330] IBD  00-2a-da-08-00-3a-00-79-00-00  | speed=22.66 hr=0 elapsed=58
+[   69.350] IBD  f5-01-86-00-4a-01-00-0b-00-57-00-59-00-05-00-ff-ff-ff  | cadence=67.0 distance=330 resistance=11 power=87 avg_power=89 energy_total=5 energy_hour=65535 energy_min=255
+[   69.350] IBD  00-2a-b9-08-00-3b-00-7b-00-00  | speed=22.33 hr=0 elapsed=59
+[   70.310] IBD  f5-01-86-00-51-01-00-0b-00-57-00-58-00-05-00-ff-ff-ff  | cadence=67.0 distance=337 resistance=11 power=87 avg_power=88 energy_total=5 energy_hour=65535 energy_min=255
+[   70.310] IBD  00-2a-b9-08-00-3c-00-7e-00-00  | speed=22.33 hr=0 elapsed=60
+[   70.790] STAT 07-0c  | RESISTANCE LEVEL ALTERADO -> nivel=12
+[   70.790] >>> MUDANCA 11 -> 12 (delta=+1) via 0x2ADA | 2700 ms desde a anterior
+[   71.330] IBD  f5-01-88-00-57-01-00-0c-00-5c-00-58-00-05-00-ff-ff-ff  | cadence=68.0 distance=343 resistance=12 power=92 avg_power=88 energy_total=5 energy_hour=65535 energy_min=255
+[   71.330] IBD  00-2a-da-08-00-3d-00-80-00-00  | speed=22.66 hr=0 elapsed=61
+[   72.350] IBD  f5-01-86-00-5d-01-00-0c-00-5a-00-58-00-05-00-ff-ff-ff  | cadence=67.0 distance=349 resistance=12 power=90 avg_power=88 energy_total=5 energy_hour=65535 energy_min=255
+[   72.350] IBD  00-2a-b9-08-00-3e-00-82-00-00  | speed=22.33 hr=0 elapsed=62
+[   73.310] IBD  f5-01-88-00-63-01-00-0d-00-5f-00-5a-00-05-00-ff-ff-ff  | cadence=68.0 distance=355 resistance=13 power=95 avg_power=90 energy_total=5 energy_hour=65535 energy_min=255
+[   73.310] >>> MUDANCA 12 -> 13 (delta=+1) via 0x2AD2 | 2520 ms desde a anterior
+[   73.310] IBD  00-2a-da-08-00-3f-00-85-00-00  | speed=22.66 hr=0 elapsed=63
+[   73.370] STAT 07-0d  | RESISTANCE LEVEL ALTERADO -> nivel=13
+[   74.330] IBD  f5-01-86-00-6a-01-00-0d-00-5d-00-5a-00-05-00-ff-ff-ff  | cadence=67.0 distance=362 resistance=13 power=93 avg_power=90 energy_total=5 energy_hour=65535 energy_min=255
+[   74.330] IBD  00-2a-b9-08-00-40-00-87-00-00  | speed=22.33 hr=0 elapsed=64
+[   75.350] IBD  f5-01-86-00-70-01-00-0d-00-5d-00-5b-00-06-00-ff-ff-ff  | cadence=67.0 distance=368 resistance=13 power=93 avg_power=91 energy_total=6 energy_hour=65535 energy_min=255
+[   75.350] IBD  00-2a-b9-08-00-41-00-89-00-00  | speed=22.33 hr=0 elapsed=65
+[   76.310] IBD  f5-01-84-00-76-01-00-0d-00-5b-00-5c-00-06-00-ff-ff-ff  | cadence=66.0 distance=374 resistance=13 power=91 avg_power=92 energy_total=6 energy_hour=65535 energy_min=255
+[   76.310] IBD  00-2a-98-08-00-42-00-8b-00-00  | speed=22.0 hr=0 elapsed=66
+[   76.550] STAT 07-0e  | RESISTANCE LEVEL ALTERADO -> nivel=14
+[   76.550] >>> MUDANCA 13 -> 14 (delta=+1) via 0x2ADA | 3240 ms desde a anterior
+[   77.331] IBD  f5-01-84-00-7c-01-00-0e-00-60-00-5d-00-06-00-ff-ff-ff  | cadence=66.0 distance=380 resistance=14 power=96 avg_power=93 energy_total=6 energy_hour=65535 energy_min=255
+[   77.332] IBD  00-2a-98-08-00-43-00-8e-00-00  | speed=22.0 hr=0 elapsed=67
+[   78.351] IBD  f5-01-82-00-82-01-00-0e-00-5e-00-5d-00-06-00-ff-ff-ff  | cadence=65.0 distance=386 resistance=14 power=94 avg_power=93 energy_total=6 energy_hour=65535 energy_min=255
+[   78.352] IBD  00-2a-76-08-00-44-00-90-00-00  | speed=21.66 hr=0 elapsed=68
+[   79.310] IBD  f5-01-80-00-88-01-00-0e-00-5c-00-5d-00-06-00-ff-ff-ff  | cadence=64.0 distance=392 resistance=14 power=92 avg_power=93 energy_total=6 energy_hour=65535 energy_min=255
+[   79.310] IBD  00-2a-55-08-00-45-00-92-00-00  | speed=21.33 hr=0 elapsed=69
+[   80.330] IBD  f5-01-84-00-8e-01-00-0e-00-60-00-5d-00-06-00-ff-ff-ff  | cadence=66.0 distance=398 resistance=14 power=96 avg_power=93 energy_total=6 energy_hour=65535 energy_min=255
+[   80.330] IBD  00-2a-98-08-00-46-00-94-00-00  | speed=22.0 hr=0 elapsed=70
+[   80.750] STAT 07-0f  | RESISTANCE LEVEL ALTERADO -> nivel=15
+[   80.750] >>> MUDANCA 14 -> 15 (delta=+1) via 0x2ADA | 4200 ms desde a anterior
+[   81.350] IBD  f5-01-86-00-94-01-00-0f-00-65-00-5f-00-06-00-ff-ff-ff  | cadence=67.0 distance=404 resistance=15 power=101 avg_power=95 energy_total=6 energy_hour=65535 energy_min=255
+[   81.351] IBD  00-2a-b9-08-00-47-00-97-00-00  | speed=22.33 hr=0 elapsed=71
+[   81.650] STAT 07-10  | RESISTANCE LEVEL ALTERADO -> nivel=16
+[   81.650] >>> MUDANCA 15 -> 16 (delta=+1) via 0x2ADA | 900 ms desde a anterior
+[   82.250] STAT 07-11  | RESISTANCE LEVEL ALTERADO -> nivel=17
+[   82.250] >>> MUDANCA 16 -> 17 (delta=+1) via 0x2ADA | 600 ms desde a anterior
+[   82.310] IBD  f5-01-8a-00-9b-01-00-11-00-72-00-62-00-06-00-ff-ff-ff  | cadence=69.0 distance=411 resistance=17 power=114 avg_power=98 energy_total=6 energy_hour=65535 energy_min=255
+[   82.310] IBD  00-2a-fc-08-00-48-00-99-00-00  | speed=23.0 hr=0 elapsed=72
+[   82.790] STAT 07-12  | RESISTANCE LEVEL ALTERADO -> nivel=18
+[   82.790] >>> MUDANCA 17 -> 18 (delta=+1) via 0x2ADA | 540 ms desde a anterior
+[   83.330] IBD  f5-01-8a-00-a1-01-00-12-00-76-00-66-00-07-00-ff-ff-ff  | cadence=69.0 distance=417 resistance=18 power=118 avg_power=102 energy_total=7 energy_hour=65535 energy_min=255
+[   83.330] IBD  00-2a-fc-08-00-49-00-9b-00-00  | speed=23.0 hr=0 elapsed=73
+[   83.450] STAT 07-13  | RESISTANCE LEVEL ALTERADO -> nivel=19
+[   83.450] >>> MUDANCA 18 -> 19 (delta=+1) via 0x2ADA | 660 ms desde a anterior
+[   84.350] IBD  f5-01-88-00-a7-01-00-14-00-7d-00-6b-00-07-00-ff-ff-ff  | cadence=68.0 distance=423 resistance=20 power=125 avg_power=107 energy_total=7 energy_hour=65535 energy_min=255
+[   84.350] >>> MUDANCA 19 -> 20 (delta=+1) via 0x2AD2 | 900 ms desde a anterior
+[   84.350] IBD  00-2a-da-08-00-4a-00-9e-00-00  | speed=22.66 hr=0 elapsed=74
+[   84.351] STAT 07-14  | RESISTANCE LEVEL ALTERADO -> nivel=20
+[   84.590] STAT 07-15  | RESISTANCE LEVEL ALTERADO -> nivel=21
+[   84.590] >>> MUDANCA 20 -> 21 (delta=+1) via 0x2ADA | 240 ms desde a anterior
+[   85.250] STAT 07-14  | RESISTANCE LEVEL ALTERADO -> nivel=20
+[   85.250] >>> MUDANCA 21 -> 20 (delta=-1) via 0x2ADA | 660 ms desde a anterior
+[   85.310] IBD  f5-01-86-00-ad-01-00-14-00-7b-00-70-00-07-00-ff-ff-ff  | cadence=67.0 distance=429 resistance=20 power=123 avg_power=112 energy_total=7 energy_hour=65535 energy_min=255
+[   85.310] IBD  00-2a-b9-08-00-4b-00-a0-00-00  | speed=22.33 hr=0 elapsed=75
+[   85.550] STAT 07-13  | RESISTANCE LEVEL ALTERADO -> nivel=19
+[   85.550] >>> MUDANCA 20 -> 19 (delta=-1) via 0x2ADA | 300 ms desde a anterior
+[   85.850] STAT 07-12  | RESISTANCE LEVEL ALTERADO -> nivel=18
+[   85.850] >>> MUDANCA 19 -> 18 (delta=-1) via 0x2ADA | 300 ms desde a anterior
+[   86.270] STAT 07-11  | RESISTANCE LEVEL ALTERADO -> nivel=17
+[   86.270] >>> MUDANCA 18 -> 17 (delta=-1) via 0x2ADA | 420 ms desde a anterior
+[   86.330] IBD  f5-01-82-00-b3-01-00-11-00-69-00-72-00-07-00-ff-ff-ff  | cadence=65.0 distance=435 resistance=17 power=105 avg_power=114 energy_total=7 energy_hour=65535 energy_min=255
+[   86.330] IBD  00-2a-76-08-00-4c-00-a2-00-00  | speed=21.66 hr=0 elapsed=76
+[   86.570] STAT 07-10  | RESISTANCE LEVEL ALTERADO -> nivel=16
+[   86.570] >>> MUDANCA 17 -> 16 (delta=-1) via 0x2ADA | 300 ms desde a anterior
+[   87.290] STAT 07-0f  | RESISTANCE LEVEL ALTERADO -> nivel=15
+[   87.290] >>> MUDANCA 16 -> 15 (delta=-1) via 0x2ADA | 720 ms desde a anterior
+[   87.350] IBD  f5-01-84-00-ba-01-00-0f-00-63-00-72-00-07-00-ff-ff-ff  | cadence=66.0 distance=442 resistance=15 power=99 avg_power=114 energy_total=7 energy_hour=65535 energy_min=255
+[   87.350] IBD  00-2a-98-08-00-4d-00-a5-00-00  | speed=22.0 hr=0 elapsed=77
+[   87.950] STAT 07-0e  | RESISTANCE LEVEL ALTERADO -> nivel=14
+[   87.950] >>> MUDANCA 15 -> 14 (delta=-1) via 0x2ADA | 660 ms desde a anterior
+[   88.310] IBD  f5-01-88-00-c0-01-00-0d-00-5f-00-6e-00-07-00-ff-ff-ff  | cadence=68.0 distance=448 resistance=13 power=95 avg_power=110 energy_total=7 energy_hour=65535 energy_min=255
+[   88.310] >>> MUDANCA 14 -> 13 (delta=-1) via 0x2AD2 | 360 ms desde a anterior
+[   88.310] IBD  00-2a-da-08-00-4e-00-a7-00-00  | speed=22.66 hr=0 elapsed=78
+[   88.370] STAT 07-0d  | RESISTANCE LEVEL ALTERADO -> nivel=13
+[   88.670] STAT 07-0c  | RESISTANCE LEVEL ALTERADO -> nivel=12
+[   88.670] >>> MUDANCA 13 -> 12 (delta=-1) via 0x2ADA | 360 ms desde a anterior
+[   88.970] STAT 07-0b  | RESISTANCE LEVEL ALTERADO -> nivel=11
+[   88.970] >>> MUDANCA 12 -> 11 (delta=-1) via 0x2ADA | 300 ms desde a anterior
+[   89.270] STAT 07-0a  | RESISTANCE LEVEL ALTERADO -> nivel=10
+[   89.270] >>> MUDANCA 11 -> 10 (delta=-1) via 0x2ADA | 300 ms desde a anterior
+[   89.330] IBD  f5-01-8a-00-c6-01-00-0a-00-58-00-69-00-07-00-ff-ff-ff  | cadence=69.0 distance=454 resistance=10 power=88 avg_power=105 energy_total=7 energy_hour=65535 energy_min=255
+[   89.330] IBD  00-2a-fc-08-00-4f-00-a9-00-00  | speed=23.0 hr=0 elapsed=79
+[   89.570] STAT 07-09  | RESISTANCE LEVEL ALTERADO -> nivel=9
+[   89.570] >>> MUDANCA 10 -> 9 (delta=-1) via 0x2ADA | 300 ms desde a anterior
+[   89.870] STAT 07-08  | RESISTANCE LEVEL ALTERADO -> nivel=8
+[   89.870] >>> MUDANCA 9 -> 8 (delta=-1) via 0x2ADA | 300 ms desde a anterior
+[   90.170] STAT 07-07  | RESISTANCE LEVEL ALTERADO -> nivel=7
+[   90.170] >>> MUDANCA 8 -> 7 (delta=-1) via 0x2ADA | 300 ms desde a anterior
+[   90.350] IBD  f5-01-88-00-cd-01-00-06-00-4b-00-61-00-07-00-ff-ff-ff  | cadence=68.0 distance=461 resistance=6 power=75 avg_power=97 energy_total=7 energy_hour=65535 energy_min=255
+[   90.350] >>> MUDANCA 7 -> 6 (delta=-1) via 0x2AD2 | 180 ms desde a anterior
+[   90.350] IBD  00-2a-da-08-00-50-00-ac-00-00  | speed=22.66 hr=0 elapsed=80
+[   90.351] STAT 07-06  | RESISTANCE LEVEL ALTERADO -> nivel=6
+[   90.650] STAT 07-05  | RESISTANCE LEVEL ALTERADO -> nivel=5
+[   90.650] >>> MUDANCA 6 -> 5 (delta=-1) via 0x2ADA | 300 ms desde a anterior
+[   90.890] STAT 07-04  | RESISTANCE LEVEL ALTERADO -> nivel=4
+[   90.890] >>> MUDANCA 5 -> 4 (delta=-1) via 0x2ADA | 240 ms desde a anterior
+[   91.190] STAT 07-03  | RESISTANCE LEVEL ALTERADO -> nivel=3
+[   91.190] >>> MUDANCA 4 -> 3 (delta=-1) via 0x2ADA | 300 ms desde a anterior
+[   91.310] IBD  f5-01-88-00-d3-01-00-03-00-45-00-58-00-08-00-ff-ff-ff  | cadence=68.0 distance=467 resistance=3 power=69 avg_power=88 energy_total=8 energy_hour=65535 energy_min=255
+[   91.310] IBD  00-2a-da-08-00-51-00-ae-00-00  | speed=22.66 hr=0 elapsed=81
+[   91.490] STAT 07-02  | RESISTANCE LEVEL ALTERADO -> nivel=2
+[   91.490] >>> MUDANCA 3 -> 2 (delta=-1) via 0x2ADA | 300 ms desde a anterior
+[   91.790] STAT 07-01  | RESISTANCE LEVEL ALTERADO -> nivel=1
+[   91.790] >>> MUDANCA 2 -> 1 (delta=-1) via 0x2ADA | 300 ms desde a anterior
+[   92.150] STAT 07-02  | RESISTANCE LEVEL ALTERADO -> nivel=2
+[   92.150] >>> MUDANCA 1 -> 2 (delta=+1) via 0x2ADA | 360 ms desde a anterior
+[   92.330] IBD  f5-01-88-00-d9-01-00-02-00-44-00-52-00-08-00-ff-ff-ff  | cadence=68.0 distance=473 resistance=2 power=68 avg_power=82 energy_total=8 energy_hour=65535 energy_min=255
+[   92.330] IBD  00-2a-da-08-00-52-00-b0-00-00  | speed=22.66 hr=0 elapsed=82
+[   92.450] STAT 07-03  | RESISTANCE LEVEL ALTERADO -> nivel=3
+[   92.450] >>> MUDANCA 2 -> 3 (delta=+1) via 0x2ADA | 300 ms desde a anterior
+[   92.870] STAT 07-02  | RESISTANCE LEVEL ALTERADO -> nivel=2
+[   92.870] >>> MUDANCA 3 -> 2 (delta=-1) via 0x2ADA | 420 ms desde a anterior
+[   93.290] STAT 07-03  | RESISTANCE LEVEL ALTERADO -> nivel=3
+[   93.290] >>> MUDANCA 2 -> 3 (delta=+1) via 0x2ADA | 420 ms desde a anterior
+[   93.350] IBD  f5-01-88-00-df-01-00-03-00-45-00-4d-00-08-00-ff-ff-ff  | cadence=68.0 distance=479 resistance=3 power=69 avg_power=77 energy_total=8 energy_hour=65535 energy_min=255
+[   93.350] IBD  00-2a-da-08-00-53-00-b3-00-00  | speed=22.66 hr=0 elapsed=83
+[   94.310] IBD  f5-01-86-00-e6-01-00-03-00-44-00-48-00-08-00-ff-ff-ff  | cadence=67.0 distance=486 resistance=3 power=68 avg_power=72 energy_total=8 energy_hour=65535 energy_min=255
+[   94.310] IBD  00-2a-b9-08-00-54-00-b5-00-00  | speed=22.33 hr=0 elapsed=84
+[   95.330] IBD  f5-01-6a-00-ea-01-00-03-00-31-00-42-00-08-00-ff-ff-ff  | cadence=53.0 distance=490 resistance=3 power=49 avg_power=66 energy_total=8 energy_hour=65535 energy_min=255
+[   95.330] IBD  00-2a-e6-06-00-55-00-b7-00-00  | speed=17.66 hr=0 elapsed=85
+[   96.350] IBD  f5-01-38-00-ed-01-00-03-00-13-00-39-00-08-00-ff-ff-ff  | cadence=28.0 distance=493 resistance=3 power=19 avg_power=57 energy_total=8 energy_hour=65535 energy_min=255
+[   96.350] IBD  00-2a-a5-03-00-56-00-b8-00-00  | speed=9.33 hr=0 elapsed=86
+[   97.310] IBD  f5-01-2e-00-ef-01-00-03-00-0d-00-2f-00-08-00-ff-ff-ff  | cadence=23.0 distance=495 resistance=3 power=13 avg_power=47 energy_total=8 energy_hour=65535 energy_min=255
+[   97.310] IBD  00-2a-fe-02-00-57-00-b9-00-00  | speed=7.66 hr=0 elapsed=87
+[   98.330] IBD  f5-01-1c-00-f1-01-00-03-00-00-00-24-00-08-00-ff-ff-ff  | cadence=14.0 distance=497 resistance=3 power=0 avg_power=36 energy_total=8 energy_hour=65535 energy_min=255
+[   98.330] IBD  00-2a-d2-01-00-58-00-b9-00-00  | speed=4.66 hr=0 elapsed=88
+[   99.350] IBD  f5-01-1a-00-f2-01-00-03-00-00-00-18-00-08-00-ff-ff-ff  | cadence=13.0 distance=498 resistance=3 power=0 avg_power=24 energy_total=8 energy_hour=65535 energy_min=255
+[   99.350] IBD  00-2a-b1-01-00-59-00-ba-00-00  | speed=4.33 hr=0 elapsed=89
+[  100.310] IBD  f5-01-1c-00-f3-01-00-03-00-00-00-0d-00-08-00-ff-ff-ff  | cadence=14.0 distance=499 resistance=3 power=0 avg_power=13 energy_total=8 energy_hour=65535 energy_min=255
+[  100.310] IBD  00-2a-d2-01-00-5a-00-ba-00-00  | speed=4.66 hr=0 elapsed=90
+[  101.330] IBD  f5-01-02-00-f3-01-00-03-00-00-00-05-00-08-00-ff-ff-ff  | cadence=1.0 distance=499 resistance=3 power=0 avg_power=5 energy_total=8 energy_hour=65535 energy_min=255
+[  101.330] IBD  00-2a-21-00-00-5b-00-ba-00-00  | speed=0.33 hr=0 elapsed=91
+[  102.350] IBD  f5-01-00-00-f3-01-00-03-00-00-00-02-00-08-00-ff-ff-ff  | cadence=0.0 distance=499 resistance=3 power=0 avg_power=2 energy_total=8 energy_hour=65535 energy_min=255
+[  102.350] IBD  00-2a-00-00-00-5c-00-ba-00-00  | speed=0.0 hr=0 elapsed=92
+[  103.310] IBD  f5-01-00-00-f3-01-00-03-00-00-00-00-00-08-00-ff-ff-ff  | cadence=0.0 distance=499 resistance=3 power=0 avg_power=0 energy_total=8 energy_hour=65535 energy_min=255
+[  103.310] IBD  00-2a-00-00-00-5d-00-ba-00-00  | speed=0.0 hr=0 elapsed=93
+[  104.330] IBD  f5-01-00-00-f3-01-00-03-00-00-00-00-00-08-00-ff-ff-ff  | cadence=0.0 distance=499 resistance=3 power=0 avg_power=0 energy_total=8 energy_hour=65535 energy_min=255
+[  104.330] IBD  00-2a-00-00-00-5e-00-ba-00-00  | speed=0.0 hr=0 elapsed=94
+[  105.350] IBD  f5-01-00-00-f3-01-00-03-00-00-00-00-00-08-00-ff-ff-ff  | cadence=0.0 distance=499 resistance=3 power=0 avg_power=0 energy_total=8 energy_hour=65535 energy_min=255
+[  105.350] IBD  00-2a-00-00-00-5f-00-ba-00-00  | speed=0.0 hr=0 elapsed=95
+[  106.310] IBD  f5-01-00-00-f3-01-00-03-00-00-00-00-00-08-00-ff-ff-ff  | cadence=0.0 distance=499 resistance=3 power=0 avg_power=0 energy_total=8 energy_hour=65535 energy_min=255
+[  106.310] IBD  00-2a-00-00-00-60-00-ba-00-00  | speed=0.0 hr=0 elapsed=96
+[  107.330] IBD  f5-01-00-00-f3-01-00-03-00-00-00-00-00-08-00-ff-ff-ff  | cadence=0.0 distance=499 resistance=3 power=0 avg_power=0 energy_total=8 energy_hour=65535 energy_min=255
+[  107.330] IBD  00-2a-00-00-00-61-00-ba-00-00  | speed=0.0 hr=0 elapsed=97
+[  108.350] IBD  f5-01-00-00-f3-01-00-03-00-00-00-00-00-08-00-ff-ff-ff  | cadence=0.0 distance=499 resistance=3 power=0 avg_power=0 energy_total=8 energy_hour=65535 energy_min=255
+[  108.350] IBD  00-2a-00-00-00-62-00-ba-00-00  | speed=0.0 hr=0 elapsed=98
+[  109.310] IBD  f5-01-00-00-f3-01-00-03-00-00-00-00-00-08-00-ff-ff-ff  | cadence=0.0 distance=499 resistance=3 power=0 avg_power=0 energy_total=8 energy_hour=65535 energy_min=255
+[  109.310] IBD  00-2a-00-00-00-63-00-ba-00-00  | speed=0.0 hr=0 elapsed=99
+[  110.330] IBD  f5-01-00-00-f3-01-00-03-00-00-00-00-00-08-00-ff-ff-ff  | cadence=0.0 distance=499 resistance=3 power=0 avg_power=0 energy_total=8 energy_hour=65535 energy_min=255
+[  110.330] IBD  00-2a-00-00-00-64-00-ba-00-00  | speed=0.0 hr=0 elapsed=100
+[  111.350] IBD  f5-01-00-00-f3-01-00-03-00-00-00-00-00-08-00-ff-ff-ff  | cadence=0.0 distance=499 resistance=3 power=0 avg_power=0 energy_total=8 energy_hour=65535 energy_min=255
+[  111.350] IBD  00-2a-00-00-00-65-00-ba-00-00  | speed=0.0 hr=0 elapsed=101
+[  112.310] IBD  f5-01-00-00-f3-01-00-03-00-00-00-00-00-08-00-ff-ff-ff  | cadence=0.0 distance=499 resistance=3 power=0 avg_power=0 energy_total=8 energy_hour=65535 energy_min=255
+[  112.310] IBD  00-2a-00-00-00-66-00-ba-00-00  | speed=0.0 hr=0 elapsed=102
+[  113.330] IBD  f5-01-00-00-f3-01-00-03-00-00-00-00-00-08-00-ff-ff-ff  | cadence=0.0 distance=499 resistance=3 power=0 avg_power=0 energy_total=8 energy_hour=65535 energy_min=255
+[  113.330] IBD  00-2a-00-00-00-67-00-ba-00-00  | speed=0.0 hr=0 elapsed=103
