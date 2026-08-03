@@ -41,7 +41,11 @@ carrega marca; a ausência de marca é erro de redação.
    115200), Freebeat (UART 9600) e Peloton (**RS-232 19200**). Nenhum é da YPOO ⚙️. A
    lição transferível da Peloton é elétrica, não arquitetural: chicote de console **não é
    TTL**. ⚙️
-10. **Há uma decisão de ordem que custa trabalho se for ignorada:** calibrar a `ergTable`
+10. **O nível reportado está desacoplado da posição física ✅.** A potência publicada é
+   calculada sobre o alvo, não sobre o estado dos ímãs. Isso esvazia os critérios de
+   potência das Fases 4 e 5 do `PLANO-MEGAGYM` — o laço do ERG fecha sobre o próprio
+   comando do QZ (§3.4). Não afeta a `ergTable`.
+11. **Há uma decisão de ordem que custa trabalho se for ignorada:** calibrar a `ergTable`
    antes de decidir a escala de resistência é jogar a calibração fora — a menos que a
    rota escolhida preserve a escala 1–32. ⚙️
 
@@ -325,23 +329,63 @@ diz onde nele a bike cai.
 Reportado: mandando resistência-alvo por FTMS de 10 para 30, a bike **vai direto**, sem os
 efeitos do knob (bipe, LEDs) ✅.
 
-**Armadilha:** isso *não* prova comando absoluto, e bipe/LED **não servem de proxy** para
-movimento do atuador. O que o relato mostra é que bipe e LED pertencem ao tratador de
-entrada do knob, não ao movimento do atuador — e que o número no display muito
-provavelmente é o **alvo**, atualizado na hora, não a posição real.
+Bipe e LED **não servem de proxy** para movimento do atuador: pertencem ao tratador de
+entrada do knob. O discriminador é o atraso até o pedal pesar — e ele foi medido.
 
-O discriminador correto é o **ruído do motor**, cronometrado:
+### 3.4 O nível reportado está desacoplado da posição física ✅
 
-| Observação em 10→30 por FTMS | Leitura |
-|---|---|
-| Uma corrida contínua do motor, ~20× a duração de 10→11 | Comando absoluto ou proporcional; MITM barato |
-| ~20 rajadas discretas | O console emite movimentos por nível; ainda injetável, mais trabalhoso |
-| Mesma duração de 10→11 | **O nível reportado está desacoplado da posição física** — implicação séria para §5 |
+**Confirmado:** em saltos grandes de resistência há atraso perceptível até o pedal pesar
+✅. O console publica o **alvo** imediatamente no `0x2AD2` enquanto o ímã ainda está a
+caminho.
 
-O terceiro caso merece atenção. Se o console reporta o alvo instantaneamente enquanto o
-ímã ainda está a caminho, então a potência sintética da §2.2 é calculada sobre o **alvo**,
-não sobre o estado físico — o que explicaria a dispersão de 0,00 W melhor do que qualquer
-tabela, e significaria que durante transientes o watt reportado é ficção. ❓
+É o fato mais consequente levantado depois do `PLANO-MEGAGYM`, e não é sobre o bridge.
+
+#### 3.4.1 A potência é calculada sobre o alvo ✅
+
+Explica a dispersão de 0,00 W em 99/99 combinações (`PLANO-MEGAGYM` §2.2) melhor do que
+"tabela de firmware": não há **nada** físico no laço, nem sequer uma medição atrasada. O
+console escolhe um número, publica esse número como resistência, e publica
+`f(esse número, cadência)` como potência.
+
+#### 3.4.2 Os critérios de ERG do PLANO-MEGAGYM ficam vazios ⚙️
+
+Este é o impacto prático imediato. As Fases 4 e 5 daquele plano têm como critério
+*"potência dentro de ±10 W do alvo"* e *"potência segue o alvo"*.
+
+O caminho do ERG é: QZ escolhe R para a potência-alvo → escreve R na bike → a bike reporta
+`f(R, cadência)` → QZ lê e compara com o alvo. **O laço fecha sobre o próprio comando do
+QZ.** O critério passa por construção, independentemente do que aconteça com os ímãs.
+
+Dos critérios daquelas fases, **só `corr(cadência, R)` negativa tem conteúdo** — essa mede
+comportamento do controlador, não a aritmética do console. Os de potência precisam ser
+descartados ou substituídos por medição externa.
+
+#### 3.4.3 O que *não* é afetado ⚙️
+
+A `ergTable` do QZ aprende `W = f(R_reportado, cadência)`, e a bike calcula
+`W = f(R_alvo, cadência)` com `R_reportado == R_alvo`. As duas são a mesma função: **a
+tabela aprendida é internamente consistente e não sofre contaminação por transiente.** A
+janela de descarte de 1000 ms em `src/ergtable.h:112` ⚙️ é inofensiva aqui — protege
+contra um problema que esta bike não tem, porque a potência nunca discorda da resistência
+reportada.
+
+Consequência: a Fase 2 do `PLANO-MEGAGYM` continua válida e produz a tabela correta. Ela
+só não descreve física.
+
+#### 3.4.4 O que fica pior do que se pensava ❓
+
+O MyWhoosh manda simulação com mediana de 1005 ms (`PLANO-MEGAGYM` §4.2) ✅, e a demanda
+percorre R 16–31 entre p5 e p95 com o offset 18 (§6.2 de lá) ✅. Se um salto grande leva
+vários segundos, **o atuador persegue um alvo que se move mais rápido do que ele** —
+possivelmente sem nunca chegar.
+
+Nesse regime a resistência física é uma versão passa-baixa da demanda, enquanto o watt
+reportado — e portanto o `.fit`, e o Strava — acompanha a demanda exatamente. A divergência
+não é transiente: é o regime de operação normal em terreno com relevo. ❓ até medir o
+atraso.
+
+**Medida que falta:** segundos até o pedal pesar, para saltos de 1, 5 e 20 níveis. Custo
+zero, e decide se §3.4.4 é nota de rodapé ou defeito central.
 
 Detalhe de arquitetura que espelha o QZ: o SS2K injeta a fonte serial no seu pipeline de
 sensores BLE dando a ela **UUID e endereço BLE sintéticos** — `PELOTON_DATA_UUID` e
@@ -389,7 +433,7 @@ Não impede: usar o SS2K como dispositivo — interoperar por BLE é uso, não d
 QZ já faz isso; ler o código para entender a abordagem; reimplementar de forma
 independente.
 
-### 3.4 `Power_Table` do SS2K contra `ergTable` do QZ ⚙️
+### 3.5 `Power_Table` do SS2K contra `ergTable` do QZ ⚙️
 
 | | QZ `ergTable` | SS2K `PowerTable` |
 |---|---|---|
@@ -518,8 +562,18 @@ mais watt por nível**. Os quatro pontos que ancoram a conta têm n = 24, 19, 43
 Frenagem magnética varia com o inverso do quadrado do entreferro, o que produz curva
 convexa e **suave**. O que foi medido tem um degrau em algum lugar entre R=13 e R=16,
 precedido de platô. Degrau é assinatura de mapeamento por tabela, não de física de ímã.
-Isso é **evidência a favor de o teto de 32 ser escolha de firmware** ✅, sem provar onde
-ele mora.
+
+**Ressalva que a §3.4 impõe a esta análise.** Com o desacoplamento confirmado ✅, sabe-se
+que a curva inteira da §2.3 é leitura de uma tabela de firmware indexada pelo alvo — não
+há nada físico nela em ponto nenhum. Logo o cotovelo prova que **a tabela** tem um
+cotovelo, e **não diz nada sobre os ímãs**. A hipótese "o teto de 32 é escolha de
+firmware" continua de pé; a pergunta separada — se existe zona morta *física* entre R 1 e
+13 — tornou-se **inacessível por estes dados** ❓, e só se responde pelo tato ou com
+medidor de potência externo.
+
+**Pergunta de custo zero que ninguém fez ainda:** subindo R de 1 a 13 pedalando, muda
+alguma coisa na perna? Se não muda, a zona morta é física. Se muda progressivamente, ela
+é só da tabela.
 
 ### 5.2 Três hipóteses
 
@@ -568,9 +622,13 @@ Explicitamente, porque a expectativa natural erra aqui.
 2. **Resolução dentro de R 13–32** ❓ — provável, se o atuador for contínuo ou mais fino
    que 32 passos.
 3. **Faixa acima de R=32** ❓ — vale entre nada e ~130 W de topo. §5.3 decide.
-4. **Paddles limpos** ⚙️ — via quadro de botões (§3.2) ou OBC, contornando
+4. **Estado físico real da resistência** ✅ — ganho novo, trazido pela §3.4. Um bridge que
+   leia a posição do atuador (potenciômetro, encoder, contagem de passos) sabe onde o ímã
+   **está**; o console só publica onde ele **deveria estar**. Não produz watt real, mas
+   elimina a ficção do transiente e permite ao QZ saber quando a resistência chegou.
+5. **Paddles limpos** ⚙️ — via quadro de botões (§3.2) ou OBC, contornando
    `gears_from_bike`.
-5. **Latência determinística** no caminho de controle ❓.
+6. **Latência determinística** no caminho de controle ❓.
 
 ---
 
@@ -652,31 +710,35 @@ já diagnosticado, correção localizada, independe de Pi, de bridge e de hardwa
 
 ## 9. Incógnitas, por quanto travam decisão
 
-1. **O atuador tem curso além de R=32, e o platô 1–13 é firmware ou entreferro?** (§5)
-   Decide os ganhos 2, 3 e o item da zona morta em §6. Custo de resolver: zero (§5.3).
-   **Maior retorno por esforço de todo o documento.**
-2. **Existe barramento digital no chicote, e em que nível elétrico?** (§4, §3.3) Decide
+1. **Quantos segundos até o pedal pesar, por tamanho de salto?** (§3.4.4) Decide se o
+   desacoplamento é nota de rodapé ou o defeito central desta bike: com demanda a ~1 Hz e
+   excursões de 15 níveis, um atuador lento pode nunca chegar, e aí a resistência física é
+   um passa-baixa da demanda enquanto o `.fit` registra a demanda. Custo: **zero**.
+2. **O atuador tem curso além de R=32, e existe zona morta física em R 1–13?** (§5)
+   Decide os ganhos 2 e 3 da §6.1. Custo: zero (§5.3), mais a pergunta de tato da §5.1.
+   A parte "é firmware ou entreferro" ficou **inacessível pelos dados de potência** (§5.1).
+3. **Existe barramento digital no chicote, e em que nível elétrico?** (§4, §3.3) Decide
    entre MITM barato e substituição do console, e decide se é seguro encostar um GPIO
    nele. A lição da Peloton diz que a resposta pode ser RS-232 ⚙️. Custo: um multímetro.
-3. **Quais pinos carregam AC ao pedalar?** (§4.1) É o discriminador único que resta
+4. **Quais pinos carregam AC ao pedalar?** (§4.1) É o discriminador único que resta
    entre eixo 2 e eixo 3, agora que a contagem de 5–8 pinos ✅ está fechada. Custo: um
    multímetro.
-4. ~~**A bike é mesmo self-generating, e o console sobrevive à parada?**~~ **Resolvido
+5. ~~**A bike é mesmo self-generating, e o console sobrevive à parada?**~~ **Resolvido
    ✅** (§4.1): é self-generating, e o console **sobrevive** com o BLE vivo — há retenção
    de energia. O risco elétrico da caracterização permanece; a restrição de projeto sobre
    o MITM cai.
-5. **A coexistência central/peripheral no `hci0` do Pi degrada em quanto tempo?** (§2.3)
+6. **A coexistência central/peripheral no `hci0` do Pi degrada em quanto tempo?** (§2.3)
    Decide se o bridge é necessário ou apenas desejável. Custo: uma sessão longa no Pi.
-6. **O log truncado desaparece no Pi?** (§2.4) Decide se a Fase 0 do PLANO-MEGAGYM existe.
-7. **Quanto custa prender o papel de central em `hci1`?** (§2.3) Alternativa barata ao
+7. **O log truncado desaparece no Pi?** (§2.4) Decide se a Fase 0 do PLANO-MEGAGYM existe.
+8. **Quanto custa prender o papel de central em `hci1`?** (§2.3) Alternativa barata ao
    bridge para o ganho nº 1; não avaliada.
-8. **O que o mantenedor respondeu em #2629, e o que faz o PR #4851?** (§3.2) Pode conter
+9. **O que o mantenedor respondeu em #2629, e o que faz o PR #4851?** (§3.2) Pode conter
    orientação de arquitetura que evita retrabalho. Bloqueado por rate limit nesta sessão.
-9. **Qual a forma do sinal de comando do atuador?** (§3.3.2) Que ele existe é dedução
+10. **Qual a forma do sinal de comando do atuador?** (§3.3.2) Que ele existe é dedução
    ✅; o que decide o custo do MITM é se é posição absoluta, step/dir, ou ponte H com
    realimentação fechando no console. Custo de estreitar: **zero** — o ensaio do salto
    10→30 da §3.3.3.
-10. **A velocidade sai da frequência do gerador?** (§4.1) Se sim, existe leitura de
+11. **A velocidade sai da frequência do gerador?** (§4.1) Se sim, existe leitura de
    cadência totalmente passiva e sem risco — o degrau natural para validar o caminho de
    dados serial ponta a ponta antes de qualquer coisa irreversível.
 
