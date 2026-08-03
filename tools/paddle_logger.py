@@ -11,6 +11,8 @@ Uso:
     python paddle_logger.py --scan                 # lista dispositivos
     python paddle_logger.py --name MEGA            # conecta por trecho do nome
     python paddle_logger.py --addr AA:BB:CC:DD:EE:FF
+    python paddle_logger.py --addr AA:BB:CC:DD:EE:FF --test-write 10
+                                                   # tenta ESCREVER resistencia 10
 
 Gera paddle_log.txt no diretorio atual, alem de imprimir na tela.
 
@@ -31,6 +33,12 @@ CHR_INDOOR_BIKE_DATA = "00002ad2-0000-1000-8000-00805f9b34fb"
 CHR_MACHINE_STATUS = "00002ada-0000-1000-8000-00805f9b34fb"
 CHR_MACHINE_FEATURE = "00002acc-0000-1000-8000-00805f9b34fb"
 CHR_CONTROL_POINT = "00002ad9-0000-1000-8000-00805f9b34fb"
+CHR_RESISTANCE_RANGE = "00002ad6-0000-1000-8000-00805f9b34fb"
+
+# Opcodes do Control Point (espelham ftmsbike.h)
+FTMS_REQUEST_CONTROL = 0x00
+FTMS_SET_TARGET_RESISTANCE_LEVEL = 0x04
+FTMS_START_RESUME = 0x07
 
 T0 = time.monotonic()
 LOGFILE = None
@@ -113,8 +121,25 @@ STATUS_OPCODES = {
     0x08: "Target Power alterado",
     0x09: "Target HR alterado",
     0x12: "Indoor Bike Simulation Params alterado",
-    0xFF: "Control Point alterado",
+    0xFF: "Control Permission Lost",
 }
+
+# Codigos de resultado da resposta do Control Point (0x80 <opcode> <resultado>)
+CP_RESULT_CODES = {
+    0x01: "Success",
+    0x02: "Op Code not supported",
+    0x03: "Invalid Parameter",
+    0x04: "Operation Failed",
+    0x05: "Control Not Permitted",
+}
+
+
+def parse_control_point_response(data: bytes) -> str:
+    b = bytes(data)
+    if len(b) >= 3 and b[0] == 0x80:
+        res = CP_RESULT_CODES.get(b[2], f"resultado desconhecido 0x{b[2]:02X}")
+        return f"resposta ao opcode 0x{b[1]:02X} -> {res}"
+    return "formato inesperado"
 
 
 def parse_machine_status(data: bytes) -> str:
@@ -162,10 +187,106 @@ class Tracker:
             self.last_change_t = now
 
 
+# ---------------------------------------------------------------- teste de escrita
+
+async def test_write(client, level: int, estado: dict) -> None:
+    """Escreve no 0x2AD9 e loga as respostas (indicate) e o STAT 07 resultante.
+
+    Testa os DOIS formatos do parametro de resistencia:
+      A) nivel x 10, little-endian  -> o que o QZ manda em ftmsbike.cpp:374-376
+      B) nivel inteiro puro         -> hipotese, ja que a bike REPORTA uint8 puro
+
+    ESPERA a bike estar pedalando antes de escrever: na rodada de 2026-08-01 a
+    bike respondeu Success ao formato B mas NAO mudou a resistencia, e estava
+    parada (cadence=0) o teste inteiro - resultado inconclusivo.
+    """
+    respostas: "asyncio.Queue[bytes]" = asyncio.Queue()
+
+    def on_cp(_, data: bytearray):
+        b = bytes(data)
+        emit(f"[{ts()}] CP<< {b.hex('-')}  | {parse_control_point_response(b)}")
+        respostas.put_nowait(b)
+
+    try:
+        await client.start_notify(CHR_CONTROL_POINT, on_cp)
+        emit(f"[{ts()}] indicate ON: 0x2AD9 (Control Point)")
+    except Exception as e:
+        emit(f"[{ts()}] 0x2AD9 indisponivel para indicate: {e} - abortando teste")
+        return
+
+    async def escreve(payload: bytes, descricao: str) -> bool:
+        while not respostas.empty():
+            respostas.get_nowait()
+        emit(f"[{ts()}] CP>> {payload.hex('-')}  | {descricao}")
+        try:
+            await client.write_gatt_char(CHR_CONTROL_POINT, payload, response=True)
+        except Exception as e:
+            emit(f"[{ts()}] falha na escrita: {e}")
+            return False
+        try:
+            resp = await asyncio.wait_for(respostas.get(), timeout=3.0)
+        except asyncio.TimeoutError:
+            emit(f"[{ts()}] SEM RESPOSTA em 3s")
+            return False
+        return len(resp) >= 3 and resp[0] == 0x80 and resp[2] == 0x01
+
+    emit("\n=== TESTE DE ESCRITA NO CONTROL POINT ===")
+    emit(">>> COMECE A PEDALAR. O teste so escreve com a bike em movimento. <<<")
+
+    espera_ate = time.monotonic() + 60.0
+    while estado.get("cadence", 0) <= 0:
+        if time.monotonic() > espera_ate:
+            emit(f"[{ts()}] 60s sem cadencia - escrevendo com a bike PARADA "
+                 f"(resultado sera inconclusivo se nada mudar)")
+            break
+        await asyncio.sleep(0.5)
+    else:
+        emit(f"[{ts()}] cadencia detectada ({estado['cadence']} rpm) - iniciando")
+
+    ok = await escreve(bytes([FTMS_REQUEST_CONTROL]), "Request Control")
+    if not ok:
+        emit(f"[{ts()}] Request Control falhou - os testes abaixo provavelmente "
+             f"vao dar 'Control Not Permitted'")
+
+    # O QZ faz REQUEST_CONTROL -> START_RESUME (ftmsbike.cpp:171-195)
+    await escreve(bytes([FTMS_START_RESUME]), "Start/Resume")
+
+    for descricao, valor in (
+        (f"Set Target Resistance FORMATO A (nivel {level} x 10)", level * 10),
+        (f"Set Target Resistance FORMATO B (nivel {level} puro)", level),
+    ):
+        antes = estado.get("resistance")
+        payload = bytes([FTMS_SET_TARGET_RESISTANCE_LEVEL,
+                         valor & 0xFF, (valor >> 8) & 0xFF])
+        aceito = await escreve(payload, descricao)
+        emit(f"[{ts()}] -> ACK {'ACEITO' if aceito else 'RECUSADO/sem resposta'}; "
+             f"resistencia antes={antes}; aguardando 5s (pedale!)")
+        await asyncio.sleep(5.0)
+        depois = estado.get("resistance")
+        if depois == level:
+            veredito = f"APLICOU: resistencia chegou em {depois} (= solicitado)"
+        elif depois != antes:
+            veredito = (f"MUDOU mas nao bate: {antes} -> {depois}, "
+                        f"solicitado {level} (checar escala)")
+        else:
+            veredito = (f"NAO APLICOU: resistencia continua {depois} "
+                        f"{'apesar do ACK de sucesso' if aceito else ''}")
+        emit(f"[{ts()}] === VEREDITO {descricao}: {veredito}")
+
+    emit(f"=== FIM DO TESTE (solicitado nivel {level}). ===\n")
+
+    try:
+        await client.stop_notify(CHR_CONTROL_POINT)
+    except Exception:
+        pass
+
+
 # ---------------------------------------------------------------- main
 
-async def run(address: str) -> None:
+async def run(address: str, write_level: int = None) -> None:
     tracker = Tracker()
+    # ultimo IBD visto; o teste de escrita le daqui pra saber se aplicou
+    estado = {}
 
     emit(f"# sessao iniciada {datetime.now().isoformat(timespec='seconds')}")
     emit(f"# alvo: {address}")
@@ -190,14 +311,31 @@ async def run(address: str) -> None:
             target = int.from_bytes(feat[4:8], "little")
             emit(f"[{ts()}] machine_features=0x{machine:08X} "
                  f"target_features=0x{target:08X}")
+            emit(f"[{ts()}] bit2  (Resistance Target)      = "
+                 f"{'SIM' if target & (1 << 2) else 'NAO'}")
+            emit(f"[{ts()}] bit3  (Power Target / ERG)     = "
+                 f"{'SIM' if target & (1 << 3) else 'NAO'}")
             emit(f"[{ts()}] bit13 (Indoor Bike Simulation) = "
                  f"{'SIM' if target & (1 << 13) else 'NAO'}")
-            emit(f"[{ts()}] bit12 (Power Target)           = "
-                 f"{'SIM' if target & (1 << 12) else 'NAO'}")
-            emit(f"[{ts()}] bit11 (Resistance Target)      = "
-                 f"{'SIM' if target & (1 << 11) else 'NAO'}")
         except Exception as e:
             emit(f"[{ts()}] falha lendo 0x2ACC: {e}")
+
+        # 0x2AD6 - Supported Resistance Level Range: 3 x sint16 (min, max, incremento)
+        try:
+            rng = await client.read_gatt_char(CHR_RESISTANCE_RANGE)
+            emit(f"[{ts()}] 0x2AD6 raw = {rng.hex('-')}")
+            if len(rng) >= 6:
+                mn = int.from_bytes(rng[0:2], "little", signed=True)
+                mx = int.from_bytes(rng[2:4], "little", signed=True)
+                inc = int.from_bytes(rng[4:6], "little", signed=True)
+                emit(f"[{ts()}] resistencia: min={mn} max={mx} incremento={inc} "
+                     f"(bruto, sem aplicar resolucao)")
+                emit(f"[{ts()}] se resolucao 0.1 -> min={mn / 10} max={mx / 10} "
+                     f"incremento={inc / 10}")
+            else:
+                emit(f"[{ts()}] 0x2AD6 curto demais ({len(rng)} bytes)")
+        except Exception as e:
+            emit(f"[{ts()}] falha lendo 0x2AD6: {e}")
 
         def on_ibd(_, data: bytearray):
             d = parse_indoor_bike_data(bytes(data))
@@ -205,6 +343,11 @@ async def run(address: str) -> None:
             campos = " ".join(f"{k}={v}" for k, v in d.items()
                               if not k.startswith("_"))
             emit(f"[{ts()}] IBD  {raw}  | {campos}")
+            # os dois pacotes que a bike alterna carregam campos diferentes;
+            # so atualiza o que veio, senao um zera o outro
+            for k in ("cadence", "resistance"):
+                if k in d:
+                    estado[k] = d[k]
             tracker.feed(d.get("resistance"), "0x2AD2")
 
         def on_status(_, data: bytearray):
@@ -232,6 +375,9 @@ async def run(address: str) -> None:
         if not started:
             emit("nenhuma notificacao disponivel - abortando")
             return
+
+        if write_level is not None:
+            await test_write(client, write_level, estado)
 
         emit("\n=== PEDALE E APERTE OS PADDLES. Ctrl+C para encerrar. ===")
         emit("=== sugestao: 1 toque, espere 3s, 1 toque, espere 3s,")
@@ -276,6 +422,9 @@ def main() -> None:
     ap.add_argument("--addr", help="endereco MAC / UUID do dispositivo")
     ap.add_argument("--name", help="trecho do nome do dispositivo")
     ap.add_argument("--out", default="paddle_log.txt", help="arquivo de log")
+    ap.add_argument("--test-write", type=int, metavar="N",
+                    help="apos conectar, tenta ajustar a resistencia para o nivel N "
+                         "pelo Control Point (0x2AD9), nos dois formatos possiveis")
     args = ap.parse_args()
 
     if args.scan:
@@ -292,7 +441,7 @@ def main() -> None:
         raise SystemExit("use --scan, --addr ou --name")
 
     try:
-        asyncio.run(run(addr))
+        asyncio.run(run(addr, args.test_write))
     except KeyboardInterrupt:
         emit("\ninterrompido pelo usuario")
 
