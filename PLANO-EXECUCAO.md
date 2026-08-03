@@ -15,7 +15,8 @@
 **Nenhum critério de aceitação deste plano pode envolver "a potência bate com o alvo".**
 
 A potência publicada pela bike é `f(nível-alvo, cadência)`, calculada sobre o alvo e não
-sobre a posição dos ímãs (`VIABILIDADE` §3.4) ✅. Qualquer laço que feche sobre ela fecha
+sobre a posição dos ímãs (`VIABILIDADE` §3.4) ✅ — **provado pelo teste 1.5**, que fecha o
+argumento sem instrumento externo. Qualquer laço que feche sobre ela fecha
 sobre o próprio comando do QZ e passa por construção.
 
 Onde o `PLANO-MEGAGYM` pede *"potência dentro de ±10 W do alvo"* ou *"potência segue o
@@ -115,7 +116,105 @@ Também custo zero. Três observações:
 
 **Artefatos:** fotos · tabela de tempos.
 
-### 1.5 Calibração da `ergTable` — só se quiser ERG
+### 1.5 Prova do desacoplamento ★★ — sem instrumento externo
+
+O §0 deste plano descarta todos os critérios de potência com base na afirmação de que
+`W = f(R_alvo, cadência)`. Essa afirmação precisa de prova, e ela sai de dois testes que
+juntos fecham o argumento. Nenhum exige compra.
+
+**As três hipóteses a discriminar:**
+
+| | |
+|---|---|
+| **H0** | `W = f(R_alvo, cadência)` — sobre o comando |
+| **H1** | `W = f(R_físico, cadência)` — sobre a posição dos ímãs, por tabela |
+| **H2** | `W` é medido (extensômetro, corrente do gerador, corrente do motor) |
+
+A dispersão de 0,00 W em 99/99 combinações (`PLANO-MEGAGYM` §2.2) ✅ **já derruba H2** —
+nenhuma medição tem ruído zero. Falta separar H0 de H1, e para isso é preciso um regime em
+que `R_alvo ≠ R_físico`. O atraso do atuador (1.3) é exatamente esse regime.
+
+#### 1.5.a Resíduo nulo no transiente — mostra que `W` só depende do reportado
+
+Com o par (cadência, resistência) da tabela da 1.6 — ou da curva de `PLANO-MEGAGYM` §2.3 —
+prever `W` a cada amostra a partir de **`R_reportado` e `cadência_reportada`**, e calcular
+o resíduo `W_observado − W_previsto`.
+
+Fazer isso **durante** um salto grande (10→30), não em regime permanente.
+
+| Resultado | Leitura |
+|---|---|
+| Resíduo **identicamente zero** em todas as amostras, inclusive no transiente | `W` é função pura dos valores publicados — nada físico entra |
+| Resíduo negativo e decrescente durante a subida | `W` acompanha os ímãs → H1 |
+
+> Não normalizar "no olho" pela cadência: ela cai quando a resistência sobe, e isso
+> confunde. Prever com a cadência **observada em cada amostra** elimina o problema.
+
+#### 1.5.b Desaceleração da roda de inércia — a parte objetiva ★
+
+Esta é a peça que fecha a prova, e ela é **física de verdade, já gravada no log**: o
+`0x2AD2` da bike carrega velocidade no segundo pacote (`PLANO-MEGAGYM` §2.1) ✅. A taxa de
+desaceleração do volante é proporcional ao torque de frenagem — ou seja, à posição real
+dos ímãs.
+
+Três corridas, partindo de velocidade alta para alongar a curva:
+
+| # | Procedimento | Produz |
+|---|---|---|
+| C1 | Estabilizar em R=13, acelerar, **parar de pedalar** | curva de decaimento A |
+| C2 | Idem em R=32 | curva B, bem mais íngreme |
+| C3 | Estabilizar em R=13, acelerar e **comandar R=32 no mesmo instante em que para de pedalar** | ver abaixo |
+
+| C3 mostra | Leitura |
+|---|---|
+| Decaimento começa como A e **vai se inclinando** até B ao longo de N segundos | N é o tempo de chegada física dos ímãs, medido **objetivamente** |
+| Decaimento é B desde o primeiro instante | Não há atraso físico — H0 cai |
+
+**O teste se autovalida.** Se o canal de velocidade da bike fosse sintético a partir da
+potência, com cadência zero ele iria a zero de uma vez. Decaimento suave e contínuo prova
+que a velocidade vem do volante — e portanto que a curva é física.
+
+> **Roda-livre:** se a bike for de transmissão fixa, os pedais continuam girando; deixar as
+> pernas serem levadas passivamente, sem aplicar torque, em vez de tirar os pés.
+>
+> **Amostragem:** o pacote com velocidade chega a cada ~2 s (os dois `0x2AD2` se alternam)
+> ✅. Uma queda de 10 s rende ~5 pontos. Partir de velocidade alta e **repetir 3× cada
+> corrida** para empilhar.
+
+#### 1.5.c A conclusão
+
+- **1.5.a** ⇒ `W` é função exata de `R_reportado` e `cadência_reportada`.
+- **1.5.b** ⇒ `R_reportado ≠ R_físico` durante N segundos, objetivamente.
+- Logo `W ≠ f(R_físico)`. **H1 cai, e sobra H0.** ∎
+
+| Aceita se | |
+|---|---|
+| Resíduo da 1.5.a estatisticamente indistinguível de zero no transiente | ✅ |
+| C3 mostra inclinação progressiva de A para B | ✅ |
+
+**Artefatos:** log do QZ das três corridas · série de resíduos · as três curvas de
+decaimento sobrepostas.
+
+#### 1.5.d Corroboração dramática, e mede a §3.4.4 de quebra
+
+Comandar R alternando **13 ↔ 32 a cada 2 s**, mais rápido do que o atuador consegue
+seguir, pedalando de forma estável.
+
+O watt publicado deve varrer a amplitude inteira — 111 ↔ 316 W a 80 rpm — em onda
+quadrada, enquanto a perna sente uma variação bem menor e suavizada. Amplitude total no
+número contra amplitude parcial na perna **é** o desacoplamento, visível a olho nu.
+
+Isso também é a medição da `VIABILIDADE` §3.4.4: se o atuador não acompanha 2 s, não
+acompanha a demanda do MyWhoosh a ~1005 ms de mediana.
+
+#### 1.5.e O limite honesto
+
+Isto prova que `W` é calculado sobre o alvo. **Não prova qual é o watt verdadeiro** — para
+isso, e só para isso, é preciso pedal ou pedivela com extensômetro (`VIABILIDADE` §7.3).
+
+---
+
+### 1.6 Calibração da `ergTable` — só se quiser ERG
 
 Pular se você só vai fazer free ride. Se quiser treino estruturado, é o `PLANO-MEGAGYM`
 Fase 2 sem alterações: degraus **R = 5, 8, 11, 14, 17, 20, 23, 26, 29, 32**, ~2 min cada a
@@ -133,7 +232,7 @@ Fase 2 sem alterações: degraus **R = 5, 8, 11, 14, 17, 20, 23, 26, 29, 32**, ~
 **Artefatos:** log · **valor da chave `ergDataPoints`** extraído das settings — é o que
 viaja para o Pi na Etapa 3, numa linha só (`VIABILIDADE` §2.2.1) ⚙️.
 
-**Portão da Etapa 1:** 1.1 e 1.2 aprovados. 1.3 e 1.4 executados e registrados.
+**Portão da Etapa 1:** 1.1, 1.2 e 1.5 aprovados. 1.3 e 1.4 executados e registrados.
 
 ---
 
@@ -343,7 +442,8 @@ quase nulo, e prova o caminho serial dentro do QZ antes de algo irreversível.
 | 1.2 ★ | ✔ | ✔ | **as três médias — referência do plano** |
 | 1.3 ★ | ✔ | — | tabela de `t_reportado` e `t_sentido` |
 | 1.4 | — | — | fotos do entreferro · tempos de motor |
-| 1.5 | ✔ | — | valor de `ergDataPoints` |
+| 1.5 ★ | ✔ | — | série de resíduos · 3 curvas de decaimento |
+| 1.6 | ✔ | — | valor de `ergDataPoints` |
 | 2.2 | — | — | log de marchas dos dois lados |
 | 2.3 ★ | ✔ | ✔ | médias vs. 1.2 |
 | 3.2 | ✔ | ✔ | médias vs. 1.2 |
