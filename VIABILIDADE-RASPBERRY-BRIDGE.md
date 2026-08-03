@@ -662,6 +662,55 @@ Explicitamente, porque a expectativa natural erra aqui.
    `gears_from_bike`.
 7. **Latência determinística** no caminho de controle ❓.
 
+### 6.2 Balanço da rota com fio, pesado ✅⚙️❓
+
+Os ganhos da §6.1 não têm o mesmo peso, e a diferença importa mais que a lista.
+
+| Ganho | Estado real |
+|---|---|
+| 1. Rádio do Pi | **Seguro contra um risco não medido.** A degradação BLE (§2.3) tem reportes upstream mas **nenhuma medição nesta configuração** ❓. É a justificativa principal da rota inteira, e está apoiada em incógnita. |
+| 2. 12 níveis físicos | Real ✅ — mas para usá-los é preciso um modelo de potência próprio, o que sem medidor externo é **trocar a ficção da YPOO pela sua** (§5.1.1, §7.3). Só se realiza por inteiro com o item de R$ 2–4 mil. |
+| 3. Estado físico real | Real ✅ — mas só vale o que valer o atraso, que é a incógnita nº 1 e **custa zero medir**. |
+| 4. Paddles limpos | Real, pequeno, e é **defeito de código do QZ** (`bike.cpp:73`, `ftmsbike.cpp:509`) com contorno documentado. Não precisa de hardware. |
+| 5. Latência de controle | Marginal — o elemento lento é o atuador, não o BLE. |
+
+**Leitura:** de cinco ganhos, um é seguro contra risco não medido, dois estão travados
+atrás de medições que custam zero, um exige uma compra cara para valer de verdade, e um
+não precisa da rota.
+
+Riscos, na ordem em que machucam:
+
+| Risco | Peso |
+|---|---|
+| **Elétrico.** AC de gerador, possivelmente trifásica, com corrente real; precedente Peloton mostra que console pode ser RS-232 (±15 V). Uma ponta de prova errada mata o console — a peça mais cara e, numa YPOO rebrandeada no Brasil, provavelmente irreparável ❓ | **Alto** |
+| **Assumir o laço inteiro.** Se o comando for ponte H com realimentação fechando no console (§3.3.2), interceptar exige substituir a função de controle: acionamento, realimentação, homing, proteção de fim de curso, com um conjunto de ímãs que pode travar | **Alto** |
+| **Perder o número de potência e ter de inventar outro.** Invalida a `ergTable` e o produto da Fase 2 (§8.1), e cria descontinuidade com o histórico e o Strava | Médio-alto |
+| **Zero arte prévia.** Nada de YPOO em lugar nenhum ⚙️. E o Trixter tinha protocolo completo *e* PR — e morreu assim mesmo (§3.2). A taxa-base de conclusão desse tipo de projeto é ruim | Médio |
+| **Plumbing no QZ.** Device novo, settings, catálogo, e a pegadinha do `deviceDiscovered()` se o console sair do circuito (§3.1) | Médio-baixo, bem precedentado |
+
+#### 6.2.1 A consequência de sequenciamento
+
+**Nenhum ganho precisa que se toque no chicote para ser avaliado.** Três medições de custo
+zero podem derrubar ou fechar o caso:
+
+1. Rodar o QZ no Pi por sessões longas com a bike no BLE → se não degradar, **o ganho 1
+   evapora, e com ele a motivação principal**.
+2. Cronometrar o atraso do atuador por tamanho de salto → se for pequeno, o ganho 3 evapora.
+3. Decidir sobre o medidor de potência → sem ele, o ganho 2 vale metade.
+
+Se as três voltarem "sem problema", a rota é projeto de hobby, não solução.
+
+#### 6.2.2 Degrau intermediário: bridge só-leitura ❓
+
+Existe uma versão de risco muito menor, que o documento ainda não tinha nomeado: **tap
+passivo, sem injeção.** Ler frequência do gerador para cadência e posição do atuador para
+estado real da resistência, mantendo o **controle por FTMS**, que já funciona ✅.
+
+- Entrega o ganho 3 inteiro e parte do 5; **não entrega o ganho 1**.
+- Risco elétrico cai a quase nada: não se corta nada, não se injeta nada.
+- Prova o caminho serial ponta a ponta dentro do QZ antes de qualquer passo irreversível.
+- Se a cadência sair da frequência do gerador (incógnita nº 11), é um tap de dois fios.
+
 ---
 
 ## 7. Ferramental a adquirir
