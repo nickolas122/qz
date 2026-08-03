@@ -118,12 +118,35 @@ Saltos de **1, 5 e 20 níveis**, três repetições cada, subindo e descendo.
 > Cronometrar pelo **ruído do motor**, nunca por bipe ou LED: eles pertencem ao tratador de
 > entrada do knob e não acompanham o atuador (`VIABILIDADE` §3.3.3) ✅.
 
-**Não tem critério de aceitação — é caracterização.** A regra de decisão:
+**Não tem critério de aceitação — é caracterização.**
 
-| Resultado | Consequência |
-|---|---|
-| `t_sentido` de 20 níveis < ~1 s | Desacoplamento é nota de rodapé |
-| `t_sentido` > ~2 s | Com demanda a ~1005 ms de mediana e excursão de 15 níveis entre p5 e p95 (`PLANO-MEGAGYM` §4.2) ✅, **o atuador nunca chega**. A resistência física vira passa-baixa da demanda enquanto o `.fit` registra a demanda |
+#### Resultado medido ✅
+
+Estimativa a olho, ainda não cronometrada com precisão:
+
+| Sentido | Taxa | 19 níveis (13↔32) | 5 níveis |
+|---|---|---|---|
+| **Subida** | 2–3 níveis/s | **6,3 – 9,5 s** | 1,7 – 2,5 s |
+| **Descida** | 4–5 níveis/s | 3,8 – 4,8 s | 1,0 – 1,3 s |
+
+**O atuador é ~2× mais rápido para aliviar do que para carregar.** ✅
+
+Duas consequências, e a segunda é a que importa para o uso real:
+
+**1. O limiar de 2 s da regra de decisão é ultrapassado já em saltos de 5 níveis na
+subida.** Com a demanda do MyWhoosh a ~1005 ms de mediana (`PLANO-MEGAGYM` §4.2) ✅, o
+atuador avança no máximo 2–3 níveis por ciclo de demanda subindo. Ele só acompanha se
+demandas consecutivas diferirem de ≤ 2–3 níveis; acima disso **fica permanentemente
+atrás**. A `VIABILIDADE` §3.4.4 deixa de ser hipótese.
+
+**2. A assimetria enviesa o esforço numa direção só.** Sobe devagar, desce rápido ⇒ em
+terreno ondulado a resistência física fica **sistematicamente abaixo** do pedido nas
+subidas e em dia nas descidas. O pedal é fisicamente mais leve do que o número diz, e o
+viés não se cancela ao longo da sessão — acumula.
+
+> **Pista para a Etapa 4:** aliviar mais rápido que carregar sugere que o atuador trabalha
+> *contra* algo que ajuda no retorno — mola, atração magnética do próprio conjunto, ou
+> gravidade. Estreita as subvariantes do eixo 2 (`VIABILIDADE` §4.1) ❓.
 
 #### 1.3.a Knob contra FTMS — teste de brinde ★
 
@@ -135,13 +158,18 @@ O knob andar de 1 em 1 não atrapalha: **vira baseline de comparação.** Fazer 
 | Knob | 19 cliques, o mais rápido que der |
 | FTMS | um toque no preset 5 |
 
-| Resultado | Leitura |
-|---|---|
-| FTMS faz **uma corrida contínua** do motor, mais rápida que os 19 cliques | O console recebe posição absoluta e executa um movimento só — comando absoluto no chicote, **MITM barato** |
-| FTMS soa igual aos 19 cliques (rajadas discretas) | O console decompõe internamente em passos por nível |
+#### Resultado medido ✅
 
-Estreita a incógnita nº 10 da `VIABILIDADE` (qual a forma do sinal de comando do atuador)
-sem abrir nada.
+**Corrida contínua do motor** em trocas grandes ✅ — não são rajadas por nível.
+
+O console **recebe posição absoluta e executa um movimento só**. Junto com a assimetria
+subida/descida, aponta para acionamento contínuo com realimentação de posição, não para
+step/dir por nível.
+
+Estreita a incógnita nº 10 da `VIABILIDADE` sem abrir nada: das três formas possíveis do
+sinal de comando (§3.3.2), **step/dir por nível fica improvável**; sobram posição absoluta
+a atuador inteligente (MITM barato) e ponte H com realimentação fechando no console (MITM
+caro). Só a medição elétrica da Etapa 4 separa as duas.
 
 **Artefatos:** tabela de tempos · gravação de áudio das duas formas · log do QZ.
 
@@ -178,6 +206,14 @@ juntos fecham o argumento. Nenhum exige compra.
 A dispersão de 0,00 W em 99/99 combinações (`PLANO-MEGAGYM` §2.2) ✅ **já derruba H2** —
 nenhuma medição tem ruído zero. Falta separar H0 de H1, e para isso é preciso um regime em
 que `R_alvo ≠ R_físico`. O atraso do atuador (1.3) é exatamente esse regime.
+
+**Evidência qualitativa já observada ✅:** em trocas rápidas de nível, mantendo a cadência
+porque a resistência ainda não chegou, a potência publicada dá **pico** — salta de uma vez
+para o valor do nível novo. Sob H1 ela subiria em **rampa** ao longo dos 6–10 s de chegada
+física. Pico e não rampa é a assinatura de H0.
+
+Falta a versão quantitativa abaixo. E a janela medida na 1.3 favorece muito o teste: 6–10 s
+de transiente na subida rendem 6–10 amostras a 1 Hz — folga de sobra.
 
 #### 1.5.a Resíduo nulo no transiente — mostra que `W` só depende do reportado
 
