@@ -489,7 +489,11 @@ void ftmsbike::update() {
         auto virtualBike = this->VirtualBike();        
         bool gears_zwift_ratio = settings.value(QZSettings::gears_zwift_ratio, QZSettings::default_gears_zwift_ratio).toBool();
 
-        if (requestResistance != -1 || lastGearValue != gears()) {
+        // servicesDiscovered gates this whole section: before GATT discovery completes,
+        // writeCharacteristic() bails out on a null gattFTMSService without queueing anything, and the
+        // lastGearValue update at the bottom would consume the one-shot gear trigger anyway, so init()
+        // would never run again for the rest of the session and the bike would never get START_RESUME.
+        if (servicesDiscovered && (requestResistance != -1 || lastGearValue != gears())) {
             bool deferResistanceRequest = false;
             if (requestResistance > 100) {
                 requestResistance = 100;
@@ -615,7 +619,9 @@ void ftmsbike::update() {
             writeCharacteristicZwiftPlay(gearApply, sizeof(gearApply), "gearApply", false, true);
         }
 
-        lastGearValue = gears();
+        // Only consume the gear trigger once the writes above could actually reach the bike.
+        if (servicesDiscovered)
+            lastGearValue = gears();
 
         // Power request routing logic:
         // 1. No virtualBike: route directly to bike
@@ -1798,6 +1804,10 @@ void ftmsbike::stateChanged(QLowEnergyService::ServiceState state) {
             homeform::singleton()->setToastRequested("PM5 rower found. Restart QZ to apply the fix, thanks.");
     }
 
+    // From here on gattFTMSService is either valid or genuinely absent for this bike, so update() can
+    // act on it. Bikes without a FTMS service reach this line too, and keep behaving as before.
+    servicesDiscovered = true;
+
     if (gattFTMSService && gattWriteCharControlPointId.isValid() &&
         (settings.value(QZSettings::hammer_racer_s, QZSettings::default_hammer_racer_s).toBool() || SCH_290R || SMB1 || FIT_BK)) {
         init();
@@ -1974,7 +1984,6 @@ void ftmsbike::ftmsCharacteristicChanged(const QLowEnergyCharacteristic &charact
 }
 
 void ftmsbike::descriptorWritten(const QLowEnergyDescriptor &descriptor, const QByteArray &newValue) {
-    static bool connectedAndDiscoveredOk = false;
     emit debug(QStringLiteral("descriptorWritten ") + descriptor.name() + QStringLiteral(" ") + newValue.toHex(' '));
 
     initRequest = true;
@@ -2324,6 +2333,7 @@ void ftmsbike::controllerStateChanged(QLowEnergyController::ControllerState stat
     if (state == QLowEnergyController::UnconnectedState && m_control) {
         qDebug() << QStringLiteral("trying to connect back again...");
         initDone = false;
+        servicesDiscovered = false;
         gearInclinationSent = false;
         m_control->connectToDevice();
     }

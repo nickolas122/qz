@@ -153,6 +153,15 @@ class ftmsbike : public bike {
 
     bool initDone = false;
     bool initRequest = false;
+    // Set once stateChanged() has finished walking the discovered services, i.e. once gattFTMSService
+    // and gattWriteCharControlPointId reflect what the bike actually exposes. The controller reaches
+    // DiscoveredState before that walk runs, so update() can otherwise fire into a null service and
+    // silently drop the control point writes.
+    bool servicesDiscovered = false;
+    // Guards connectedAndDiscovered() against the several descriptorWritten() callbacks of a single
+    // connection. Must be per-instance: as a function-local static it stayed true for the lifetime of
+    // the process, so a bike reconnecting into a fresh ftmsbike object never signalled at all.
+    bool connectedAndDiscoveredOk = false;
 
     bool noWriteResistance = false;
     bool noHeartService = false;

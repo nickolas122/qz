@@ -180,6 +180,13 @@ bluetooth::bluetooth(bool logs, const QString &deviceName, bool noWriteResistanc
             discoveryTimeout.start(15000);
         }
 
+        // Keep scanning for as long as no device has been picked up: a scan that ends empty is
+        // rescheduled instead of being the last one, so a bike switched on after QZ is still found.
+        // The small gap avoids a busy loop when the adapter is off and start()/finished() fire back
+        // to back, and keeps us well inside Android's "5 scan starts per 30s" throttling.
+        rescanTimer.setSingleShot(true);
+        connect(&rescanTimer, &QTimer::timeout, this, &bluetooth::startDiscovery);
+
         // Start a discovery
 #ifndef Q_OS_WIN
         discoveryAgent->setLowEnergyDiscoveryTimeout(10000);
@@ -196,7 +203,36 @@ bluetooth::~bluetooth() {
     }*/
 }
 
-void bluetooth::signalBluetoothDeviceConnected(bluetoothdevice *b) { emit this->bluetoothDeviceConnected(b); }
+void bluetooth::signalBluetoothDeviceConnected(bluetoothdevice *b) {
+    // Every device declares its own disconnected() signal rather than inheriting one from
+    // bluetoothdevice, so this has to go through the string-based form: it resolves against the
+    // runtime metaobject of whatever concrete device we were handed. Without this the bike powering
+    // off left its object alive forever, which kept device() non-null, kept finished() bailing out
+    // early and kept the "!ftmsBike" guards in deviceDiscovered() from ever re-creating it -- so
+    // turning the bike back on did nothing until QZ was restarted.
+    if (b) {
+        connect(b, SIGNAL(disconnected()), this, SLOT(deviceDisconnected()), Qt::UniqueConnection);
+    }
+    emit this->bluetoothDeviceConnected(b);
+}
+
+void bluetooth::deviceDisconnected() {
+    if (restartRequested) {
+        return;
+    }
+    restartRequested = true;
+
+    qDebug() << QStringLiteral("bluetooth::deviceDisconnected, scheduling a restart of the discovery");
+
+    // Deferred to the next event loop pass on purpose: restart() deletes the very object whose
+    // signal we are handling, so running it inline would free the emitter mid-emission. The flag is
+    // cleared only after restart() returns, so anything re-emitted while tearing devices down is
+    // swallowed instead of queueing a second restart.
+    QTimer::singleShot(0, this, [this]() {
+        this->restart();
+        restartRequested = false;
+    });
+}
 
 void bluetooth::finished() {
     if (discoveryFinishedHandled)
@@ -297,13 +333,23 @@ void bluetooth::finished() {
         forceHeartBeltOffForTimeout = true;
     }
 
-    this->startDiscovery();
+    rescanTimer.start(1000);
 }
 
 void bluetooth::startDiscovery() {
 
     if (!this->useDiscovery)
         return;
+
+    if (!this->discoveryAgent) {
+        qDebug() << "bluetooth::startDiscovery() called when discoveryAgent is not defined. ";
+        return;
+    }
+
+    rescanTimer.stop();
+    // discoveryFinishedHandled only has to keep the watchdog and the agent's own finished() from
+    // both handling the *same* scan; every new scan gets to report its own end.
+    discoveryFinishedHandled = false;
 
 #ifndef Q_OS_IOS
     QSettings settings;
@@ -328,6 +374,7 @@ void bluetooth::startDiscovery() {
 }
 
 void bluetooth::stopDiscovery() {
+    rescanTimer.stop();
     if (this->discoveryAgent)
         this->discoveryAgent->stop();
     else

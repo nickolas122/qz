@@ -372,6 +372,19 @@ class bluetooth : public QObject, public SignalHandler {
     QTimer discoveryTimeout;
     bool discoveryFinishedHandled = false;
 
+    /**
+     * @brief Collapses a burst of disconnected() signals into a single restart. Devices such as
+     * ftmsbike re-emit it from update() on every poll tick while the link is down, and restart()
+     * deletes the emitter, so it must run once and outside the emitter's call stack.
+     */
+    bool restartRequested = false;
+
+    /**
+     * @brief Re-arms the discovery agent a short while after a scan ends without a match, so QZ
+     * keeps looking for the device instead of giving up after the first sweep.
+     */
+    QTimer rescanTimer;
+
 #ifdef Q_OS_IOS
     lockscreen *h = nullptr;
 #endif
@@ -431,6 +444,7 @@ class bluetooth : public QObject, public SignalHandler {
 #endif
     void canceled();
     void finished();
+    void deviceDisconnected();
     void speedChanged(double);
     void inclinationChanged(double, double);
     void connectedAndDiscovered();
