@@ -1,0 +1,477 @@
+# QZ no Raspberry Pi e bridge com fio na megagym — viabilidade
+
+> **Documento de viabilidade, não plano de execução.** Avalia rotas, custos, riscos e
+> incógnitas para dois objetivos, e entrega os critérios que decidem entre eles. Não
+> há fases numeradas nem cronograma: as decisões que os determinariam ainda não têm
+> evidência.
+>
+> Complementa `PLANO-MEGAGYM.md` (branch `docs/plano-megagym`), que caracterizou a
+> bike YPOO `YPBM001264` e diagnosticou os defeitos. Este documento herda os fatos de
+> lá e não os repete — só os cita.
+
+**Convenção:** ✅ medido · ⚙️ verificado no código · ❓ desconhecido. Toda afirmação
+carrega marca; a ausência de marca é erro de redação.
+
+---
+
+## 1. TL;DR
+
+1. **Migrar o QZ para o Pi é caminho batido.** O CI já produz e testa binários armv6hf
+   e aarch64 a cada push. ⚙️
+2. **O preço da migração é a interface.** O Pi não compila o servidor HTTP — sem GUI e
+   sem web UI, a configuração vira arquivo `.conf` e flags de CLI. ⚙️
+3. **O maior prêmio do bridge não é resistência, é o rádio.** Um único `hci0` fazendo
+   central e peripheral ao mesmo tempo é o risco central da migração; tirar a bike do
+   BLE resolve. ⚙️❓
+4. **A bike é self-generating.** O chicote carrega energia, não só sinal. Isso eleva o
+   risco da caracterização, obriga o bridge a ter alimentação própria — e abre a
+   possibilidade de ler cadência pela frequência do gerador, de forma passiva. ❓
+5. **O QZ já tem toda a infraestrutura para uma bike por serial.** Cinco devices seriais
+   em produção, transporte `termios` cru sem dependência nova, e um ponto de entrada que
+   ganha prioridade sobre a detecção BLE da bike. ⚙️
+6. **O upstream tem três pedidos de bridge de hardware e zero entregas.** O que chegou
+   mais longe — Trixter X-Dream, protocolo completo e PR — está aberto e não mergeado. ⚙️
+7. **O bridge não produz watt real.** Nenhuma variante dele produz. Só pedivela ou pedal
+   com extensômetro. ✅
+8. **Há uma decisão de ordem que custa trabalho se for ignorada:** calibrar a `ergTable`
+   antes de decidir a escala de resistência é jogar a calibração fora. ⚙️
+
+---
+
+## 2. Objetivo 1 — QZ no Raspberry Pi
+
+### 2.1 O que já existe ⚙️
+
+| Job | Alvo | Onde |
+|---|---|---|
+| `raspberry-pi-build` | armv6hf, valida `Tag_CPU_arch = v6` (Pi Zero W) | `.github/workflows/main.yml:1462` |
+| `raspberry-pi-build-and-image-64bit` | aarch64, valida GLIBC ≤ 2.31 (bullseye) | `main.yml:1525` |
+| `raspberry-pi-smoke-test` | checa ELF e roda `-smoke-test` sob QEMU | `main.yml:1585` |
+
+Baixar o artefato `raspberry-pi-binary-aarch64` do último run do master dispensa as
+~45 min de compilação descritas em `docs/10_Installation.md:128`. O `docs/10_Installation.md:132`
+aponta para um run fixo e antigo — usar o run corrente é estritamente melhor. ⚙️
+
+### 2.2 Custo real: não há interface ⚙️
+
+`src/qdomyos-zwift.pri:6` compila `webserverinfosender.cpp` apenas sob
+`qtHaveModule(httpserver)`. Debian bullseye não traz o módulo, e o CI do Pi ainda o
+remove explicitamente (`main.yml:1499` e `:1559`, mais o comentário em massa dos
+`#include <QtHttpServer` em `:1500` e `:1560`).
+
+Resultado: **binário de Pi sem web UI**, e em modo headless sem GUI. Sobra:
+
+| Via | Referência | Observação |
+|---|---|---|
+| `qDomyos-Zwift.conf` editado à mão | `docs/10_Installation.md:213` | `/root/.config/'Roberto Viola'/` |
+| Flags de CLI | `src/main.cpp:405` `-bike-resistance-offset`, `:401` `-bike-resistance-gain`, `:311` `-test-resistance`, `:373` `-name`, `:323` `-only-virtualbike`, `:299` `-no-gui`, `:303` `-qml` | cobrem o essencial da calibração |
+| `TcpClientInfoSender` | `src/tcpclientinfosender.h:7` | o outro `TemplateInfoSender`; **não** depende de QHttpServer, sobrevive no Pi |
+
+**Impacto direto sobre o `PLANO-MEGAGYM`:** o trabalho de calibração descrito lá é
+inteiramente conduzido por GUI — importar `megagym-calib.qzs` (§6.1), conferir o tile
+*Target R.*, ligar o tile *Erg Mode*. Nada disso existe no Pi. O import de `.qzs` é
+fluxo QML (`SettingsList.qml`, `homeform.cpp:11053`) ⚙️ e morre junto. O equivalente
+headless é editar as cinco chaves no `.conf` e reiniciar — o `bikeResistanceOffset` é
+lido só no arranque de qualquer forma (`main.cpp:649`) ⚙️.
+
+Alternativa a considerar: Raspberry Pi OS **Desktop** com `-qml`, sacrificando o boot
+enxuto e o overlay FS de `docs/10_Installation.md:424` em troca da GUI. É uma escolha
+entre plataforma de operação e plataforma de calibração; não precisam ser a mesma
+máquina nem a mesma imagem.
+
+### 2.3 Risco central: um rádio, dois papéis ⚙️❓
+
+No Pi o mesmo adaptador teria que ser **central** (falando com a bike) e **peripheral**
+(sendo o virtualbike para o MyWhoosh) simultaneamente.
+
+- `src/virtualdevices/virtualbike.cpp:444` usa `QLowEnergyController::createPeripheral()`
+  sem nenhum guard de plataforma ⚙️ — compila e roda no BlueZ.
+- O QZ **não seleciona adaptador**: checa apenas `QBluetoothLocalDevice::allDevices()`
+  não-vazio (`src/devices/bluetooth.cpp:152`) ⚙️ e usa o default.
+
+Consequência prática: **um segundo dongle USB não resolve sozinho.** Resolveria com uma
+mudança pequena — passar um `QBluetoothAddress` ao `QBluetoothDeviceDiscoveryAgent` para
+prender o papel de central em `hci1`, deixando o peripheral no default. Custo estimado
+baixo, mas não medido ❓.
+
+Reportes upstream compatíveis com esse modo de falha, todos ❓ quanto a se aplicam a
+esta configuração:
+
+| Issue | Sintoma |
+|---|---|
+| [#1702](https://github.com/cagnulein/qdomyos-zwift/issues/1702) | para de anunciar depois de um tempo ocioso; reboot recupera |
+| [#3041](https://github.com/cagnulein/qdomyos-zwift/issues/3041) | `-no-gui` não desconecta o BLE ao sair |
+| [#3107](https://github.com/cagnulein/qdomyos-zwift/issues/3107) | velocidade não atualiza, erros intermitentes |
+
+### 2.4 O que a migração provavelmente conserta ❓
+
+O defeito §5.3 do `PLANO-MEGAGYM` — log truncado em 40.509.090 bytes com o app ainda
+vivo — foi diagnosticado lá como sem causa no código, com suspeita de storage/SAF do
+Android. No Pi é filesystem comum mais `journalctl`. A hipótese é que o defeito
+desapareça; não há como confirmar antes de rodar. Se confirmar, o item que hoje é
+descrito como bloqueante deixa de existir.
+
+### 2.5 Balanço
+
+| | |
+|---|---|
+| **Viável** | Sim. Binários prontos, testados em CI, documentação de instalação existente. |
+| **Custo principal** | Perda de interface (§2.2). Requer decidir onde se calibra. |
+| **Risco principal** | Coexistência central/peripheral no mesmo rádio (§2.3). |
+| **Mitigações** | Bridge com fio (elimina o papel de central); ou seleção de adaptador com dois dongles; ou aceitar o risco e monitorar. |
+
+---
+
+## 3. Objetivo 2 — Bridge com fio
+
+### 3.1 O que o QZ já oferece ⚙️
+
+Cinco devices por porta serial em produção: `computrainerbike`, `kettlerusbbike`,
+`freebeatbike`, `csaferower`/`csafeelliptical` e `waterrowerusb`, instanciados em
+`src/devices/bluetooth.cpp:931–1012`, cada um atrás de uma setting de porta.
+
+- **Transporte sem dependência nova:** `open()` + `termios` cru
+  (`src/devices/kettlerusbbike/KettlerUSB.cpp:337`, `KettlerUSB.h:31`). Não usa
+  QtSerialPort. Nada que quebre o build enxuto do Pi. ⚙️
+- **Prioridade favorável:** a cadeia serial está em `bluetooth.cpp:931`; o match `YPBM`
+  que hoje cria o `ftmsbike` está em `bluetooth.cpp:2017`. Primeiro match vence, então um
+  branch serial novo **ganha automaticamente** da detecção BLE da bike, sem desligar
+  nada. ⚙️
+- **Pegadinha:** toda a cadeia vive dentro de `bluetooth::deviceDiscovered()`
+  (`bluetooth.cpp:542`) ⚙️. Devices seriais só nascem quando *algum* anúncio BLE aparece.
+  Com o console ligado e anunciando, dispara sozinho; com o console fora do circuito, um
+  Pi headless espera para sempre. É correção necessária em qualquer rota que remova o
+  console.
+- **Rota do atuador separado:** `bluetooth.cpp:3159–3184` conecta o `smartspin2k` como
+  `ftmsAccessory` — um device que só recebe `resistanceChanged` e devolve
+  `resistanceRead`, enquanto a telemetria vem de outro. ⚙️ Permite um primeiro protótipo
+  sem escrever device novo.
+- **Direct Connect:** o QZ embute servidor dircon (`src/qzsettings.h:1263`, porta base
+  `:1266` = 36866) ⚙️ — quarta rota possível, sobre TCP.
+- **Arte prévia interna:** `QZ_ESP32/QZ_ESP32.ino` (436 linhas) faz cliente BLE lendo
+  FTMS `0x2AD2` e servidor BLE publicando Cycling Power. ⚙️
+
+### 3.2 Arte prévia upstream ⚙️
+
+| Referência | Estado | O que é |
+|---|---|---|
+| [#855](https://github.com/cagnulein/qdomyos-zwift/issues/855) + [PR #899](https://github.com/cagnulein/qdomyos-zwift/pull/899) | **ambos abertos** | Trixter X-Dream — bike por serial, protocolo completo, PR nunca mergeado |
+| [#2629](https://github.com/cagnulein/qdomyos-zwift/issues/2629) | fechado | stepper + ESP32 substituindo knob manual |
+| [#525](https://github.com/cagnulein/qdomyos-zwift/issues/525) | aberto | Raspberry Pi simulando botões de esteira |
+| [#780](https://github.com/cagnulein/qdomyos-zwift/issues/780) | aberto | protocolo serial do Wahoo Kickr |
+| [PR #4851](https://github.com/cagnulein/qdomyos-zwift/pull/4851) / [#4791](https://github.com/cagnulein/qdomyos-zwift/issues/4791) | aberto | QZ como listener de OpenBikeControl |
+| [#500](https://github.com/cagnulein/qdomyos-zwift/issues/500) | aberto | SS2k + Schwinn: auto-resistência cai no meio do treino |
+
+**Leitura:** pedidos de bridge de hardware existem há anos no upstream e nenhum foi
+entregue. Não é falta de ideia — é falta de alguém com o hardware na mão.
+
+> Os comentários de #2629 e o corpo de PR #4851 permanecem ❓: `api.github.com` passou a
+> devolver 403 por rate limit e o MCP do GitHub desta sessão está restrito a
+> `nickolas122/qz` (`add_repo` recusou o upstream por ser de outro owner). Títulos,
+> estados e corpos iniciais foram lidos antes do limite.
+
+#### Trixter X-Dream é o melhor template disponível ⚙️
+
+Melhor que o `freebeatbike`, que era a referência óbvia. Do corpo de #855:
+
+```
+Bike → Host: 16 bytes (como 32 chars hex), a cada ~13 ms, serial 115200
+  [0] 0x6a header · [1] steering · [3] posição do pedivela 1–60
+  [4-5] freios (135–250, 250 = solto) · [8-9] BOTÕES (bitmap)
+  [10-11] tempo de revolução do pedivela
+  [12-13] tempo de revolução do VOLANTE     → RPM ≈ 576000/F
+  [14] HR bpm · [15] checksum XOR
+
+Host → Bike: 6 bytes binários, a cada ~10 ms
+  header + nível + checksum · 251 NÍVEIS de resistência
+```
+
+Três decisões de projeto que o Freebeat não tem e que esta bike precisa:
+
+1. **Tempo de revolução em vez de RPM pré-calculado** — deixa a média para o consumidor,
+   muito melhor em cadência baixa.
+2. **Botões no mesmo quadro da telemetria** — endereça os paddles sem passar por
+   `gears_from_bike`, cujo defeito de contagem dupla está em `PLANO-MEGAGYM` §3.2
+   (`devices/bike.cpp:73` +1×, `devices/ftmsbike/ftmsbike.cpp:509` +5×) ⚙️.
+3. **251 níveis** em vez de 32.
+
+`grep -rn trixter src/` → nada ⚙️. **O QZ não tem esse driver.**
+
+#### Correção à §12 do PLANO-MEGAGYM ⚙️
+
+Aquele documento descartou OpenBikeControl como "irrelevante". Correto quanto a
+*resistência* — OBC não trata disso. Mas OBC é protocolo aberto para **dispositivos de
+input** (Zwift Play/Click, Di2) falarem com apps de treino, via mDNS ou BLE, e há PR
+aberto tornando o QZ listener. É o encaixe natural do problema dos paddles. A dispensa
+foi ampla demais.
+
+#### Arte prévia externa
+
+[SHIFTR](https://github.com/JuergenLeber/SHIFTR) — ponte BLE↔Direct Connect em ESP32.
+Prova de que o caminho ESP32 funciona neste ecossistema. ❓ quanto a reuso direto.
+
+---
+
+## 4. O que há no chicote — a incógnita dominante
+
+Não existe documentação pública de chicote YPOO ❓. O que as listagens do fabricante
+estabelecem sobre o F5:
+
+| Fato | Fonte | Marca |
+|---|---|---|
+| "F5 **Self Generated Power**, volante 22 kg" | Made-in-China / ypoosport.com | ❓ (catálogo, não medido) |
+| "**two-way magnetic brake system with electronic control** and self-generating electricity" | ypoosport.com | ❓ |
+| Transmissão por correia | catálogo | ❓ |
+| Consoles: Shuttle LED, 15,6" TFT, 21,5" TFT | catálogo | ❓ |
+| **36 níveis** de resistência | catálogo | ❓ — conflita com §5 |
+
+### 4.1 Três eixos, com pesos diferentes
+
+**Eixo 1 — o chicote carrega energia (provável).** Um gerador acionado por correia
+alimenta o console. Três desdobramentos:
+
+- O console **morre quando se para de pedalar**, salvo capacitor ou bateria de retenção.
+  Qualquer MITM tem que sobreviver a isso; qualquer bridge precisa de alimentação
+  própria e não pode se pendurar no chicote. ❓
+- Há AC no chicote, possivelmente trifásica, com corrente real. **Não é um barramento de
+  3,3 V que se mede displicentemente** — eleva materialmente o risco da caracterização e
+  muda o ferramental (§7). ❓
+- A frequência do gerador é proporcional à rotação do volante. **Pode não existir hall
+  separado**; se a velocidade sai da própria AC, ler cadência é medir frequência — 100%
+  passivo, sem tocar em nada. ❓
+
+**Eixo 2 — sinais analógicos, cenário principal.** "Freio magnético bidirecional com
+controle eletrônico" mais um console que monta tabela de potência apontam para
+inteligência centralizada no console e sinal cru no chicote. Não há protocolo para
+farejar. O bridge teria que acionar o atuador com feedback de posição e homing, o que na
+prática tira o console do circuito de controle. Subvariantes ❓: DC + potenciômetro,
+stepper com batente, ou servo.
+
+**Eixo 3 — barramento digital, hipótese secundária.** Se existir placa controladora
+embaixo conversando por UART/I²C/CAN, o MITM é o caso fácil e o console segue vivo. Foi
+rebaixado de cenário coequivalente para hipótese secundária pela evidência dos eixos 1 e
+2. ❓
+
+### 4.2 Ensaios que discriminam
+
+Ordenados por custo. Nenhum exige código.
+
+| Ensaio | Ferramenta | O que decide |
+|---|---|---|
+| Contar pinos do conector, anotar cor por cor | nenhuma | 2–3 fios ≈ só sensor; 5–8 ≈ sensor + atuador + feedback; par isolado com atividade constante ≈ barramento |
+| Tensão DC de repouso por pino contra GND | multímetro | separa rails de sinal |
+| **Tensão AC e frequência por pino, pedalando** | multímetro com frequencímetro | confirma o gerador e diz se a velocidade sai dele |
+| Qual pino pulsa pedalando devagar | multímetro | localiza hall/reed, se existir |
+| O que muda ao varrer R 1→32 | multímetro | tensão linear = pot/DAC; par que inverte = DC + ponte H; quatro fases = stepper; trem de bits 3,3 V = barramento |
+| A bike acende o console sem tomada? | nenhuma | confirma self-generating |
+| Foto da placa do console: L298/DRV88xx/TB6612 presente? | nenhuma | ponte H no console = eixo 2 confirmado |
+| Captura do barramento, se houver | analisador lógico | fecha o protocolo (baud típico 9600/19200/115200) |
+
+**Regra de segurança:** só medição passiva primeiro. Não injetar nada antes de entender.
+O console é a peça mais cara e menos substituível da bike, e o eixo 1 diz que há energia
+real circulando ali.
+
+---
+
+## 5. A incógnita dos 32 níveis
+
+O console expõe **32 níveis** de forma consistente: `0x2AD6` declara min 1, máx 32, passo
+1 (`PLANO-MEGAGYM` §2.1) ✅, e o knob e os paddles do painel também param em 32 ✅. O
+catálogo do F5 anuncia 36 ❓.
+
+Como as três superfícies do console concordam entre si, a hipótese de "o BLE expõe menos
+que o painel" está descartada ✅. O teto, se existir, é a montante.
+
+### 5.1 A curva tem estrutura que a física não explica ✅
+
+Usando apenas os níveis bem amostrados da §2.3 — descartando R 6, 7, 8 (n = 5–7) e R 14
+(n = 4), que são ruído:
+
+| trecho | níveis | Δ W/rpm | por nível | n das pontas |
+|---|---|---|---|---|
+| R 1 → 13 | 12 | +0,388 | **0,032** | 24 · 19 |
+| R 13 → 16 | 3 | +0,311 | 0,104 | 19 · 434 |
+| R 16 → 22 | 6 | +0,492 | 0,082 | 434 · 66 |
+| R 22 → 26 | 4 | +0,489 | 0,122 | 66 · 19 |
+
+Dois intervalos de largura quase igual — R 1→13 e R 13→26 — e o segundo entrega **3,7×
+mais watt por nível**. Os quatro pontos que ancoram a conta têm n = 24, 19, 434 e 19; não
+é ruído de amostragem. ✅
+
+Frenagem magnética varia com o inverso do quadrado do entreferro, o que produz curva
+convexa e **suave**. O que foi medido tem um degrau em algum lugar entre R=13 e R=16,
+precedido de platô. Degrau é assinatura de mapeamento por tabela, não de física de ímã.
+Isso é **evidência a favor de o teto de 32 ser escolha de firmware** ✅, sem provar onde
+ele mora.
+
+### 5.2 Três hipóteses
+
+| # | Hipótese | Implicação para o bridge |
+|---|---|---|
+| a | Mesmo curso mecânico, 32 rótulos em vez de 36 | ganha resolução, não ganha faixa |
+| b | Passo fixo por nível, truncado em 32 | 32 níveis ocupam ~89% do curso; sobram 4 níveis no topo. Como R 27→32 corre a 0,226 W/rpm por nível, extrapolação grosseira põe R=36 perto de 450 W a 80 rpm ❓ |
+| c | Console de SKU inferior, não rebranding | mesmo chassi, atuador capaz de ≥36 com firmware diferente |
+
+(b) e (c) não são exclusivas e dizem a mesma coisa ao projeto: **há curso mecânico além
+do que o console comanda.**
+
+### 5.3 Dois ensaios de custo zero decidem
+
+**Cronometrar o atuador.** Medir de ouvido quanto tempo o motor roda em 1→2, 12→13,
+13→14 e 31→32. Tempo constante ⇒ mapeamento linear em posição e o cotovelo em 13 é tabela
+de potência, não mecânica. 13→14 visivelmente mais longo ⇒ salto de posição no firmware,
+confirma remapeamento. 31→32 mais curto que os vizinhos ⇒ 32 é o batente.
+
+**Inspecionar o entreferro.** Fotografar o carro de ímãs em R=1 e em R=32. Observar
+quanto gap sobrou em 32; se há batente (ruído seco, ou zumbido de stall se o motor
+insistir); e onde o ímã começa a se aproximar de fato — se em R=13 o gap já estiver quase
+fechado, o platô de 1–13 é ar e é físico.
+
+---
+
+## 6. O que o bridge não resolve
+
+Explicitamente, porque a expectativa natural erra aqui.
+
+| Não resolve | Por quê |
+|---|---|
+| **Potência real** | A potência é tabela de firmware — 99 de 99 combinações com dispersão 0,00 W (`PLANO-MEGAGYM` §2.2) ✅. No eixo 2 perde-se até essa tabela e é preciso inventar outra, igualmente sintética. O gerador é fonte de alimentação, não sensor — se fosse carga eletrônica, o firmware teria potência elétrica medida de graça e a dispersão não seria zero ✅. **Só pedivela ou pedal com extensômetro dá watt real.** |
+| **Marcha em dobro** | `PLANO-MEGAGYM` §5.1 — defeito de código do QZ (`bike.cpp:73`, `ftmsbike.cpp:509`) ⚙️. Sobrevive ao bridge. |
+| **Keep-alive do ERG furado** | §5.2 — `virtualbike.cpp:1499` gateado por `lastFTMSFrameReceived`, atualizado por qualquer escrita no `0x2AD9` (`:664`) ⚙️. Sobrevive ao bridge. |
+| **Tempo físico do atuador** | Mecânica. |
+| **Zona morta R 1–13** | ❓ **Rebaixado de ganho para incógnita.** A evidência está dividida: o cotovelo (§5.1) diz firmware, um eventual gap fechado em R=13 diria física. Os ensaios da §5.3 decidem. Se for física, nenhum bridge a recupera e comprar resolução ali não serve para nada. |
+
+### 6.1 O que o bridge resolve, em ordem de valor
+
+1. **Liberar o rádio BLE do Pi** ⚙️ — o único ganho que independe de tudo em §4 e §5, e o
+   que amarra os dois objetivos. Também elimina a armadilha de "uma conexão por vez"
+   (`PLANO-MEGAGYM` §11) ✅.
+2. **Resolução dentro de R 13–32** ❓ — provável, se o atuador for contínuo ou mais fino
+   que 32 passos.
+3. **Faixa acima de R=32** ❓ — vale entre nada e ~130 W de topo. §5.3 decide.
+4. **Paddles limpos** ⚙️ — via quadro de botões (§3.2) ou OBC, contornando
+   `gears_from_bike`.
+5. **Latência determinística** no caminho de controle ❓.
+
+---
+
+## 7. Ferramental a adquirir
+
+Ordem de grandeza no mercado BR; confirmar antes de comprar. Estado atual: nada
+disponível.
+
+| Item | Para quê | ~R$ |
+|---|---|---|
+| **Multímetro com frequencímetro** (Minipa ET-1002 ou similar) | O eixo 1 (§4.1) exige medir AC e frequência, não só DC. Se a velocidade sair do gerador, o frequencímetro lê cadência na bancada sem escrever código. Um DT-830B básico **não** basta | 80–120 |
+| Analisador lógico USB 8 ch 24 MHz (clone Saleae) | Fecha o eixo 3 se ele aparecer. Funciona com sigrok/PulseView, livre, roda no próprio Pi | 35–60 |
+| **ESP32 DevKit** (WROOM-32) | Ver §7.1 | 35–60 |
+| Protoboard, jumpers, garras jacaré | Medir sem cortar fio | 20–40 |
+| Level shifter bidirecional 3,3/5 V | Seguro se o barramento for 5 V | 10–20 |
+| Pi Zero 2 W + cartão SD, se não houver Pi | Objetivo 1 | 250–400 |
+
+Os ensaios de §5.3 e metade dos de §4.2 não precisam de nada — podem preceder a compra.
+
+### 7.1 ESP32, não Arduino
+
+- Lógica nativa 3,3 V, que casa com barramento de console sem level shifter na maioria
+  dos casos.
+- Periférico **PCNT** em hardware: conta pulsos sem consumir CPU nem interrupção — o
+  gargalo exato de um AVR contando hall enquanto conversa por serial.
+- **Arte prévia dentro de casa:** `QZ_ESP32/QZ_ESP32.ino` ⚙️, e abre a rota de o bridge
+  falar BLE-FTMS direto.
+
+**Contrapartida da rota BLE-FTMS:** se o bridge se anunciar como bike FTMS padrão, o QZ o
+adota com o `ftmsbike` que já existe — **zero código novo no QZ** ⚙️. Mas ela reintroduz
+BLE e portanto **não entrega o ganho nº 1 da §6.1**, que é o que motiva o projeto. Troca
+esforço de software pelo prêmio principal. Vale como protótipo, não como destino.
+
+---
+
+## 8. Interação entre os dois objetivos
+
+São independentes em execução e acoplados em valor:
+
+- O objetivo 1 tem um risco (§2.3) cuja melhor mitigação é o objetivo 2.
+- O objetivo 2 não depende do 1 — pode ser desenvolvido com o QZ ainda no Android, onde
+  há GUI para depurar.
+- A caracterização de hardware (§4.2, §5.3) não depende de nenhum dos dois e é a mais
+  barata das três frentes.
+
+### 8.1 Restrição de ordem ⚙️
+
+**A `ergTable` é indexada por nível de resistência.** `ergtable.h:37` exige 10 amostras no
+mesmo par exato (cadência, resistência) ⚙️. A calibração descrita em `PLANO-MEGAGYM` §7
+Fase 2 — dez níveis × três cadências, ~2 min por ponto — produz uma tabela sobre a escala
+1–32.
+
+**Se o bridge trocar a escala de resistência, essa tabela é descartada.**
+
+| Trabalho do PLANO-MEGAGYM | Depende da escala? |
+|---|---|
+| Confiabilidade do log (§7 Fase 0) | Não — e provavelmente evapora no Pi (§2.4) |
+| Settings, offset 18 (§6, §7 Fase 1) | Não — mas o *como* muda no Pi (§2.2) |
+| Keep-alive do ERG (§5.2, §7 Fase 5) | Não — código puro, independe de tudo aqui |
+| Auto-ERG (§7 Fase 6) | Não |
+| **Calibração da `ergTable` (§7 Fase 2)** | **Sim — refém da decisão do bridge** |
+| MyWhoosh, free ride e ERG (§7 Fases 3 e 4) | Sim, por dependerem da Fase 2 |
+
+O item de melhor custo-benefício que não é refém de nada é o keep-alive do ERG: defeito
+já diagnosticado, correção localizada, independe de Pi, de bridge e de hardware.
+
+---
+
+## 9. Incógnitas, por quanto travam decisão
+
+1. **O atuador tem curso além de R=32, e o platô 1–13 é firmware ou entreferro?** (§5)
+   Decide os ganhos 2, 3 e o item da zona morta em §6. Custo de resolver: zero (§5.3).
+   **Maior retorno por esforço de todo o documento.**
+2. **O que passa no chicote?** (§4) Decide se o bridge é MITM barato ou substituição do
+   console. Custo: um multímetro e uma tarde.
+3. **A bike é mesmo self-generating, e o console sobrevive à parada?** (§4.1) Decide o
+   projeto elétrico do bridge e o risco de toda a caracterização. Custo: zero — pedalar
+   sem tomada.
+4. **A coexistência central/peripheral no `hci0` do Pi degrada em quanto tempo?** (§2.3)
+   Decide se o bridge é necessário ou apenas desejável. Custo: uma sessão longa no Pi.
+5. **O log truncado desaparece no Pi?** (§2.4) Decide se a Fase 0 do PLANO-MEGAGYM existe.
+6. **Quanto custa prender o papel de central em `hci1`?** (§2.3) Alternativa barata ao
+   bridge para o ganho nº 1; não avaliada.
+7. **O que o mantenedor respondeu em #2629, e o que faz o PR #4851?** (§3.2) Pode conter
+   orientação de arquitetura que evita retrabalho. Bloqueado por rate limit nesta sessão.
+8. **A velocidade sai da frequência do gerador?** (§4.1) Se sim, existe leitura de
+   cadência totalmente passiva e sem risco — o degrau natural para validar o caminho de
+   dados serial ponta a ponta antes de qualquer coisa irreversível.
+
+---
+
+## 10. Referências de código
+
+| O quê | Onde |
+|---|---|
+| Jobs de Pi no CI | `.github/workflows/main.yml:1462`, `:1525`, `:1585` |
+| Remoção do QtHttpServer no Pi | `main.yml:1499`, `:1500`, `:1559`, `:1560` |
+| Web UI condicional | `src/qdomyos-zwift.pri:6` |
+| Info sender que sobrevive no Pi | `src/tcpclientinfosender.h:7` |
+| Flags de CLI úteis sem GUI | `src/main.cpp:299`, `:303`, `:311`, `:323`, `:373`, `:401`, `:405` |
+| Peripheral BLE | `src/virtualdevices/virtualbike.cpp:444` |
+| Adaptador BLE não selecionável | `src/devices/bluetooth.cpp:152` |
+| Entrada de descoberta | `src/devices/bluetooth.cpp:542` |
+| Cadeia de devices seriais | `src/devices/bluetooth.cpp:931–1012` |
+| Match YPBM (perde para a cadeia serial) | `src/devices/bluetooth.cpp:2017`, `src/devices/ftmsbike/ftmsbike.cpp:2171` |
+| Outras famílias YPOO conhecidas | `bluetooth.cpp:1249` (`YPOO-U3-`), `:1680` (`YPOO-MINI PRO-`) |
+| Atuador separado (`ftmsAccessory`) | `src/devices/bluetooth.cpp:3159–3184` |
+| Transporte serial cru | `src/devices/kettlerusbbike/KettlerUSB.cpp:337`, `KettlerUSB.h:31` |
+| Protocolo UART documentado | `src/devices/freebeatbike/PROTOCOL.md` |
+| Servidor Direct Connect | `src/qzsettings.h:1263`, `:1266` |
+| Sketch ESP32 existente | `QZ_ESP32/QZ_ESP32.ino` |
+| `ergTable`, 10 amostras por par | `src/devices/ergtable.h:37` |
+
+## 11. Fontes externas
+
+- [YPOO F5 Self Generated Power, volante 22 kg](https://ypoosports.en.made-in-china.com/product/LtdrucSBEqVi/China-Ypoo-Exercise-Bike-Spinning-Bike-F5-Self-Generated-Power-22kg-Flywheel-with-Ypoofit-APP.html)
+- [YPOO — freio magnético bidirecional com controle eletrônico e autogeração](https://www.ypoosport.com/magnetic-spinning-bike)
+- [F5 Commercial Spinning Bike — 36 níveis, 22 kg](https://www.megamallonline.store/products/pro-sportz-commercial-stationary-spinning-bike-with-apps-preorder-sales-now-open)
+- [Patente 8328692 — aparato de resistência autogerativa](https://patents.justia.com/patent/8328692)
+- [Patente 20200147449 — spinner com resistência magnética ajustável](https://patents.justia.com/patent/20200147449)
+- [OpenBikeControl — protocolo](https://github.com/OpenBikeControl/openbikecontrol-protocol) · [bikecontrol](https://github.com/OpenBikeControl/bikecontrol)
+- [SHIFTR — ponte BLE↔Direct Connect em ESP32](https://github.com/JuergenLeber/SHIFTR)
+- [Wiki de compatibilidade do QZ](https://github.com/cagnulein/qdomyos-zwift/wiki/Equipment-Compatibility) — sem nenhuma entrada YPOO ⚙️
