@@ -34,11 +34,14 @@ carrega marca; a ausência de marca é erro de redação.
    mais longe — Trixter X-Dream, protocolo completo e PR — está aberto e não mergeado. ⚙️
 7. **O bridge não produz watt real.** Nenhuma variante dele produz. Só pedivela ou pedal
    com extensômetro. ✅
-8. **Há três protocolos de barramento de bike documentados como arte prévia** — Trixter
-   (serial 115200), Freebeat (UART 9600) e Peloton (**RS-232 19200**, tap no chicote do
-   console). Nenhum é da YPOO ⚙️. O da Peloton é o mais próximo em cenário, e ensina que
-   chicote de console **não é TTL** e pode ser polled. ⚙️
-9. **Há uma decisão de ordem que custa trabalho se for ignorada:** calibrar a `ergTable`
+8. **O sinal de comando de resistência existe no chicote, por dedução.** O console
+   comanda o atuador eletronicamente ✅, logo manda algum sinal. A questão não é *se* dá
+   para escrever, é **qual a forma** — e disso depende o custo do MITM (§3.3.2). ✅
+9. **Há três protocolos de barramento documentados como arte prévia** — Trixter (serial
+   115200), Freebeat (UART 9600) e Peloton (**RS-232 19200**). Nenhum é da YPOO ⚙️. A
+   lição transferível da Peloton é elétrica, não arquitetural: chicote de console **não é
+   TTL**. ⚙️
+10. **Há uma decisão de ordem que custa trabalho se for ignorada:** calibrar a `ergTable`
    antes de decidir a escala de resistência é jogar a calibração fora — a menos que a
    rota escolhida preserve a escala 1–32. ⚙️
 
@@ -271,10 +274,74 @@ Quatro lições diretamente transferíveis para a megagym:
    prova** ausência de barramento. ❓
 3. **Payload em ASCII, não binário.** Nem todo console fala binário empacotado; o parser
    tem que estar aberto a texto.
-4. **Mesmo a Peloton só dá leitura.** O SS2K lê cadência, potência e resistência pelo
-   chicote, mas **não escreve resistência por ele** — para isso ainda gira o knob. Se um
-   fabricante grande não expõe escrita no barramento, é prudente não assumir que a YPOO
-   exponha. ❓
+4. **O barramento da Peloton é só-leitura porque não há o que escrever** — e isso *não*
+   se transfere. Ver §3.3.1: uma revisão anterior deste documento tirou daqui a conclusão
+   oposta e errada.
+
+#### 3.3.1 Retratação: a Peloton não é evidência contra escrita ✅
+
+Uma revisão anterior deste documento concluiu, do fato de o SS2K girar o knob da Peloton
+em vez de escrever no barramento, que "nem um fabricante grande expõe escrita, logo é
+prudente não assumir que a YPOO exponha". **A inferência é falsa** e a analogia não se
+sustenta.
+
+A **Peloton Bike** original tem resistência **mecânica**: girar o knob move fisicamente as
+peças dentro da bike. **Não existe atuador eletrônico para comandar.** O SS2K gira o knob
+porque **o knob é o atuador** — é o propósito declarado do projeto, tornar smart uma bike
+burra. O barramento é só-leitura porque não há nada do outro lado para escrever, não
+porque o acesso foi negado.
+
+A **Peloton Bike+** é a outra categoria: o knob **gira sem fim porque só manda sinal**, e
+a resistência é eletrônica com auto-follow. O SS2K não é feito para ela — ela não precisa.
+
+**A megagym é da segunda categoria, e há duas evidências independentes disso:**
+
+| Evidência | Marca |
+|---|---|
+| Aceita resistência-alvo por FTMS: `0x2ACC` bit 2, escrita ×10 (`PLANO-MEGAGYM` §2.1, `ftmsbike.cpp:374`) | ✅⚙️ |
+| O knob gira sem batente — assinatura de encoder digital, exatamente como a Bike+ | ✅ |
+
+#### 3.3.2 Dedução: o sinal de comando existe ✅
+
+Segue de forma direta, e não é hipótese:
+
+> Se o console controla a resistência eletronicamente, **algum sinal ele manda**. Um
+> atuador existe, é comandado pelo console, e o comando percorre o chicote.
+
+Isso reposiciona a incógnita. A pergunta **não** é "o chicote aceita escrita?" — é **qual a
+forma do sinal**, e o quanto disso é preciso assumir para injetá-lo:
+
+| Forma do comando | Dificuldade de MITM |
+|---|---|
+| Posição absoluta a atuador inteligente (passo/serial/DAC) | **Baixa** — cortar um fio e comandar |
+| Pulsos step/dir a driver de stepper | Baixa a média — injetar pulsos |
+| Ponte H + realimentação de posição fechando no console | **Alta** — é preciso assumir motor *e* realimentação, ou seja, substituir a função de controle do console |
+
+**Não há resultado "não dá para escrever".** Há um espectro de custo, e o ensaio da §3.3.3
+diz onde nele a bike cai.
+
+#### 3.3.3 Ensaio do salto 10→30 — e uma armadilha ✅
+
+Reportado: mandando resistência-alvo por FTMS de 10 para 30, a bike **vai direto**, sem os
+efeitos do knob (bipe, LEDs) ✅.
+
+**Armadilha:** isso *não* prova comando absoluto, e bipe/LED **não servem de proxy** para
+movimento do atuador. O que o relato mostra é que bipe e LED pertencem ao tratador de
+entrada do knob, não ao movimento do atuador — e que o número no display muito
+provavelmente é o **alvo**, atualizado na hora, não a posição real.
+
+O discriminador correto é o **ruído do motor**, cronometrado:
+
+| Observação em 10→30 por FTMS | Leitura |
+|---|---|
+| Uma corrida contínua do motor, ~20× a duração de 10→11 | Comando absoluto ou proporcional; MITM barato |
+| ~20 rajadas discretas | O console emite movimentos por nível; ainda injetável, mais trabalhoso |
+| Mesma duração de 10→11 | **O nível reportado está desacoplado da posição física** — implicação séria para §5 |
+
+O terceiro caso merece atenção. Se o console reporta o alvo instantaneamente enquanto o
+ímã ainda está a caminho, então a potência sintética da §2.2 é calculada sobre o **alvo**,
+não sobre o estado físico — o que explicaria a dispersão de 0,00 W melhor do que qualquer
+tabela, e significaria que durante transientes o watt reportado é ficção. ❓
 
 Detalhe de arquitetura que espelha o QZ: o SS2K injeta a fonte serial no seu pipeline de
 sensores BLE dando a ela **UUID e endereço BLE sintéticos** — `PELOTON_DATA_UUID` e
@@ -467,8 +534,9 @@ do que o console comanda.**
 
 ### 5.3 Dois ensaios de custo zero decidem
 
-**Cronometrar o atuador.** Medir de ouvido quanto tempo o motor roda em 1→2, 12→13,
-13→14 e 31→32. Tempo constante ⇒ mapeamento linear em posição e o cotovelo em 13 é tabela
+**Cronometrar o atuador.** Medir de ouvido quanto tempo **o motor** roda em 1→2, 12→13,
+13→14 e 31→32 — o motor, não o console: bipe e LED pertencem ao tratador do knob e não
+acompanham o atuador (§3.3.3) ✅. Tempo constante ⇒ mapeamento linear em posição e o cotovelo em 13 é tabela
 de potência, não mecânica. 13→14 visivelmente mais longo ⇒ salto de posição no firmware,
 confirma remapeamento. 31→32 mais curto que os vizinhos ⇒ 32 é o batente.
 
@@ -604,10 +672,10 @@ já diagnosticado, correção localizada, independe de Pi, de bridge e de hardwa
    bridge para o ganho nº 1; não avaliada.
 8. **O que o mantenedor respondeu em #2629, e o que faz o PR #4851?** (§3.2) Pode conter
    orientação de arquitetura que evita retrabalho. Bloqueado por rate limit nesta sessão.
-9. **O barramento da megagym, se existir, aceita escrita de resistência?** (§3.3) Nem o
-   da Peloton aceita — o SS2K lê pelo chicote e escreve pelo knob ⚙️. Se a megagym também
-   for só-leitura, a rota com fio entrega telemetria mas o controle continua por FTMS, e
-   o prêmio do rádio se perde pela metade.
+9. **Qual a forma do sinal de comando do atuador?** (§3.3.2) Que ele existe é dedução
+   ✅; o que decide o custo do MITM é se é posição absoluta, step/dir, ou ponte H com
+   realimentação fechando no console. Custo de estreitar: **zero** — o ensaio do salto
+   10→30 da §3.3.3.
 10. **A velocidade sai da frequência do gerador?** (§4.1) Se sim, existe leitura de
    cadência totalmente passiva e sem risco — o degrau natural para validar o caminho de
    dados serial ponta a ponta antes de qualquer coisa irreversível.
