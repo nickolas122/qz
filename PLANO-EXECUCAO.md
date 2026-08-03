@@ -80,8 +80,35 @@ Extrair, como em `PLANO-MEGAGYM` §8:
 
 **Custo zero, e é a medida de maior retorno de todo o plano.**
 
-Bike conectada, QZ mostrando resistência. Pelo tile *Resistance* (ou `-test-resistance`,
-`main.cpp:311` ⚙️), comandar saltos e cronometrar **duas coisas separadas**:
+**Ferramenta: os tiles de preset de resistência.** O knob da bike anda de 1 em 1, mas o QZ
+não passa por ele — `ftmsbike.cpp:374` escreve **um único pacote FTMS absoluto** para o
+perfil YPBM ⚙️:
+
+```cpp
+uint8_t write[] = {FTMS_SET_TARGET_RESISTANCE_LEVEL, 0x00, 0x00};
+write[1] = ((uint16_t)requestResistance * 10) & 0xFF;   // nível × 10, LE
+write[2] = ((uint16_t)requestResistance * 10) >> 8;
+```
+
+Os tiles *preset resistance* chamam `changeResistance(<valor>)` com valor **absoluto**
+(`homeform.cpp:4692–4726`) ⚙️, lido das chaves `tile_preset_resistance_1_value` …
+`_5_value` (`qzsettings.cpp:525–545`) ⚙️. Configurar em Tiles Options e habilitar os cinco:
+
+| Preset | Valor | Serve a |
+|---|---|---|
+| 1 | **1** | 1.4 (entreferro mínimo) |
+| 2 | **13** | 1.3, 1.5.b |
+| 3 | **10** | 1.5.a |
+| 4 | **30** | 1.5.a |
+| 5 | **32** | 1.3, 1.4, 1.5.b |
+
+> `changeResistance` passa por `bike.cpp:73` — `resistência × m_difficult + gearsModifier()`
+> ⚙️. Conferir **dificuldade em 100% e marcha em 0** antes de cada corrida, senão o valor
+> comandado não é o do tile. A 1.1 já garante marcha 0; a dificuldade volta sozinha a 100%
+> a cada sessão (`PLANO-MEGAGYM` §3.3) ✅.
+
+Bike conectada, QZ mostrando resistência. Tocando os presets, comandar saltos e cronometrar
+**duas coisas separadas**:
 
 - `t_reportado` — do comando até o número mudar no QZ
 - `t_sentido` — do comando até o pedal pesar de fato
@@ -98,7 +125,25 @@ Saltos de **1, 5 e 20 níveis**, três repetições cada, subindo e descendo.
 | `t_sentido` de 20 níveis < ~1 s | Desacoplamento é nota de rodapé |
 | `t_sentido` > ~2 s | Com demanda a ~1005 ms de mediana e excursão de 15 níveis entre p5 e p95 (`PLANO-MEGAGYM` §4.2) ✅, **o atuador nunca chega**. A resistência física vira passa-baixa da demanda enquanto o `.fit` registra a demanda |
 
-**Artefatos:** tabela de tempos · log do QZ da sessão de bancada.
+#### 1.3.a Knob contra FTMS — teste de brinde ★
+
+O knob andar de 1 em 1 não atrapalha: **vira baseline de comparação.** Fazer o mesmo
+13→32 das duas formas e comparar tempo total e ruído do motor:
+
+| Via | Como |
+|---|---|
+| Knob | 19 cliques, o mais rápido que der |
+| FTMS | um toque no preset 5 |
+
+| Resultado | Leitura |
+|---|---|
+| FTMS faz **uma corrida contínua** do motor, mais rápida que os 19 cliques | O console recebe posição absoluta e executa um movimento só — comando absoluto no chicote, **MITM barato** |
+| FTMS soa igual aos 19 cliques (rajadas discretas) | O console decompõe internamente em passos por nível |
+
+Estreita a incógnita nº 10 da `VIABILIDADE` (qual a forma do sinal de comando do atuador)
+sem abrir nada.
+
+**Artefatos:** tabela de tempos · gravação de áudio das duas formas · log do QZ.
 
 ### 1.4 Bancada: curso, batente e cotovelo
 
