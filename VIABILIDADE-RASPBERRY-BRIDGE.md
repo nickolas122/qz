@@ -735,6 +735,14 @@ zero podem derrubar ou fechar o caso:
 
 Se as três voltarem "sem problema", a rota é projeto de hobby, não solução.
 
+**Cuidado metodológico na medição nº 1:** ela mede *central + peripheral*. Qualquer vínculo
+BLE extra no adaptador do Pi — um shifter, um cinta cardíaca, um sensor — muda o que está
+sendo medido e invalida o resultado. Controles de marcha do app devem viver no **rádio do
+PC**, não no do Pi: além de manterem a medição limpa, é a marcha que o MyWhoosh entende.
+As marchas do QZ agem **depois** da demanda FTMS, e o app é cego a elas (`PLANO-MEGAGYM`
+§4.1) ✅ — fora que passam pelo defeito de contagem dupla, 6 níveis por marcha
+(`bike.cpp:73` +1×, `ftmsbike.cpp:509` +5×) ⚙️.
+
 #### 6.2.2 Degrau intermediário: bridge só-leitura ❓
 
 Existe uma versão de risco muito menor, que o documento ainda não tinha nomeado: **tap
