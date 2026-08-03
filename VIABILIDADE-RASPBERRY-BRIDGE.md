@@ -33,8 +33,12 @@ carrega marca; a ausência de marca é erro de redação.
    mais longe — Trixter X-Dream, protocolo completo e PR — está aberto e não mergeado. ⚙️
 7. **O bridge não produz watt real.** Nenhuma variante dele produz. Só pedivela ou pedal
    com extensômetro. ✅
-8. **Há uma decisão de ordem que custa trabalho se for ignorada:** calibrar a `ergTable`
-   antes de decidir a escala de resistência é jogar a calibração fora. ⚙️
+8. **Existe uma quarta rota, de risco elétrico zero: motorizar o knob.** O SmartSpin2k já
+   implementa homing contra bike FTMS — a classe exata da megagym — e o QZ já o suporta.
+   Não entrega o prêmio do rádio, mas não toca no chicote. ⚙️
+9. **Há uma decisão de ordem que custa trabalho se for ignorada:** calibrar a `ergTable`
+   antes de decidir a escala de resistência é jogar a calibração fora — a menos que a
+   rota escolhida preserve a escala 1–32. ⚙️
 
 ---
 
@@ -210,9 +214,94 @@ foi ampla demais.
 [SHIFTR](https://github.com/JuergenLeber/SHIFTR) — ponte BLE↔Direct Connect em ESP32.
 Prova de que o caminho ESP32 funciona neste ecossistema. ❓ quanto a reuso direto.
 
+### 3.3 SmartSpin2k — rota de risco elétrico zero ⚙️
+
+[SmartSpin2k](https://github.com/doudar/SmartSpin2k) é um projeto ESP32 maduro (~9.700
+linhas em `src/`) que motoriza o knob de resistência com stepper e se apresenta aos apps
+como trainer. O QZ já o suporta como `ftmsAccessory` (`bluetooth.cpp:3159–3184`) ⚙️, e o
+driver `src/devices/smartspin2k/smartspin2k.cpp` escreve na característica customizada
+dele — `{0x02,0x08,…}` shiftStep, `{0x02,0x17,…}` forceResistance, `{0x02,0x1B,…}`
+syncMode — e pode até injetar watt/cadência/HR do próprio QZ (`{0x02,0x0E/0x0F/0x0D}`) ⚙️.
+
+**O achado que importa:** o SS2K já trata a classe exata da megagym. Em
+`src/Stepper.cpp:389` ⚙️:
+
+```cpp
+// if we're using real resistance from a FTMS bike, find those values for the
+// reported min and max resistance instead of using hard stops.
+if (!rtConfig->resistance.getSimulate() && userConfig->getConnectedPowerMeter() != NONE
+    && rtConfig->resistance.getMax() > 0) {
+  ss2k->_findFTMSHome(bothDirections);
+```
+
+`_findFTMSHome()` (`Stepper.cpp:291`) gira o knob **observando a resistência que a bike
+reporta por FTMS**, até bater no mínimo; zera o stepper ali; depois varre até o máximo e
+grava a posição. Os dois insumos que ele exige são exatamente o que a megagym publica:
+resistência no `0x2AD2` ✅ e min 1 / máx 32 no `0x2AD6` ✅. **Nenhuma engenharia reversa,
+nenhum fio cortado, console intacto.**
+
+Ressalva de projeto: o SS2K nasceu para knobs que *são* o atuador. O knob da megagym é
+*entrada* para o console. O laço fecha igual (knob → console → motor → resistência →
+FTMS), e o `_findFTMSHome` não depende de batente mecânico — termina quando a resistência
+reportada atinge o alvo, ao contrário do homing por StallGuard (`Stepper.h:12–27`) que
+exige stall. Restam duas incógnitas mecânicas ❓: se o knob tem batente, e quantos graus
+de rotação cobrem R 1→32.
+
+#### Peças do SS2K que endereçam problemas deste documento ⚙️
+
+| Peça | Endereça |
+|---|---|
+| `src/HTTP_Server_Basic.cpp` (854 linhas) — web UI no próprio ESP32 | Ataca de lado o custo do objetivo 1 (§2.2): se o bridge tem página de config própria, a configuração de resistência sai do QZ |
+| `src/Power_Table.cpp` + `src/PowerTable_Helpers.cpp` (1069 linhas) | O mesmo problema da `ergTable` — ver §3.4 |
+| `src/BLE_OpenBikeControl_Service.cpp` | Já fala OBC; casa com o PR #4851 aberto no QZ. Par pronto para o problema dos paddles |
+| `src/DirConManager.cpp`, `src/DirConMessage.cpp` | Fala Direct Connect — mas ver a ressalva abaixo |
+| TMC2209 + StallGuard (`Stepper.h`, `Stepper.cpp:221`) | Homing sensorless sem fim de curso, se algum dia for o eixo 2 |
+| `BLE_Fitness_Machine_Service`, `_Cycling_Power_`, `_Cycling_Speed_Cadence_`, `_Wattbike_`, `_SB20_`, `_Zwift_` | Emulações prontas de referência |
+
+**Direct Connect não ajuda como se esperaria.** O dircon do QZ é **só servidor**:
+`src/devices/dircon/dirconprocessor.h:75` tem `QTcpServer *server`, e
+`DirconProcessorClient` (`:63`) representa um socket de cliente *conectado*, não um
+cliente de saída — não há `connectToHost` em `src/devices/dircon/*.cpp` ⚙️. **O QZ não
+consome um device dircon.** A ideia de "SS2K por dircon libera o rádio do Pi" exige antes
+escrever um cliente dircon no QZ ❓.
+
+#### Bloqueio de licença ⚙️
+
+**SS2K é GPL-2.0-only** (cabeçalhos SPDX `GPL-2.0-only`; `LICENSE` = GPLv2 de junho de
+1991). **QZ é GPL-3.0** (`LICENSE:2`). GPL-2-only é incompatível com GPL-3: **não é
+permitido copiar ou adaptar código do SS2K para dentro do QZ.**
+
+Não impede: usar o SS2K como dispositivo — interoperar por BLE é uso, não derivação, e o
+QZ já faz isso; ler o código para entender a abordagem; reimplementar de forma
+independente.
+
+### 3.4 `Power_Table` do SS2K contra `ergTable` do QZ ⚙️
+
+| | QZ `ergTable` | SS2K `PowerTable` |
+|---|---|---|
+| Estrutura | pares exatos (cadência, resistência) | grade 2D `[10 cadências][30 watts]` (`settings.h:295`, `:298`) |
+| Granularidade de cadência | valor exato | incremento de 5 rpm (`settings.h:307`) |
+| Requisito de amostras | **10 no par exato** (`src/ergtable.h:37`) | agregação por balde da grade |
+| Persistência | **sim**, QSettings (`src/ergtable.h:86`, `:90`) | sim, LittleFS |
+| Extras | — | `predictWatts()`, checagens de confiabilidade, derivação de min/max do stepper |
+
+Duas correções de premissa que esta comparação produziu:
+
+1. **A `ergTable` do QZ persiste** ⚙️ — `loadSettings()` no construtor, `saveSettings()` no
+   destrutor e a cada ponto novo. A calibração da Fase 2 do `PLANO-MEGAGYM` **não** é
+   perdida entre sessões. Isso não estava verificado.
+2. A diferença real é de **estrutura**, não de durabilidade. A grade de 5 rpm do SS2K é
+   muito mais tolerante a cadência oscilante — que é exatamente a dificuldade que a Fase 2
+   descreve ("cadência oscilante espalha as amostras em vários baldes e nenhum fecha").
+   Como abordagem, é a melhor referência disponível ❓ quanto a valer o esforço de
+   reimplementar no QZ.
+
 ---
 
 ## 4. O que há no chicote — a incógnita dominante
+
+Dominante **para as rotas que invadem o chicote**. A rota da §3.3 não depende de nada
+desta seção — é o argumento principal a favor dela.
 
 Não existe documentação pública de chicote YPOO ❓. O que as listagens do fabricante
 estabelecem sobre o F5:
@@ -345,7 +434,8 @@ Explicitamente, porque a expectativa natural erra aqui.
 
 1. **Liberar o rádio BLE do Pi** ⚙️ — o único ganho que independe de tudo em §4 e §5, e o
    que amarra os dois objetivos. Também elimina a armadilha de "uma conexão por vez"
-   (`PLANO-MEGAGYM` §11) ✅.
+   (`PLANO-MEGAGYM` §11) ✅. **Só as rotas com fio o entregam** — SS2K (§3.3) e BLE-FTMS
+   (§7.1) não.
 2. **Resolução dentro de R 13–32** ❓ — provável, se o atuador for contínuo ou mais fino
    que 32 passos.
 3. **Faixa acima de R=32** ❓ — vale entre nada e ~130 W de topo. §5.3 decide.
@@ -383,7 +473,15 @@ Os ensaios de §5.3 e metade dos de §4.2 não precisam de nada — podem preced
 **Contrapartida da rota BLE-FTMS:** se o bridge se anunciar como bike FTMS padrão, o QZ o
 adota com o `ftmsbike` que já existe — **zero código novo no QZ** ⚙️. Mas ela reintroduz
 BLE e portanto **não entrega o ganho nº 1 da §6.1**, que é o que motiva o projeto. Troca
-esforço de software pelo prêmio principal. Vale como protótipo, não como destino.
+esforço de software pelo prêmio principal. Vale como protótipo, não como destino. A mesma
+contrapartida se aplica à rota SS2K da §3.3.
+
+### 7.2 Se a rota for SS2K
+
+O ferramental muda: sai o analisador lógico, entra impressora 3D (ou serviço de impressão)
+para o suporte, e a lista de materiais passa a ser a do projeto — ESP32, TMC2209, stepper
+NEMA. Há kits prontos à venda. A adaptação do suporte ao knob da megagym é trabalho de
+modelagem, não de eletrônica ❓.
 
 ---
 
@@ -404,7 +502,10 @@ mesmo par exato (cadência, resistência) ⚙️. A calibração descrita em `PL
 Fase 2 — dez níveis × três cadências, ~2 min por ponto — produz uma tabela sobre a escala
 1–32.
 
-**Se o bridge trocar a escala de resistência, essa tabela é descartada.**
+**Se o bridge trocar a escala de resistência, essa tabela é descartada.** A restrição é
+condicional à rota: na rota SS2K (§3.3) **o console segue no comando e a escala continua
+1–32**, então a calibração sobrevive e a Fase 2 deixa de ser refém. Nas rotas que
+substituem o controle do console, não.
 
 | Trabalho do PLANO-MEGAGYM | Depende da escala? |
 |---|---|
@@ -412,7 +513,7 @@ Fase 2 — dez níveis × três cadências, ~2 min por ponto — produz uma tabe
 | Settings, offset 18 (§6, §7 Fase 1) | Não — mas o *como* muda no Pi (§2.2) |
 | Keep-alive do ERG (§5.2, §7 Fase 5) | Não — código puro, independe de tudo aqui |
 | Auto-ERG (§7 Fase 6) | Não |
-| **Calibração da `ergTable` (§7 Fase 2)** | **Sim — refém da decisão do bridge** |
+| **Calibração da `ergTable` (§7 Fase 2)** | **Sim — refém da decisão do bridge, exceto na rota SS2K** |
 | MyWhoosh, free ride e ERG (§7 Fases 3 e 4) | Sim, por dependerem da Fase 2 |
 
 O item de melhor custo-benefício que não é refém de nada é o keep-alive do ERG: defeito
@@ -425,19 +526,23 @@ já diagnosticado, correção localizada, independe de Pi, de bridge e de hardwa
 1. **O atuador tem curso além de R=32, e o platô 1–13 é firmware ou entreferro?** (§5)
    Decide os ganhos 2, 3 e o item da zona morta em §6. Custo de resolver: zero (§5.3).
    **Maior retorno por esforço de todo o documento.**
-2. **O que passa no chicote?** (§4) Decide se o bridge é MITM barato ou substituição do
-   console. Custo: um multímetro e uma tarde.
-3. **A bike é mesmo self-generating, e o console sobrevive à parada?** (§4.1) Decide o
+2. **O knob tem batente, e quantos graus cobrem R 1→32?** (§3.3) Decide se a rota SS2K —
+   a única de risco elétrico zero, e a que o QZ já suporta sem código novo — é viável
+   mecanicamente. Custo de resolver: **zero, girar o knob à mão**. Fica em segundo só
+   porque o teto de 32 afeta todas as rotas, e esta afeta uma.
+3. **O que passa no chicote?** (§4) Decide se o bridge é MITM barato ou substituição do
+   console. Só importa para as rotas que o invadem. Custo: um multímetro e uma tarde.
+4. **A bike é mesmo self-generating, e o console sobrevive à parada?** (§4.1) Decide o
    projeto elétrico do bridge e o risco de toda a caracterização. Custo: zero — pedalar
    sem tomada.
-4. **A coexistência central/peripheral no `hci0` do Pi degrada em quanto tempo?** (§2.3)
+5. **A coexistência central/peripheral no `hci0` do Pi degrada em quanto tempo?** (§2.3)
    Decide se o bridge é necessário ou apenas desejável. Custo: uma sessão longa no Pi.
-5. **O log truncado desaparece no Pi?** (§2.4) Decide se a Fase 0 do PLANO-MEGAGYM existe.
-6. **Quanto custa prender o papel de central em `hci1`?** (§2.3) Alternativa barata ao
+6. **O log truncado desaparece no Pi?** (§2.4) Decide se a Fase 0 do PLANO-MEGAGYM existe.
+7. **Quanto custa prender o papel de central em `hci1`?** (§2.3) Alternativa barata ao
    bridge para o ganho nº 1; não avaliada.
-7. **O que o mantenedor respondeu em #2629, e o que faz o PR #4851?** (§3.2) Pode conter
+8. **O que o mantenedor respondeu em #2629, e o que faz o PR #4851?** (§3.2) Pode conter
    orientação de arquitetura que evita retrabalho. Bloqueado por rate limit nesta sessão.
-8. **A velocidade sai da frequência do gerador?** (§4.1) Se sim, existe leitura de
+9. **A velocidade sai da frequência do gerador?** (§4.1) Se sim, existe leitura de
    cadência totalmente passiva e sem risco — o degrau natural para validar o caminho de
    dados serial ponta a ponta antes de qualquer coisa irreversível.
 
@@ -461,9 +566,25 @@ já diagnosticado, correção localizada, independe de Pi, de bridge e de hardwa
 | Atuador separado (`ftmsAccessory`) | `src/devices/bluetooth.cpp:3159–3184` |
 | Transporte serial cru | `src/devices/kettlerusbbike/KettlerUSB.cpp:337`, `KettlerUSB.h:31` |
 | Protocolo UART documentado | `src/devices/freebeatbike/PROTOCOL.md` |
-| Servidor Direct Connect | `src/qzsettings.h:1263`, `:1266` |
+| Direct Connect — **servidor apenas** | `src/qzsettings.h:1263`, `:1266`; `src/devices/dircon/dirconprocessor.h:75` |
+| Driver do SS2K no QZ | `src/devices/smartspin2k/smartspin2k.cpp:57`, `:222` |
 | Sketch ESP32 existente | `QZ_ESP32/QZ_ESP32.ino` |
-| `ergTable`, 10 amostras por par | `src/devices/ergtable.h:37` |
+| `ergTable`, 10 amostras por par | `src/ergtable.h:37` |
+| `ergTable` persiste em QSettings | `src/ergtable.h:86`, `:90` |
+| Licença do QZ (GPL-3) | `LICENSE:2` |
+
+### 10.1 Referências no SmartSpin2k ⚙️
+
+| O quê | Onde |
+|---|---|
+| Homing contra bike FTMS | `src/Stepper.cpp:291` (`_findFTMSHome`), despacho em `:389` |
+| Homing sensorless por StallGuard | `src/Stepper.cpp:221`, `include/Stepper.h:12–27` |
+| Tabela de potência | `src/Power_Table.cpp`, `src/PowerTable_Helpers.cpp`; dimensões em `include/settings.h:295`, `:298`, `:307` |
+| Web UI no ESP32 | `src/HTTP_Server_Basic.cpp` |
+| OpenBikeControl | `src/BLE_OpenBikeControl_Service.cpp` |
+| Direct Connect | `src/DirConManager.cpp`, `src/DirConMessage.cpp` |
+| Característica customizada (a que o QZ escreve) | `CustomCharacteristic.md`, `src/BLE_Custom_Characteristic.cpp` |
+| Licença (GPL-2.0-only) | `LICENSE`, cabeçalhos SPDX |
 
 ## 11. Fontes externas
 
@@ -472,6 +593,7 @@ já diagnosticado, correção localizada, independe de Pi, de bridge e de hardwa
 - [F5 Commercial Spinning Bike — 36 níveis, 22 kg](https://www.megamallonline.store/products/pro-sportz-commercial-stationary-spinning-bike-with-apps-preorder-sales-now-open)
 - [Patente 8328692 — aparato de resistência autogerativa](https://patents.justia.com/patent/8328692)
 - [Patente 20200147449 — spinner com resistência magnética ajustável](https://patents.justia.com/patent/20200147449)
+- [SmartSpin2k](https://github.com/doudar/SmartSpin2k) — firmware ESP32, GPL-2.0-only · [SS2k-Hardware](https://github.com/doudar/SS2k-Hardware) (CERN-OHL-P) · [SS2kConfigApp](https://github.com/doudar/SS2kConfigApp)
 - [OpenBikeControl — protocolo](https://github.com/OpenBikeControl/openbikecontrol-protocol) · [bikecontrol](https://github.com/OpenBikeControl/bikecontrol)
 - [SHIFTR — ponte BLE↔Direct Connect em ESP32](https://github.com/JuergenLeber/SHIFTR)
 - [Wiki de compatibilidade do QZ](https://github.com/cagnulein/qdomyos-zwift/wiki/Equipment-Compatibility) — sem nenhuma entrada YPOO ⚙️
