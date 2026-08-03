@@ -95,6 +95,41 @@ enxuto e o overlay FS de `docs/10_Installation.md:424` em troca da GUI. É uma e
 entre plataforma de operação e plataforma de calibração; não precisam ser a mesma
 máquina nem a mesma imagem.
 
+#### 2.2.1 O custo se dissolve: calibrar no tablet, subir pronto ⚙️
+
+Melhor que rodar GUI no Pi: **manter as duas plataformas com papéis distintos** — o
+Android calibra, o Pi opera. O `docs/10_Installation.md:213` já sugere isso ("replicate
+the settings in the UI"), mas o código permite algo bem mais forte que replicar à mão.
+
+**O `.qzs` é um arquivo INI de `QSettings`.** `homeform::loadSettings()`
+(`homeform.cpp:11053`) abre com `QSettings settings2Load(settingsFile, QSettings::IniFormat)`
+e copia chave a chave; `homeform::saveSettings()` (`:11029`) escreve pelo mesmo caminho ⚙️.
+Os nomes de chave são os mesmos do `qDomyos-Zwift.conf` do Pi. Logo o export do tablet
+**é** o arquivo de configuração do Pi, a menos de mesclagem.
+
+**E a `ergTable` cabe numa linha.** Ela serializa para uma única string na chave
+`ergDataPoints` (`qzsettings.cpp:840`), no formato `cadência|watt|resistência` separado por
+`;` (`src/ergtable.h:291–292`, `:316`) ⚙️:
+
+```ini
+ergDataPoints=80|136|16;80|140|17;65|128|16;...
+```
+
+Consequência prática: **toda a calibração da Fase 2 do `PLANO-MEGAGYM`** — o trabalho caro,
+dez níveis × três cadências × ~2 min — pode ser feita no tablet, com GUI e tiles, e
+transferida ao Pi como **uma linha de texto**.
+
+**Ressalvas do código** ⚙️, visíveis nos dois laços:
+
+- Chaves contendo `password` ou `token` são cifradas com `SimpleCrypt` no `.qzs`. Ao
+  mesclar à mão no `.conf` do Pi, **pule-as** — o valor cifrado não serve lá; configure-as
+  direto no Pi.
+- `peloton_refreshtoken` é ignorada na importação por design.
+- Chaves de `cryptoKeySettingsProfiles` são puladas nos dois sentidos.
+
+Com isso, a §2.2 deixa de ser custo da migração e vira divisão de trabalho. O Pi pode
+seguir headless, com boot enxuto e overlay FS.
+
 ### 2.3 Risco central: um rádio, dois papéis ⚙️❓
 
 No Pi o mesmo adaptador teria que ser **central** (falando com a bike) e **peripheral**
@@ -132,7 +167,7 @@ descrito como bloqueante deixa de existir.
 | | |
 |---|---|
 | **Viável** | Sim. Binários prontos, testados em CI, documentação de instalação existente. |
-| **Custo principal** | Perda de interface (§2.2). Requer decidir onde se calibra. |
+| **Custo principal** | Baixo. A perda de interface (§2.2) se resolve calibrando no tablet e subindo a config pronta (§2.2.1). |
 | **Risco principal** | Coexistência central/peripheral no mesmo rádio (§2.3). |
 | **Mitigações** | Bridge com fio (elimina o papel de central); ou seleção de adaptador com dois dongles; ou aceitar o risco e monitorar. |
 
