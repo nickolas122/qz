@@ -725,7 +725,7 @@ disponível.
 | **ESP32 DevKit** (WROOM-32) | Ver §7.1 | 35–60 |
 | Protoboard, jumpers, garras jacaré | Medir sem cortar fio | 20–40 |
 | Level shifter bidirecional 3,3/5 V | Seguro se o barramento for 5 V | 10–20 |
-| Pi Zero 2 W + cartão SD, se não houver Pi | Objetivo 1 | 250–400 |
+| **Pi 4 Model B 2 GB** + SD 32 GB A1 + fonte USB-C 5 V/3 A + case | Objetivo 1 — ver §7.4 para por que não é o Zero 2 W | 700–1.100 |
 
 Os ensaios de §5.3 e metade dos de §4.2 não precisam de nada — podem preceder a compra.
 
@@ -743,6 +743,53 @@ adota com o `ftmsbike` que já existe — **zero código novo no QZ** ⚙️. Ma
 BLE e portanto **não entrega o ganho nº 1 da §6.1**, que é o que motiva o projeto. Troca
 esforço de software pelo prêmio principal. Vale como protótipo, não como destino. A mesma
 contrapartida se aplica à rota SS2K da §3.3.
+
+### 7.4 Escolha da placa: Pi 4, não Zero 2 W ⚙️❓
+
+O `docs/10_Installation.md` documenta o Zero W/Zero 2 W, e o CI produz binário para os
+dois (`main.yml:1462` armv6hf, `:1525` aarch64) ⚙️. Ainda assim, para **esta** fase a placa
+certa é a Pi 4, por quatro razões amarradas a seções deste documento.
+
+**1. Ethernet permite desligar o WiFi — e sem isso a medição nº 1 da §6.2.1 é
+inconclusiva.** Em toda Pi com rádio, WiFi e Bluetooth dividem o mesmo chip combo e a mesma
+antena. A incógnita nº 6 pergunta se central+peripheral degrada. Rodando esse teste sobre
+WiFi, uma degradação **não distingue** contenção WiFi/BT de papel duplo BLE. Com cabo e
+WiFi desligado, distingue. Como essa é a medição que pode encerrar a rota do bridge, vale
+comprar a placa que a torna interpretável. ❓
+
+**2. Portas USB-A de verdade.** A mitigação da §2.3 — prender o papel de central em `hci1`
+com um segundo dongle — precisa de porta. O bridge, mais tarde, precisa de USB serial. O
+Zero 2 W tem uma micro-USB OTG.
+
+**3. RAM e GPU para a GUI QML.** O maior custo da migração é a perda de interface (§2.2), e
+o contorno é Raspberry Pi OS Desktop com `-qml` (`main.cpp:303`) ⚙️. 512 MB do Zero 2 W
+sofrem; 2 GB resolvem.
+
+**4. BT 5.0 contra 4.2.** Menor, mas de graça.
+
+**2 GB bastam** — não há motivo para pagar 4 ou 8 GB aqui.
+
+| Alternativa | Veredito |
+|---|---|
+| Pi 3B/3B+ | Substituto legítimo e barato: tem Ethernet, USB-A, BT 4.2, 1 GB. Só a GUI fica apertada. Usada serve |
+| Pi Zero 2 W | O alvo documentado e a escolha certa para **implantação final** presa à bike. Ruim como placa única nesta fase |
+| Pi 5 | Sem ganho aqui; exige refrigeração ativa e fonte 5 V/5 A. Pular |
+| Pi Zero W original | Não. ARMv6 single-core, só o binário armv6hf, e `10_Installation.md:127` avisa que build com `-j4` falha |
+
+**Acessórios que importam:**
+
+- **Fonte de qualidade, 5 V/3 A USB-C.** Subtensão na Pi 4 produz sintomas erráticos de USB
+  e rádio — exatamente o tipo de ruído que envenenaria a medição nº 1.
+- MicroSD 32 GB A1/A2 de marca. Cartão genérico corrompe.
+- Cabo Ethernet, e case com dissipador ou cooler.
+- **Se comprar dongle BT:** procurar **RTL8761B (BT 5.0)**, não "CSR 4.0" — os CSR baratos
+  são majoritariamente clones CSR8510 falsificados e se comportam mal no BlueZ. Mesmo o
+  RTL8761B tem bug conhecido de nome de firmware em algumas distros (`rtl8761bu` contra
+  `rtl8761b`), contornável com symlink. ❓
+
+**Nota de sequenciamento:** das três medições da §6.2.1, só a nº 1 exige compra — e é a
+placa que o objetivo 1 pediria de qualquer forma. A compra não é investimento no bridge;
+é a do objetivo 1, que por acaso produz o dado decisivo.
 
 ### 7.3 O item que torna §5 e §6 falsificáveis
 
