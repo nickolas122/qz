@@ -649,6 +649,7 @@ const QString QZSettings::default_kettler_usb_serialport = QStringLiteral("");
 const QString QZSettings::kettler_usb_baudrate = QStringLiteral("kettler_usb_baudrate");
 const QString QZSettings::freebeat_serialport = QStringLiteral("freebeat_serialport");
 const QString QZSettings::default_freebeat_serialport = QStringLiteral("");
+const QString QZSettings::android_daemon_mode = QStringLiteral("android_daemon_mode");
 const QString QZSettings::strava_virtual_activity = QStringLiteral("strava_virtual_activity");
 const QString QZSettings::powr_sensor_running_cadence_half_on_strava =
     QStringLiteral("powr_sensor_running_cadence_half_on_strava");
@@ -1279,7 +1280,7 @@ const QString QZSettings::default_shortcut_start_stop = QStringLiteral("");
 const QString QZSettings::shortcut_stop = QStringLiteral("shortcut_stop");
 const QString QZSettings::default_shortcut_stop = QStringLiteral("");
 
-const uint32_t allSettingsCount = 1001;
+const uint32_t allSettingsCount = 1002;
 
 QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::cryptoKeySettingsProfiles, QZSettings::default_cryptoKeySettingsProfiles},
@@ -2305,6 +2306,7 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::zwiftplay_gear_lb, QZSettings::default_zwiftplay_gear_lb},
     {QZSettings::zwiftplay_gear_rb, QZSettings::default_zwiftplay_gear_rb},
     {QZSettings::freebeat_serialport, QZSettings::default_freebeat_serialport},
+    {QZSettings::android_daemon_mode, QZSettings::default_android_daemon_mode},
 };
 
 void QZSettings::qDebugAllSettings(bool showDefaults) {

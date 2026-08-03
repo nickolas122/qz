@@ -3708,11 +3708,18 @@ void bluetooth::connectedAndDiscovered() {
             settings.value(QZSettings::ant_heart_device_number, QZSettings::default_ant_heart_device_number).toInt());
     }
 
-    if (settings.value(QZSettings::android_notification, QZSettings::default_android_notification).toBool()) {
-        QAndroidJniObject javaNotification = QAndroidJniObject::fromString("QZ is running!");
+    bool daemon_mode = settings.value(QZSettings::android_daemon_mode, QZSettings::default_android_daemon_mode).toBool();
+    if (settings.value(QZSettings::android_notification, QZSettings::default_android_notification).toBool() ||
+        daemon_mode) {
+        // In daemon mode the service is already up from startup; re-issuing the intent just refreshes
+        // the notification text, and keeps the partial wake lock held across the reconnection.
+        const QString status =
+            daemon_mode ? QStringLiteral("Connected to ") + device()->bluetoothDevice.name() : QStringLiteral("QZ is running!");
+        QAndroidJniObject javaNotification = QAndroidJniObject::fromString(status);
         QAndroidJniObject::callStaticMethod<void>(
-            "org/cagnulen/qdomyoszwift/NotificationClient", "notify", "(Landroid/content/Context;Ljava/lang/String;)V",
-            QtAndroid::androidContext().object(), javaNotification.object<jstring>());
+            "org/cagnulen/qdomyoszwift/NotificationClient", daemon_mode ? "notifyDaemon" : "notify",
+            "(Landroid/content/Context;Ljava/lang/String;)V", QtAndroid::androidContext().object(),
+            javaNotification.object<jstring>());
     }
 #endif
 
@@ -3838,6 +3845,18 @@ void bluetooth::restart() {
     if (settings.value(QZSettings::bluetooth_no_reconnection, QZSettings::default_bluetooth_no_reconnection).toBool()) {
         exit(EXIT_SUCCESS);
     }
+
+#ifdef Q_OS_ANDROID
+    if (settings.value(QZSettings::android_daemon_mode, QZSettings::default_android_daemon_mode).toBool()) {
+        // The device dropped: go back to the searching notification, but keep the service (and its
+        // wake lock) alive so the scan below survives the screen being off.
+        QAndroidJniObject daemonStatus = QAndroidJniObject::fromString(QStringLiteral("Waiting for the device..."));
+        QAndroidJniObject::callStaticMethod<void>("org/cagnulen/qdomyoszwift/NotificationClient", "notifyDaemon",
+                                                  "(Landroid/content/Context;Ljava/lang/String;)V",
+                                                  QtAndroid::androidContext().object(),
+                                                  daemonStatus.object<jstring>());
+    }
+#endif
 
     devices.clear();
 

@@ -3308,6 +3308,11 @@ class QZSettings {
     static const QString zwiftplay_gear_rb; // Ride On (RB)
     static constexpr int default_zwiftplay_gear_rb = 0; // Disabled
 
+    // Android only: keeps QZ scanning and re-broadcasting with the screen off, so a bike switched
+    // on later is picked up without bringing the app back to the foreground.
+    static const QString android_daemon_mode;
+    static constexpr bool default_android_daemon_mode = false;
+
     /**
      * @brief Write the QSettings values using the constants from this namespace.
      * @param showDefaults Optionally indicates if the default should be shown with the key.

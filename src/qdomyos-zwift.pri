@@ -981,6 +981,7 @@ DISTFILES += \
    android/src/FloatingHandler.java \
    android/src/FloatingWindowGFG.java \
    android/src/ForegroundService.java \
+   android/src/DaemonMode.java \
    android/src/NotificationClient.java \
    android/src/QZAdbRemote.java \
         android/src/ScanRecordResult.java \

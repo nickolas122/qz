@@ -154,6 +154,9 @@
 
 <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="36" tools:overrideLibrary="com.google.android.play.agesignals,com.google.android.gms.common,androidx.health.connect.client" />
 <uses-permission android:name="android.permission.WAKE_LOCK"/>
+<!-- Daemon mode: without a Doze exemption the process is frozen once the tablet idles and the
+     BLE scan never sees the bike waking up. Only requested when daemon mode is enabled. -->
+<uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/>
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>

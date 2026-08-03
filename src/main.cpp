@@ -863,7 +863,24 @@ int main(int argc, char *argv[]) {
             QtAndroid::requestPermissionsSync(QStringList({"android.permission.POST_NOTIFICATIONS"}));
         if (resultHash["android.permission.POST_NOTIFICATIONS"] == QtAndroid::PermissionResult::Denied)
             qDebug() << "POST_NOTIFICATIONS denied!";
-    }    
+    }
+#endif
+
+#ifdef Q_OS_ANDROID
+    if (settings.value(QZSettings::android_daemon_mode, QZSettings::default_android_daemon_mode).toBool()) {
+        // Daemon mode has to bring the foreground service up *before* discovery starts. Without a
+        // running foreground service Android throttles BLE scanning as soon as the app leaves the
+        // screen, so a bike switched on later would never be noticed. bluetooth::connectedAndDiscovered()
+        // later re-issues the same intent to swap the notification text for the device name.
+        QAndroidJniObject daemonStatus = QAndroidJniObject::fromString(QStringLiteral("Waiting for the device..."));
+        QAndroidJniObject::callStaticMethod<void>("org/cagnulen/qdomyoszwift/NotificationClient", "notifyDaemon",
+                                                  "(Landroid/content/Context;Ljava/lang/String;)V",
+                                                  QtAndroid::androidContext().object(),
+                                                  daemonStatus.object<jstring>());
+        QAndroidJniObject::callStaticMethod<void>("org/cagnulen/qdomyoszwift/DaemonMode",
+                                                  "requestIgnoreBatteryOptimizations", "(Landroid/app/Activity;)V",
+                                                  QtAndroid::androidActivity().object());
+    }
 #endif
 
     /* test virtual echelon

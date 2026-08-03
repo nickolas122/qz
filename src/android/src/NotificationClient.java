@@ -17,21 +17,37 @@ public class NotificationClient
          private static Intent serviceIntent = null;
 
          private static final String EXTRA_FOREGROUND_SERVICE_TYPE = "FOREGROUND_SERVICE_TYPE";
+         private static final String EXTRA_DAEMON_MODE = "DAEMON_MODE";
          private static final int FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE = 0x10;
 
 	 public NotificationClient() {}
 
 	 public static void notify(Context context, String message) {
-                  _context = context;
-                  serviceIntent = new Intent(context, ForegroundService.class);
-		  serviceIntent.putExtra("inputExtra", "QZ is Running");
+                  start(context, message, false);
+	 }
+
+         /**
+          * Same foreground service, but it also holds a partial wake lock. Used by daemon mode, which
+          * brings the service up at startup instead of waiting for a device to connect, so discovery
+          * keeps running while the tablet sits idle.
+          */
+         public static void notifyDaemon(Context context, String message) {
+                  start(context, message, true);
+         }
+
+         private static void start(Context context, String message, boolean daemonMode) {
+                  // The service outlives any single Activity instance, so don't pin its context to one.
+                  _context = context.getApplicationContext();
+                  serviceIntent = new Intent(_context, ForegroundService.class);
+                  serviceIntent.putExtra("inputExtra", message);
                   serviceIntent.putExtra(EXTRA_FOREGROUND_SERVICE_TYPE,
                                          FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+                  serviceIntent.putExtra(EXTRA_DAEMON_MODE, daemonMode);
 
 		  if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-			   context.startForegroundService(serviceIntent);
+			   _context.startForegroundService(serviceIntent);
 		  } else {
-		      context.startService(serviceIntent);
+		      _context.startService(serviceIntent);
 		  }
 	 }
 

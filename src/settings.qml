@@ -1737,6 +1737,7 @@ import AndroidStatusBar 1.0
             property int mywhoosh_link_emote_value: 1
             property bool waterrower_usb: false
             property string freebeat_serialport: ""
+            property bool android_daemon_mode: false
         }
 
 
@@ -15996,6 +15997,34 @@ import AndroidStatusBar 1.0
 
                     Label {
                         text: qsTr("Forces Android devices to remain awake while QZ is running. Default is on.")
+                        font.bold: true
+                        font.italic: true
+                        font.pixelSize: Qt.application.font.pixelSize - 2
+                        textFormat: Text.PlainText
+                        wrapMode: Text.WordWrap
+                        verticalAlignment: Text.AlignVCenter
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
+                        Layout.fillWidth: true
+                        color: Material.color(Material.Lime)
+                    }
+
+                    IndicatorOnlySwitch {
+                        id: androidDaemonModeDelegate
+                        text: qsTr("Android Daemon Mode")
+                        spacing: 0
+                        bottomPadding: 0
+                        topPadding: 0
+                        rightPadding: 0
+                        leftPadding: 0
+                        clip: false
+                        checked: settings.android_daemon_mode
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
+                        Layout.fillWidth: true
+                        onClicked: { settings.android_daemon_mode = checked; window.settings_restart_to_apply = true; }
+                    }
+
+                    Label {
+                        text: qsTr("Keeps QZ scanning and re-broadcasting with the screen off, so a bike turned on later connects on its own without reopening the app. Asks for a battery optimization exemption on the next start. Costs battery: meant for a tablet left plugged in next to the bike. Default is off.")
                         font.bold: true
                         font.italic: true
                         font.pixelSize: Qt.application.font.pixelSize - 2
