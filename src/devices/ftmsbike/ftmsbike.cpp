@@ -370,7 +370,10 @@ void ftmsbike::forceResistance(resistance_t requestResistance) {
 
         if(SL010 || SPORT01 || TOPUTURE_TEB5 || FS_YK)
             Resistance = requestResistance;
-        
+
+        if(YPBM)
+            lastForcedResistance = requestResistance;
+
         if(JFBK5_0 || DIRETO_XR || YPBM || FIT_BK || ZIPRO_RAVE || SPEEDRACEX || MRK_S28 || USDC_D700 || FS_YK) {
             uint8_t write[] = {FTMS_SET_TARGET_RESISTANCE_LEVEL, 0x00, 0x00};
             write[1] = ((uint16_t)requestResistance * 10) & 0xFF;
@@ -944,6 +947,32 @@ void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteris
                     d = d / 10.0;
                 // for this bike, i will use the resistance that I set directly because the bike sends a different ratio.
                 if(!SL010 && !TITAN_7000 && !SPORT01 && !TOPUTURE_TEB5 && !FS_YK && !SMARTBIKE_3DIGIT) {
+                    if (YPBM && settings.value(QZSettings::gears_from_bike, QZSettings::default_gears_from_bike).toBool()) {
+                        qDebug() << QStringLiteral("gears_from_bike") << d << Resistance.value() << gears()
+                                 << lastRawRequestedResistanceValue << lastForcedResistance << requestResistance;
+                        if (
+                            // there is a previous native reading to compare against
+                            native_resistance_received &&
+                            // and the resistance really changed
+                            qRound(d) != qRound(Resistance.value()) &&
+                            // and we are not waiting for a resistance we asked for
+                            requestResistance == -1 &&
+                            // and this is not the bike echoing back the resistance we just commanded
+                            (lastForcedResistance == -1 || qRound(d) != lastForcedResistance) &&
+                            // and the jump is small enough to be a paddle press
+                            qAbs(qRound(d) - qRound(Resistance.value())) < 6) {
+
+                            double g = gears() + (qRound(d) - qRound(Resistance.value()));
+                            qDebug() << QStringLiteral("gears_from_bike APPLIED") << gears() << g;
+                            resistance_t savedRawValue = lastRawRequestedResistanceValue;
+                            lastRawRequestedResistanceValue = -1; // temporarily prevent setGears from re-applying resistance
+                            setGears(g);
+                            lastRawRequestedResistanceValue = savedRawValue; // restore for future checks
+                            // the user already moved the resistance with the paddle, so don't let update()
+                            // write it back just because the gear changed
+                            lastGearValue = gears();
+                        }
+                    }
                     Resistance = d;
                     native_resistance_received = true;
                     calculatedResistanceFallbackSince = QDateTime();

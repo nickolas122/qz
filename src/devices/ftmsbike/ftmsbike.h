@@ -172,6 +172,9 @@ class ftmsbike : public bike {
     // D500V2 workaround: track if we're awaiting start simulation command after request control
     bool awaiting_start_simulation_after_request_control = false;
     resistance_t lastDomyosRequestedResistance = -1;
+    // YPBM: last resistance commanded by forceResistance, used to tell the bike's echo
+    // apart from a paddle press when gears_from_bike is on
+    resistance_t lastForcedResistance = -1;
 
     bool DU30_bike = false;
     bool ICSE = false;
