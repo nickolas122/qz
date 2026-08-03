@@ -23,9 +23,10 @@ carrega marca; a ausência de marca é erro de redação.
 3. **O maior prêmio do bridge não é resistência, é o rádio.** Um único `hci0` fazendo
    central e peripheral ao mesmo tempo é o risco central da migração; tirar a bike do
    BLE resolve. ⚙️❓
-4. **A bike é self-generating.** O chicote carrega energia, não só sinal. Isso eleva o
-   risco da caracterização, obriga o bridge a ter alimentação própria — e abre a
-   possibilidade de ler cadência pela frequência do gerador, de forma passiva. ❓
+4. **A bike é self-generating, confirmado.** O console acende sem tomada ✅. O chicote
+   carrega energia, não só sinal: isso eleva o risco da caracterização e obriga o bridge
+   a ter alimentação própria. Abre também a possibilidade de ler cadência pela frequência
+   do gerador, de forma passiva ❓.
 5. **O QZ já tem toda a infraestrutura para uma bike por serial.** Cinco devices seriais
    em produção, transporte `termios` cru sem dependência nova, e um ponto de entrada que
    ganha prioridade sobre a detecção BLE da bike. ⚙️
@@ -240,12 +241,53 @@ grava a posição. Os dois insumos que ele exige são exatamente o que a megagym
 resistência no `0x2AD2` ✅ e min 1 / máx 32 no `0x2AD6` ✅. **Nenhuma engenharia reversa,
 nenhum fio cortado, console intacto.**
 
-Ressalva de projeto: o SS2K nasceu para knobs que *são* o atuador. O knob da megagym é
-*entrada* para o console. O laço fecha igual (knob → console → motor → resistência →
-FTMS), e o `_findFTMSHome` não depende de batente mecânico — termina quando a resistência
-reportada atinge o alvo, ao contrário do homing por StallGuard (`Stepper.h:12–27`) que
-exige stall. Restam duas incógnitas mecânicas ❓: se o knob tem batente, e quantos graus
-de rotação cobrem R 1→32.
+#### O knob não tem batente — e isso restringe a topologia ✅⚙️
+
+O knob da megagym gira sem fim ✅. Isso não impede a rota, mas **elimina uma das duas
+topologias possíveis**, e o motivo está no código dos dois lados.
+
+O SS2K tem dois modos de posicionamento (`src/Stepper.cpp:111`, `_resistanceMove`):
+
+- **Malha fechada**, quando ele mesmo enxerga a resistência real de uma bike FTMS. Move
+  o stepper incrementalmente na direção que reduz `target − reported`, sem nunca usar
+  mapa absoluto de posição. **Deriva é estruturalmente impossível** neste modo: patinação
+  do acoplamento, passo perdido ou clique de encoder pulado se autocorrigem na iteração
+  seguinte. É o modo certo para um knob sem batente.
+- **Malha aberta**, `posição = shifterPosition × shiftStep`, relativa ao *home*.
+
+O homing por FTMS só é escolhido sob `userConfig->getConnectedPowerMeter() != NONE`
+(`Stepper.cpp:389`) ⚙️ — ou seja, **exige que o SS2K tenha o próprio vínculo BLE com a
+bike**. Sem ele, cai no homing por StallGuard (`Stepper.cpp:221`), que precisa de stall
+contra batente. Num knob que gira sem fim não há stall: o homing roda até o
+`HOME_TIMEOUT` de 30 s (`Stepper.h:12`) e desiste, deixando `homed` falso e uma faixa
+provisória (`Stepper.cpp:78`).
+
+E o QZ dirige o SS2K **em malha aberta**: `smartspin2k.cpp:201` calcula
+`steps = slope × R + intercept`, chama `setShiftStep(steps)` (`0x02 0x08`) e escreve
+`0x02 0x17` — que em `CustomCharacteristic.md:74` é `BLE_shifterPosition` ⚙️. Não há
+realimentação: `resistanceReadFromTheBike()` só serve ao `lowInit` inicial ⚙️.
+
+**Conclusão:** a topologia "SS2K como `ftmsAccessory` do QZ" **não fecha** nesta bike —
+sem vínculo próprio com a bike o SS2K não consegue se referenciar, e sem batente o
+fallback não existe. A rota exige a topologia em que **o SS2K mantém o próprio vínculo
+BLE com a bike** e opera em malha fechada. ❓ quanto a se o QZ pode então consumi-lo como
+bike FTMS em vez de acessório.
+
+Um paliativo mecânico — batente impresso no suporte — **não resolve**, se o knob for
+encoder incremental: nesse caso não existe mapeamento absoluto entre ângulo do knob e
+nível, e um batente pararia num ponto arbitrário da escala. ❓
+
+**Sub-incógnita barata:** o knob é incremental com clamp? Descer até R=1, continuar
+descendo mais 10 cliques, subir 5. Se parar em R=6, é incremental com clamp — os cliques
+excedentes foram absorvidos, e não há ângulo absoluto.
+
+#### Risco de estabilidade da malha ❓
+
+A malha fechada do SS2K realimenta pela resistência que a bike reporta. A megagym alterna
+dois pacotes `0x2AD2` de ~1 s, e só um deles carrega resistência (`PLANO-MEGAGYM` §2.1)
+✅ — realimentação a cada ~2 s. Somado ao tempo físico do motor movendo os ímãs, é uma
+malha lenta. Deve servir para relevo; para ERG, tende a caçar o alvo. `ERGSensitivity` e
+`shiftStep` são os parâmetros de ajuste. Não medido.
 
 #### Peças do SS2K que endereçam problemas deste documento ⚙️
 
@@ -316,12 +358,14 @@ estabelecem sobre o F5:
 
 ### 4.1 Três eixos, com pesos diferentes
 
-**Eixo 1 — o chicote carrega energia (provável).** Um gerador acionado por correia
-alimenta o console. Três desdobramentos:
+**Eixo 1 — o chicote carrega energia. Confirmado ✅.** O console acende sem tomada ✅, logo
+um gerador acionado por correia o alimenta. Três desdobramentos, um deles refutado:
 
-- O console **morre quando se para de pedalar**, salvo capacitor ou bateria de retenção.
-  Qualquer MITM tem que sobreviver a isso; qualquer bridge precisa de alimentação
-  própria e não pode se pendurar no chicote. ❓
+- ~~O console morre quando se para de pedalar.~~ **Refutado ✅:** o console permanece
+  ligado e mantém o BLE vivo depois que se para de pedalar. Existe retenção — bateria ou
+  supercapacitor — no console. Isso **remove uma restrição de projeto** que eu havia
+  imposto ao MITM, e implica que o console consegue acionar o motor de resistência com a
+  bike parada.
 - Há AC no chicote, possivelmente trifásica, com corrente real. **Não é um barramento de
   3,3 V que se mede displicentemente** — eleva materialmente o risco da caracterização e
   muda o ferramental (§7). ❓
@@ -336,23 +380,35 @@ farejar. O bridge teria que acionar o atuador com feedback de posição e homing
 prática tira o console do circuito de controle. Subvariantes ❓: DC + potenciômetro,
 stepper com batente, ou servo.
 
+**Contagem de pinos: 5 a 8 ✅.** Cai exatamente na banda "sensor + atuador + feedback" da
+§4.2, e é consistente com o eixo 2. Descontando 2–3 pinos para o gerador, sobram 3–5:
+suficiente para motor (2) + hall (2), ou motor (2) + potenciômetro (3), ou stepper (4)
+com terra compartilhado.
+
 **Eixo 3 — barramento digital, hipótese secundária.** Se existir placa controladora
 embaixo conversando por UART/I²C/CAN, o MITM é o caso fácil e o console segue vivo. Foi
 rebaixado de cenário coequivalente para hipótese secundária pela evidência dos eixos 1 e
-2. ❓
+2. A contagem de 5–8 pinos **não o mata** — alimentação (3) mais UART (3) cabe na faixa —
+mas o exige dividindo espaço com os fios do gerador, o que aperta. ❓
+
+**O discriminador que resta é um só:** quais pinos carregam AC enquanto se pedala.
+Identificada a dupla (ou trinca) do gerador, o que sobra decide entre eixo 2 e eixo 3 por
+simples contagem.
 
 ### 4.2 Ensaios que discriminam
 
 Ordenados por custo. Nenhum exige código.
 
+Os dois marcados **feito ✅** já foram executados; os resultados estão na §4.1.
+
 | Ensaio | Ferramenta | O que decide |
 |---|---|---|
-| Contar pinos do conector, anotar cor por cor | nenhuma | 2–3 fios ≈ só sensor; 5–8 ≈ sensor + atuador + feedback; par isolado com atividade constante ≈ barramento |
+| ~~Contar pinos do conector~~ — **feito ✅: 5 a 8** | nenhuma | banda "sensor + atuador + feedback"; ver §4.1 |
 | Tensão DC de repouso por pino contra GND | multímetro | separa rails de sinal |
 | **Tensão AC e frequência por pino, pedalando** | multímetro com frequencímetro | confirma o gerador e diz se a velocidade sai dele |
 | Qual pino pulsa pedalando devagar | multímetro | localiza hall/reed, se existir |
 | O que muda ao varrer R 1→32 | multímetro | tensão linear = pot/DAC; par que inverte = DC + ponte H; quatro fases = stepper; trem de bits 3,3 V = barramento |
-| A bike acende o console sem tomada? | nenhuma | confirma self-generating |
+| ~~A bike acende o console sem tomada?~~ — **feito ✅: sim, e o console segue ligado com o BLE vivo depois de parar de pedalar** | nenhuma | self-generating confirmado; há retenção de energia no console |
 | Foto da placa do console: L298/DRV88xx/TB6612 presente? | nenhuma | ponte H no console = eixo 2 confirmado |
 | Captura do barramento, se houver | analisador lógico | fecha o protocolo (baud típico 9600/19200/115200) |
 
@@ -526,15 +582,16 @@ já diagnosticado, correção localizada, independe de Pi, de bridge e de hardwa
 1. **O atuador tem curso além de R=32, e o platô 1–13 é firmware ou entreferro?** (§5)
    Decide os ganhos 2, 3 e o item da zona morta em §6. Custo de resolver: zero (§5.3).
    **Maior retorno por esforço de todo o documento.**
-2. **O knob tem batente, e quantos graus cobrem R 1→32?** (§3.3) Decide se a rota SS2K —
-   a única de risco elétrico zero, e a que o QZ já suporta sem código novo — é viável
-   mecanicamente. Custo de resolver: **zero, girar o knob à mão**. Fica em segundo só
-   porque o teto de 32 afeta todas as rotas, e esta afeta uma.
+2. **O knob é encoder incremental com clamp?** (§3.3) Já se sabe que **não tem batente
+   ✅**, o que sozinho descarta a topologia "SS2K como `ftmsAccessory` do QZ" e exige a
+   topologia de malha fechada. Falta saber se existe qualquer mapeamento absoluto
+   ângulo→nível. Custo de resolver: **zero** — o teste de cliques da §3.3.
 3. **O que passa no chicote?** (§4) Decide se o bridge é MITM barato ou substituição do
    console. Só importa para as rotas que o invadem. Custo: um multímetro e uma tarde.
-4. **A bike é mesmo self-generating, e o console sobrevive à parada?** (§4.1) Decide o
-   projeto elétrico do bridge e o risco de toda a caracterização. Custo: zero — pedalar
-   sem tomada.
+4. ~~**A bike é mesmo self-generating, e o console sobrevive à parada?**~~ **Resolvido
+   ✅** (§4.1): é self-generating, e o console **sobrevive** com o BLE vivo — há retenção
+   de energia. O risco elétrico da caracterização permanece; a restrição de projeto sobre
+   o MITM cai.
 5. **A coexistência central/peripheral no `hci0` do Pi degrada em quanto tempo?** (§2.3)
    Decide se o bridge é necessário ou apenas desejável. Custo: uma sessão longa no Pi.
 6. **O log truncado desaparece no Pi?** (§2.4) Decide se a Fase 0 do PLANO-MEGAGYM existe.
@@ -542,7 +599,9 @@ já diagnosticado, correção localizada, independe de Pi, de bridge e de hardwa
    bridge para o ganho nº 1; não avaliada.
 8. **O que o mantenedor respondeu em #2629, e o que faz o PR #4851?** (§3.2) Pode conter
    orientação de arquitetura que evita retrabalho. Bloqueado por rate limit nesta sessão.
-9. **A velocidade sai da frequência do gerador?** (§4.1) Se sim, existe leitura de
+9. **O QZ consegue consumir o SS2K como bike FTMS, e não como acessório?** (§3.3) É a
+   pergunta que decide se a rota de risco zero tem topologia viável. Não avaliada.
+10. **A velocidade sai da frequência do gerador?** (§4.1) Se sim, existe leitura de
    cadência totalmente passiva e sem risco — o degrau natural para validar o caminho de
    dados serial ponta a ponta antes de qualquer coisa irreversível.
 
