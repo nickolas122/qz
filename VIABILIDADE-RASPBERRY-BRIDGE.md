@@ -45,7 +45,10 @@ carrega marca; a ausência de marca é erro de redação.
    calculada sobre o alvo, não sobre o estado dos ímãs. Isso esvazia os critérios de
    potência das Fases 4 e 5 do `PLANO-MEGAGYM` — o laço do ERG fecha sobre o próprio
    comando do QZ (§3.4). Não afeta a `ergTable`.
-11. **Há uma decisão de ordem que custa trabalho se for ignorada:** calibrar a `ergTable`
+11. **A zona morta R 1–13 é da tabela, não dos ímãs ✅.** A perna sente a diferença ao
+   longo dela. São 12 níveis de faixa física real que o firmware achata — e que um bridge
+   com controle direto do atuador recupera (§5.1.1).
+12. **Há uma decisão de ordem que custa trabalho se for ignorada:** calibrar a `ergTable`
    antes de decidir a escala de resistência é jogar a calibração fora — a menos que a
    rota escolhida preserve a escala 1–32. ⚙️
 
@@ -571,9 +574,34 @@ firmware" continua de pé; a pergunta separada — se existe zona morta *física
 13 — tornou-se **inacessível por estes dados** ❓, e só se responde pelo tato ou com
 medidor de potência externo.
 
-**Pergunta de custo zero que ninguém fez ainda:** subindo R de 1 a 13 pedalando, muda
-alguma coisa na perna? Se não muda, a zona morta é física. Se muda progressivamente, ela
-é só da tabela.
+#### 5.1.1 A zona morta é da tabela, não dos ímãs ✅
+
+**Respondido: subindo R de 1 a 13 pedalando, a perna sente diferença ✅.** Observação
+tátil, não instrumentada — mas direta e suficiente para decidir.
+
+Portanto **os ímãs se engajam progressivamente ao longo de 1–13, e a tabela de firmware
+não reporta isso.** Os 12 níveis não são mortos: são resistência física real que o console
+sub-reporta, comprimindo ~1/4 da faixa mecânica em 31 W de watt publicado.
+
+Três consequências.
+
+**1. Corrige o `PLANO-MEGAGYM` §2.3.** "Faixa útil: R 13–32" é a faixa útil **da potência
+reportada**, não da bike. A faixa física útil é **1–32**.
+
+**2. É o terceiro sinal independente de que a tabela é construção, não medição.** Junto
+com a dispersão de 0,00 W (§2.2 de lá) e com o desacoplamento nível↔posição (§3.4), fecha
+o caso: o console publica um número escolhido por alguém, mal calibrado no fundo de
+escala.
+
+**3. Torna todo o eixo de watts não-falsificável sem referência externa.** Se a tabela
+erra a *forma* no fundo, não há motivo para confiar na *escala* no topo: os 316 W
+declarados em R=32 podem estar tão errados quanto os 80 W de R=1. Ver §7.3.
+
+**Tensão que isso cria com o offset 18** (§6.2 de lá): aquele valor foi escolhido para
+manter tudo dentro de 13–32. Sabendo que 1–13 é fisicamente vivo, um offset menor daria
+mais faixa **física** ao custo de menos faixa de watt **reportado** — e como o MyWhoosh
+calcula velocidade a partir do watt reportado, o preço é andar mais devagar pelo mesmo
+esforço. É escolha, não erro. ❓
 
 ### 5.2 Três hipóteses
 
@@ -611,7 +639,7 @@ Explicitamente, porque a expectativa natural erra aqui.
 | **Marcha em dobro** | `PLANO-MEGAGYM` §5.1 — defeito de código do QZ (`bike.cpp:73`, `ftmsbike.cpp:509`) ⚙️. Sobrevive ao bridge. |
 | **Keep-alive do ERG furado** | §5.2 — `virtualbike.cpp:1499` gateado por `lastFTMSFrameReceived`, atualizado por qualquer escrita no `0x2AD9` (`:664`) ⚙️. Sobrevive ao bridge. |
 | **Tempo físico do atuador** | Mecânica. |
-| **Zona morta R 1–13** | ❓ **Rebaixado de ganho para incógnita.** A evidência está dividida: o cotovelo (§5.1) diz firmware, um eventual gap fechado em R=13 diria física. Os ensaios da §5.3 decidem. Se for física, nenhum bridge a recupera e comprar resolução ali não serve para nada. |
+| ~~Zona morta R 1–13~~ | **Resolvido, e saiu desta tabela ✅** — não é limitação física (§5.1.1). Virou o ganho 4 da §6.1. |
 
 ### 6.1 O que o bridge resolve, em ordem de valor
 
@@ -622,13 +650,17 @@ Explicitamente, porque a expectativa natural erra aqui.
 2. **Resolução dentro de R 13–32** ❓ — provável, se o atuador for contínuo ou mais fino
    que 32 passos.
 3. **Faixa acima de R=32** ❓ — vale entre nada e ~130 W de topo. §5.3 decide.
-4. **Estado físico real da resistência** ✅ — ganho novo, trazido pela §3.4. Um bridge que
-   leia a posição do atuador (potenciômetro, encoder, contagem de passos) sabe onde o ímã
+4. **12 níveis físicos hoje inacessíveis** ✅ — R 1–13 muda a perna (§5.1.1), mas o
+   console os achata em 31 W de watt publicado. Um bridge que comande o atuador direto usa
+   a faixa mecânica inteira em vez de 19 dos 32 níveis. Não é "resolução numa região
+   morta", como escrevi antes: **é faixa real que o firmware esconde.**
+5. **Estado físico real da resistência** ✅ — trazido pela §3.4. Um bridge que leia a
+   posição do atuador (potenciômetro, encoder, contagem de passos) sabe onde o ímã
    **está**; o console só publica onde ele **deveria estar**. Não produz watt real, mas
    elimina a ficção do transiente e permite ao QZ saber quando a resistência chegou.
-5. **Paddles limpos** ⚙️ — via quadro de botões (§3.2) ou OBC, contornando
+6. **Paddles limpos** ⚙️ — via quadro de botões (§3.2) ou OBC, contornando
    `gears_from_bike`.
-6. **Latência determinística** no caminho de controle ❓.
+7. **Latência determinística** no caminho de controle ❓.
 
 ---
 
@@ -662,6 +694,22 @@ adota com o `ftmsbike` que já existe — **zero código novo no QZ** ⚙️. Ma
 BLE e portanto **não entrega o ganho nº 1 da §6.1**, que é o que motiva o projeto. Troca
 esforço de software pelo prêmio principal. Vale como protótipo, não como destino. A mesma
 contrapartida se aplica à rota SS2K da §3.3.
+
+### 7.3 O item que torna §5 e §6 falsificáveis
+
+Nada neste documento sobre **watt absoluto** pode ser verificado sem referência externa, e
+a §5.1.1 mostrou que a tabela do console erra até a *forma*. Um **medidor de potência de
+pedal ou pedivela** é o único instrumento que fecha isso.
+
+| Opção | ~R$ |
+|---|---|
+| Pedal unilateral (ex. Favero Assioma Uno) | 2.000–2.800 |
+| Pedal bilateral (ex. Assioma Duo) | 3.500–4.500 |
+
+É de longe o item mais caro da lista e o único que **não** é pré-requisito de nenhuma
+rota — o bridge funciona sem ele. Mas sem ele, "calibrar" continua significando escolher
+um mapeamento agradável, nunca convergir para a verdade, exatamente como o
+`PLANO-MEGAGYM` §2.2 já dizia. Decisão de quanto vale saber. ❓
 
 ### 7.2 Item que a lição da Peloton acrescenta
 
@@ -714,9 +762,10 @@ já diagnosticado, correção localizada, independe de Pi, de bridge e de hardwa
    desacoplamento é nota de rodapé ou o defeito central desta bike: com demanda a ~1 Hz e
    excursões de 15 níveis, um atuador lento pode nunca chegar, e aí a resistência física é
    um passa-baixa da demanda enquanto o `.fit` registra a demanda. Custo: **zero**.
-2. **O atuador tem curso além de R=32, e existe zona morta física em R 1–13?** (§5)
-   Decide os ganhos 2 e 3 da §6.1. Custo: zero (§5.3), mais a pergunta de tato da §5.1.
-   A parte "é firmware ou entreferro" ficou **inacessível pelos dados de potência** (§5.1).
+2. **O atuador tem curso além de R=32?** (§5.2) Decide o ganho 3 da §6.1 — entre nada e
+   ~130 W de topo. Custo: zero (§5.3). A metade "existe zona morta física?" foi
+   **resolvida: não** ✅ (§5.1.1). Note que saber que 1–13 é vivo **não discrimina** entre
+   as três hipóteses de §5.2 — todas continuam de pé.
 3. **Existe barramento digital no chicote, e em que nível elétrico?** (§4, §3.3) Decide
    entre MITM barato e substituição do console, e decide se é seguro encostar um GPIO
    nele. A lição da Peloton diz que a resposta pode ser RS-232 ⚙️. Custo: um multímetro.
