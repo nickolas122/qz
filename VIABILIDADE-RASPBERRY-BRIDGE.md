@@ -34,9 +34,10 @@ carrega marca; a ausência de marca é erro de redação.
    mais longe — Trixter X-Dream, protocolo completo e PR — está aberto e não mergeado. ⚙️
 7. **O bridge não produz watt real.** Nenhuma variante dele produz. Só pedivela ou pedal
    com extensômetro. ✅
-8. **Existe uma quarta rota, de risco elétrico zero: motorizar o knob.** O SmartSpin2k já
-   implementa homing contra bike FTMS — a classe exata da megagym — e o QZ já o suporta.
-   Não entrega o prêmio do rádio, mas não toca no chicote. ⚙️
+8. **Há três protocolos de barramento de bike documentados como arte prévia** — Trixter
+   (serial 115200), Freebeat (UART 9600) e Peloton (**RS-232 19200**, tap no chicote do
+   console). Nenhum é da YPOO ⚙️. O da Peloton é o mais próximo em cenário, e ensina que
+   chicote de console **não é TTL** e pode ser polled. ⚙️
 9. **Há uma decisão de ordem que custa trabalho se for ignorada:** calibrar a `ergTable`
    antes de decidir a escala de resistência é jogar a calibração fora — a menos que a
    rota escolhida preserve a escala 1–32. ⚙️
@@ -215,79 +216,83 @@ foi ampla demais.
 [SHIFTR](https://github.com/JuergenLeber/SHIFTR) — ponte BLE↔Direct Connect em ESP32.
 Prova de que o caminho ESP32 funciona neste ecossistema. ❓ quanto a reuso direto.
 
-### 3.3 SmartSpin2k — rota de risco elétrico zero ⚙️
+### 3.3 SmartSpin2k — o que serve, e o que não serve ⚙️
 
 [SmartSpin2k](https://github.com/doudar/SmartSpin2k) é um projeto ESP32 maduro (~9.700
-linhas em `src/`) que motoriza o knob de resistência com stepper e se apresenta aos apps
-como trainer. O QZ já o suporta como `ftmsAccessory` (`bluetooth.cpp:3159–3184`) ⚙️, e o
-driver `src/devices/smartspin2k/smartspin2k.cpp` escreve na característica customizada
-dele — `{0x02,0x08,…}` shiftStep, `{0x02,0x17,…}` forceResistance, `{0x02,0x1B,…}`
-syncMode — e pode até injetar watt/cadência/HR do próprio QZ (`{0x02,0x0E/0x0F/0x0D}`) ⚙️.
+linhas em `src/`) que o QZ já suporta como `ftmsAccessory` (`bluetooth.cpp:3159–3184`) ⚙️.
 
-**O achado que importa:** o SS2K já trata a classe exata da megagym. Em
-`src/Stepper.cpp:389` ⚙️:
+**O que não serve: motorizar o knob.** É o propósito principal do projeto — stepper
+girando o knob de bikes cuja resistência não é comandável eletronicamente. **A megagym
+aceita resistência-alvo por FTMS** (`0x2ACC` bit 2, escrita ×10 em `ftmsbike.cpp:374`,
+`PLANO-MEGAGYM` §2.1) ✅, então essa metade do projeto resolve um problema que esta bike
+não tem. Descartada.
 
-```cpp
-// if we're using real resistance from a FTMS bike, find those values for the
-// reported min and max resistance instead of using hard stops.
-if (!rtConfig->resistance.getSimulate() && userConfig->getConnectedPowerMeter() != NONE
-    && rtConfig->resistance.getMax() > 0) {
-  ss2k->_findFTMSHome(bothDirections);
+**O que serve: é o único repo examinado com um protocolo de barramento de console
+documentado em código funcionando.**
+
+#### O tap na UART do console da Peloton ⚙️
+
+Terceiro template, ao lado do Freebeat (§3.1) e do Trixter (§3.2) — e o único dos três que
+é **tap no chicote de console de uma bike comercial**, que é exatamente o cenário da
+megagym.
+
+Camada física (`src/Main.cpp:101`, `include/settings.h:197`, `:200`):
+
+| | |
+|---|---|
+| Interface | UART do console, hardware serial 1 do ESP32 |
+| Taxa | **19200 8N1** |
+| Pinos (placa rev2) | RX = GPIO22, TX = GPIO21 |
+| **Níveis** | **RS-232, não TTL** — a PCB V3 traz um **MAX3232** ⚙️ |
+
+Protocolo (`lib/SS2K/include/Constants.h:88–97`, `src/Main.cpp:554–576`,
+`lib/SS2K/src/sensors/PelotonData.cpp`):
+
+```
+Host → bike, 4 bytes, a cada 100 ms (AUX_SERIAL_DELAY), alternando os IDs:
+  [ 0xF5 | ID | checksum | 0xF6 ]      checksum = (byte0 + byte1) % 256
+
+  ID  0x41 cadência · 0x44 potência · 0x49 resistência · 0x4a resistência alt (não impl.)
+
+Bike → host:
+  [ 0xF1 | ID | payload_len | payload… | 0xF6 ]
+  payload = dígitos ASCII em ORDEM INVERSA (decodifica de 2+len para baixo até 3)
+  potência = valor / 10 · resistência 5–98 (settings.h:108, :112)
 ```
 
-`_findFTMSHome()` (`Stepper.cpp:291`) gira o knob **observando a resistência que a bike
-reporta por FTMS**, até bater no mínimo; zera o stepper ali; depois varre até o máximo e
-grava a posição. Os dois insumos que ele exige são exatamente o que a megagym publica:
-resistência no `0x2AD2` ✅ e min 1 / máx 32 no `0x2AD6` ✅. **Nenhuma engenharia reversa,
-nenhum fio cortado, console intacto.**
+Quatro lições diretamente transferíveis para a megagym:
 
-#### O knob não tem batente — e isso restringe a topologia ✅⚙️
+1. **Níveis não são TTL.** A PCB precisou de um MAX3232 ⚙️. Encostar GPIO de ESP32 num
+   chicote de console sem medir tensão é como se queima a placa. Reforça a regra de
+   §4.2.
+2. **O barramento é polled.** O host precisa *pedir*; um tap puramente passivo pode não
+   ver nada se ninguém estiver perguntando. Na megagym, se houver barramento, o console é
+   quem pergunta — então escutar deve mostrar tráfego, mas a ausência de tráfego **não
+   prova** ausência de barramento. ❓
+3. **Payload em ASCII, não binário.** Nem todo console fala binário empacotado; o parser
+   tem que estar aberto a texto.
+4. **Mesmo a Peloton só dá leitura.** O SS2K lê cadência, potência e resistência pelo
+   chicote, mas **não escreve resistência por ele** — para isso ainda gira o knob. Se um
+   fabricante grande não expõe escrita no barramento, é prudente não assumir que a YPOO
+   exponha. ❓
 
-O knob da megagym gira sem fim ✅. Isso não impede a rota, mas **elimina uma das duas
-topologias possíveis**, e o motivo está no código dos dois lados.
+Detalhe de arquitetura que espelha o QZ: o SS2K injeta a fonte serial no seu pipeline de
+sensores BLE dando a ela **UUID e endereço BLE sintéticos** — `PELOTON_DATA_UUID` e
+`PELOTON_ADDRESS 00:00:00:00:00:00` (`Constants.h:85–86`) ⚙️. É o mesmo truque que o QZ
+usa ao instanciar devices seriais dentro de `deviceDiscovered()` (§3.1).
 
-O SS2K tem dois modos de posicionamento (`src/Stepper.cpp:111`, `_resistanceMove`):
+#### O que o repo NÃO tem ⚙️
 
-- **Malha fechada**, quando ele mesmo enxerga a resistência real de uma bike FTMS. Move
-  o stepper incrementalmente na direção que reduz `target − reported`, sem nunca usar
-  mapa absoluto de posição. **Deriva é estruturalmente impossível** neste modo: patinação
-  do acoplamento, passo perdido ou clique de encoder pulado se autocorrigem na iteração
-  seguinte. É o modo certo para um knob sem batente.
-- **Malha aberta**, `posição = shifterPosition × shiftStep`, relativa ao *home*.
+Verificado por busca, não por suposição:
 
-O homing por FTMS só é escolhido sob `userConfig->getConnectedPowerMeter() != NONE`
-(`Stepper.cpp:389`) ⚙️ — ou seja, **exige que o SS2K tenha o próprio vínculo BLE com a
-bike**. Sem ele, cai no homing por StallGuard (`Stepper.cpp:221`), que precisa de stall
-contra batente. Num knob que gira sem fim não há stall: o homing roda até o
-`HOME_TIMEOUT` de 30 s (`Stepper.h:12`) e desiste, deixando `homed` falso e uma faixa
-provisória (`Stepper.cpp:78`).
-
-E o QZ dirige o SS2K **em malha aberta**: `smartspin2k.cpp:201` calcula
-`steps = slope × R + intercept`, chama `setShiftStep(steps)` (`0x02 0x08`) e escreve
-`0x02 0x17` — que em `CustomCharacteristic.md:74` é `BLE_shifterPosition` ⚙️. Não há
-realimentação: `resistanceReadFromTheBike()` só serve ao `lowInit` inicial ⚙️.
-
-**Conclusão:** a topologia "SS2K como `ftmsAccessory` do QZ" **não fecha** nesta bike —
-sem vínculo próprio com a bike o SS2K não consegue se referenciar, e sem batente o
-fallback não existe. A rota exige a topologia em que **o SS2K mantém o próprio vínculo
-BLE com a bike** e opera em malha fechada. ❓ quanto a se o QZ pode então consumi-lo como
-bike FTMS em vez de acessório.
-
-Um paliativo mecânico — batente impresso no suporte — **não resolve**, se o knob for
-encoder incremental: nesse caso não existe mapeamento absoluto entre ângulo do knob e
-nível, e um batente pararia num ponto arbitrário da escala. ❓
-
-**Sub-incógnita barata:** o knob é incremental com clamp? Descer até R=1, continuar
-descendo mais 10 cliques, subir 5. Se parar em R=6, é incremental com clamp — os cliques
-excedentes foram absorvidos, e não há ângulo absoluto.
-
-#### Risco de estabilidade da malha ❓
-
-A malha fechada do SS2K realimenta pela resistência que a bike reporta. A megagym alterna
-dois pacotes `0x2AD2` de ~1 s, e só um deles carrega resistência (`PLANO-MEGAGYM` §2.1)
-✅ — realimentação a cada ~2 s. Somado ao tempo físico do motor movendo os ímãs, é uma
-malha lenta. Deve servir para relevo; para ERG, tende a caçar o alvo. `ERGSensitivity` e
-`shiftStep` são os parâmetros de ajuste. Não medido.
+- **Nada sobre YPOO ou YPBM.** `grep -rin "ypoo\|ypbm"` → zero ocorrências.
+- Nada sobre bikes self-generating, geradores ou retenção de energia em console.
+- Nenhuma leitura de sensor cru — sem hall, sem contagem de pulsos. O SS2K consome dados
+  já decodificados (BLE) ou já formatados (UART da Peloton).
+- Nenhuma escrita de resistência por barramento, em nenhuma bike.
+- Fora a Peloton, todos os decodificadores de `lib/SS2K/src/sensors/` são BLE:
+  `EchelonData`, `FlywheelData`, `CyclePowerData`, `CscSensorData`,
+  `FitnessMachineIndoorBikeData`, `ChronoData`, `HeartRateData`.
 
 #### Peças do SS2K que endereçam problemas deste documento ⚙️
 
@@ -490,8 +495,8 @@ Explicitamente, porque a expectativa natural erra aqui.
 
 1. **Liberar o rádio BLE do Pi** ⚙️ — o único ganho que independe de tudo em §4 e §5, e o
    que amarra os dois objetivos. Também elimina a armadilha de "uma conexão por vez"
-   (`PLANO-MEGAGYM` §11) ✅. **Só as rotas com fio o entregam** — SS2K (§3.3) e BLE-FTMS
-   (§7.1) não.
+   (`PLANO-MEGAGYM` §11) ✅. **Só as rotas com fio o entregam**; a rota BLE-FTMS do §7.1
+   não.
 2. **Resolução dentro de R 13–32** ❓ — provável, se o atuador for contínuo ou mais fino
    que 32 passos.
 3. **Faixa acima de R=32** ❓ — vale entre nada e ~130 W de topo. §5.3 decide.
@@ -532,12 +537,12 @@ BLE e portanto **não entrega o ganho nº 1 da §6.1**, que é o que motiva o pr
 esforço de software pelo prêmio principal. Vale como protótipo, não como destino. A mesma
 contrapartida se aplica à rota SS2K da §3.3.
 
-### 7.2 Se a rota for SS2K
+### 7.2 Item que a lição da Peloton acrescenta
 
-O ferramental muda: sai o analisador lógico, entra impressora 3D (ou serviço de impressão)
-para o suporte, e a lista de materiais passa a ser a do projeto — ESP32, TMC2209, stepper
-NEMA. Há kits prontos à venda. A adaptação do suporte ao knob da megagym é trabalho de
-modelagem, não de eletrônica ❓.
+Se o chicote tiver barramento, ele pode não ser TTL — a PCB do SS2K precisou de um
+**MAX3232** para falar com o console da Peloton (§3.3) ⚙️. Um transceptor RS-232 de
+bancada (MAX3232 em módulo, R$10–20) entra na lista como item condicional, a comprar
+**depois** de medir as tensões, não antes.
 
 ---
 
@@ -582,12 +587,12 @@ já diagnosticado, correção localizada, independe de Pi, de bridge e de hardwa
 1. **O atuador tem curso além de R=32, e o platô 1–13 é firmware ou entreferro?** (§5)
    Decide os ganhos 2, 3 e o item da zona morta em §6. Custo de resolver: zero (§5.3).
    **Maior retorno por esforço de todo o documento.**
-2. **O knob é encoder incremental com clamp?** (§3.3) Já se sabe que **não tem batente
-   ✅**, o que sozinho descarta a topologia "SS2K como `ftmsAccessory` do QZ" e exige a
-   topologia de malha fechada. Falta saber se existe qualquer mapeamento absoluto
-   ângulo→nível. Custo de resolver: **zero** — o teste de cliques da §3.3.
-3. **O que passa no chicote?** (§4) Decide se o bridge é MITM barato ou substituição do
-   console. Só importa para as rotas que o invadem. Custo: um multímetro e uma tarde.
+2. **Existe barramento digital no chicote, e em que nível elétrico?** (§4, §3.3) Decide
+   entre MITM barato e substituição do console, e decide se é seguro encostar um GPIO
+   nele. A lição da Peloton diz que a resposta pode ser RS-232 ⚙️. Custo: um multímetro.
+3. **Quais pinos carregam AC ao pedalar?** (§4.1) É o discriminador único que resta
+   entre eixo 2 e eixo 3, agora que a contagem de 5–8 pinos ✅ está fechada. Custo: um
+   multímetro.
 4. ~~**A bike é mesmo self-generating, e o console sobrevive à parada?**~~ **Resolvido
    ✅** (§4.1): é self-generating, e o console **sobrevive** com o BLE vivo — há retenção
    de energia. O risco elétrico da caracterização permanece; a restrição de projeto sobre
@@ -599,8 +604,10 @@ já diagnosticado, correção localizada, independe de Pi, de bridge e de hardwa
    bridge para o ganho nº 1; não avaliada.
 8. **O que o mantenedor respondeu em #2629, e o que faz o PR #4851?** (§3.2) Pode conter
    orientação de arquitetura que evita retrabalho. Bloqueado por rate limit nesta sessão.
-9. **O QZ consegue consumir o SS2K como bike FTMS, e não como acessório?** (§3.3) É a
-   pergunta que decide se a rota de risco zero tem topologia viável. Não avaliada.
+9. **O barramento da megagym, se existir, aceita escrita de resistência?** (§3.3) Nem o
+   da Peloton aceita — o SS2K lê pelo chicote e escreve pelo knob ⚙️. Se a megagym também
+   for só-leitura, a rota com fio entrega telemetria mas o controle continua por FTMS, e
+   o prêmio do rádio se perde pela metade.
 10. **A velocidade sai da frequência do gerador?** (§4.1) Se sim, existe leitura de
    cadência totalmente passiva e sem risco — o degrau natural para validar o caminho de
    dados serial ponta a ponta antes de qualquer coisa irreversível.
@@ -643,6 +650,10 @@ já diagnosticado, correção localizada, independe de Pi, de bridge e de hardwa
 | OpenBikeControl | `src/BLE_OpenBikeControl_Service.cpp` |
 | Direct Connect | `src/DirConManager.cpp`, `src/DirConMessage.cpp` |
 | Característica customizada (a que o QZ escreve) | `CustomCharacteristic.md`, `src/BLE_Custom_Characteristic.cpp` |
+| **Tap RS-232 no console da Peloton** | `src/Main.cpp:101` (19200 8N1), `:554–576` (TX), `lib/SS2K/src/sensors/PelotonData.cpp` (decode) |
+| Constantes do protocolo Peloton | `lib/SS2K/include/Constants.h:88–97` |
+| Fonte serial com identidade BLE sintética | `lib/SS2K/include/Constants.h:85–86` |
+| MAX3232 na PCB V3 | `Hardware/V3 - Integrated PCB/PCB/SS2K_KiCad_Files/SmartSpin2k.kicad_pcb` |
 | Licença (GPL-2.0-only) | `LICENSE`, cabeçalhos SPDX |
 
 ## 11. Fontes externas
