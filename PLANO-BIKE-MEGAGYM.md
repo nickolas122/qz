@@ -6,7 +6,34 @@ log — nada é suposição, exceto onde marcado como **hipótese**.
 
 ---
 
-## TL;DR
+## ⚠️ ATUALIZAÇÃO 2026-08-01 — a premissa deste plano estava errada
+
+O nome BLE é **`YPBM001264`**. Com o nome em mãos, a conclusão muda por completo:
+
+**A bike já é suportada pelo QZ.** Ela casa com o padrão `YPBM` + `length() == 10`
+que já existe em `ftmsbike.cpp:2171` e `bluetooth.cpp:2017`, adicionado no commit
+`85421f41` (2025-09-30, *"KUBIsport BC91EK"*). O perfil já atribuído é
+**exatamente** o que este plano derivou do `0x2ACC`:
+
+```cpp
+YPBM = true;
+resistance_lvl_mode = true;
+ergModeSupported = false;
+max_resistance = 32;      // bate com o 0x2AD6 lido: min 1, máx 32, passo 1
+```
+
+**A Etapa B (seção 5) é obsoleta — não há driver a escrever.** A codificação da
+escrita também foi confirmada correta (seção 4, dado 3): a bike espera nível ×
+10, que é justamente o que o ramo de `ftmsbike.cpp:374` já manda para `YPBM`.
+
+**Conclusão: a bike funciona no QZ sem alteração de código.** Ver seção 5-bis.
+
+O restante do documento fica como registro da caracterização do equipamento, que
+continua válida.
+
+---
+
+## TL;DR (histórico — escrito antes de descobrir o nome BLE)
 
 A bike é uma OEM chinesa (quase certamente **YPOO** rebrandeada) que fala **FTMS
 padrão**. Ela aceita **resistência-alvo** (opcode `0x04`), mas **não** tem ERG
@@ -191,25 +218,51 @@ imediatamente; o controle de resistência é o que precisa do perfil da seção 
 
 ---
 
-## 4. Os 3 dados que faltam
+## 4. Os 3 dados que faltavam — ✅ COLHIDOS
 
-Sem eles não dá para escrever o driver.
+### 1. Nome BLE — ✅ `YPBM001264`
+`B8:F8:62:6D:A8:D6  rssi=-48  YPBM001264`. 10 caracteres, casa com o padrão
+`YPBM` já existente. **É o que torna a Etapa B obsoleta.**
 
-### 1. Nome BLE
-A captura só tem o MAC. Necessário para a entrada na tabela e para a detecção em
-`bluetooth.cpp`.
+### 2. `0x2AD6` — ✅ min 1, máx **32**, passo 1
 
-```bash
-python tools/paddle_logger.py --scan
+```
+0x2AD6 raw = 0a-00-40-01-0a-00  ->  min=10  max=320  incremento=10
 ```
 
-*(o `--scan` foi corrigido no commit `8a09f38` — `return_adv=True`)*
+Aplicando a resolução 0,1 do spec: **1 / 32 / 1**. Confirmado na prática — os
+paddles chegaram a `resistance=32` no log. Bate com o `max_resistance = 32` que
+o QZ já usa.
 
-### 2. `0x2AD6` — Supported Resistance Level Range
-É `read` e nunca foi lido. Retorna 3 × `sint16`: mínimo, máximo, incremento.
-O máximo vira o `max_resistance`. Observamos até 21; o real pode ser 24, 32…
+### 3. Teste de escrita no `0x2AD9` — ✅ **formato ×10, como o spec e como o QZ já faz**
 
-### 3. Teste de escrita no `0x2AD9`
+Rodada limpa de 2026-08-01 14:20:50, **pedalando** (~75 rpm):
+
+```
+CP>> 04-64-00  (nível 10 × 10 = 100)  ->  80-04-01 Success
+     resistência 1 -> 10 em 420 ms, estável por 5 s; potência 45 -> 98 W
+
+CP>> 04-0a-00  (nível 10 puro = 10)   ->  80-04-01 Success
+     resistência 10 -> 1  (ou seja, 10 ÷ 10 = nível 1); potência 98 -> 76 W
+```
+
+Reproduzido na rodada das 14:24:31. **A bike é conformante:** o parâmetro é
+nível × 10, resolução 0,1 — exatamente o que `ftmsbike.cpp:374-376` já manda
+para `YPBM`. Nada a corrigir.
+
+> **Correção de leituras anteriores.** As duas primeiras rodadas sugeriram o
+> contrário e estavam erradas, por motivos distintos:
+> - **14:14:10** — bike parada o tempo todo (`cadence=0`). O `Success` do
+>   formato puro não moveu nada porque a bike não aciona o freio sem pedalada.
+> - **14:19:18** — a bike vinha de `STAT 02-01` (*parado/pausado*). O
+>   `START_RESUME` disparou um reset de sessão (distância e tempo zeraram) e a
+>   escrita de resistência caiu exatamente nessa janela — mesmo timestamp do
+>   `STAT 04`. Daí o `80-04-02`. É corrida com a transição de estado, não
+>   problema de codificação.
+>
+> Lição: só vale teste de escrita **pedalando e com a sessão já ativa**.
+
+### Anexo: o primeiro teste (bike parada, inconclusivo)
 A captura prova que o control point **existe** e que a bike **declara** suporte —
 não que a escrita funciona.
 
@@ -232,7 +285,14 @@ write 0x2AD9 <- 04-64-00        # Set Target Resistance, nível 10 (×10, como o
 
 ## 5. Tarefas
 
-### Etapa A — corrigir e estender `tools/paddle_logger.py`
+### Etapa A — corrigir e estender `tools/paddle_logger.py` ✅ FEITO
+
+> Concluída. A1-A4 implementados; falta apenas **rodar** contra o equipamento:
+> ```bash
+> python tools/paddle_logger.py --scan                                  # dado 1
+> python tools/paddle_logger.py --addr B8:F8:62:6D:A8:D6 --test-write 10  # dados 2 e 3
+> ```
+
 
 O script está em `tools/paddle_logger.py` (301 linhas, commit `8a09f38`).
 
@@ -258,7 +318,10 @@ com log do indicate + do `STAT 07` resultante.
 
 **Resultado:** uma única rodada fecha os 3 dados da seção 4.
 
-### Etapa B — implementar o driver
+### Etapa B — implementar o driver ❌ OBSOLETA
+
+> Não se aplica: a bike já está na tabela como `YPBM`, com o perfil correto.
+> Ver o aviso no topo. O que segue fica só como registro do que *seria* feito.
 
 **B1.** Adicionar a entrada em `ftmsbike::deviceDiscovered()`
 (`src/devices/ftmsbike/ftmsbike.cpp`, na cadeia da linha 2033), no padrão do
@@ -302,6 +365,24 @@ do `ftmsbike` (cadeia que termina na linha ~2025).
 4. Ativar `log_debug` e procurar `"FTMS service and Control Point found"`
 5. Ajustar sensibilidade com `bike_resistance_offset` / `bike_resistance_gain_f`
    (`src/qzsettings.cpp:83-84`)
+
+---
+
+## 5-bis. Conclusão: nada a implementar
+
+Os três dados da seção 4 foram colhidos e **todos confirmam o que o QZ já faz**:
+
+| Dado | Medido | O que o QZ já usa | Bate? |
+|---|---|---|---|
+| Nome BLE | `YPBM001264` (10 chars) | `startsWith("YPBM") && length()==10` | ✅ |
+| `max_resistance` | 32 (`0x2AD6`) | `max_resistance = 32` | ✅ |
+| ERG | não (`0x2ACC` bit 3 = 0) | `ergModeSupported = false` | ✅ |
+| Modo | resistência-alvo (bit 2 = 1) | `resistance_lvl_mode = true` | ✅ |
+| Codificação da escrita | nível × 10 | ramo ×10 de `ftmsbike.cpp:374` | ✅ |
+
+**A bike funciona no QZ sem nenhuma alteração de código.** O trabalho restante é
+só validação de uso (Etapa C) e ajuste fino de sensibilidade via
+`bike_resistance_offset` / `bike_resistance_gain_f`, se necessário.
 
 ---
 
