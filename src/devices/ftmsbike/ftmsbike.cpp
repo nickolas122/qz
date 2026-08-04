@@ -245,7 +245,7 @@ void ftmsbike::zwiftPlayInit() {
 void ftmsbike::forcePower(int16_t requestPower) {
     if((resistance_lvl_mode || TITAN_7000) && !MAGNUS && !SS2K) {
         const resistance_t targetResistance = resistanceFromPowerRequest(requestPower);
-        forceResistance(targetResistance);
+        commandResistance(targetResistance);
     } else {
         uint8_t write[] = {FTMS_SET_TARGET_POWER, 0x00, 0x00};
 
@@ -295,6 +295,71 @@ void ftmsbike::changePower(int32_t power) {
 
 resistance_t ftmsbike::resistanceFromPowerRequest(uint16_t power) {
     return _ergTable.resistanceFromPowerRequest(power, Cadence.value(), max_resistance);
+}
+
+void ftmsbike::configureResistanceSlew(QSettings &settings) {
+    resistanceSlew.configure(
+        settings.value(QZSettings::resistance_slew_up, QZSettings::default_resistance_slew_up).toDouble(),
+        settings.value(QZSettings::resistance_slew_down, QZSettings::default_resistance_slew_down).toDouble());
+}
+
+/**
+ * @brief Entry point for every resistance target the app wants the bike to reach.
+ *
+ * With the slew limiter off this is forceResistance() and nothing else, so the wire
+ * traffic is unchanged. With it on, the target is handed to the limiter and only the
+ * level the actuator could have reached by now is written; resistanceSlewTick() walks
+ * the rest of the way on the following polls.
+ */
+void ftmsbike::commandResistance(resistance_t requestResistance) {
+    QSettings settings;
+    configureResistanceSlew(settings);
+
+    if (!resistanceSlew.enabled()) {
+        // Keep the limiter aware of where we are, so enabling it mid-session doesn't
+        // start the first ramp from a stale level.
+        resistanceSlew.sync(requestResistance);
+        forceResistance(requestResistance);
+        return;
+    }
+
+    if (!resistanceSlew.primed() && resistance_received) {
+        // Start the first ramp from where the console says the magnets are, not from
+        // the target itself, which would let the first command of the session jump.
+        resistanceSlew.sync(currentResistance().value());
+    }
+
+    const qint64 now = QDateTime::currentMSecsSinceEpoch();
+    resistanceSlew.setTarget(requestResistance, now);
+
+    resistance_t next;
+    if (resistanceSlew.step(now, &next)) {
+        if (next != requestResistance)
+            qDebug() << QStringLiteral("resistance slew: commanding") << next << QStringLiteral("towards")
+                     << requestResistance;
+        forceResistance(next);
+    } else {
+        qDebug() << QStringLiteral("resistance slew: holding") << resistanceSlew.lastCommanded()
+                 << QStringLiteral("towards") << requestResistance;
+    }
+}
+
+/**
+ * @brief Continue a ramp that has no new demand behind it.
+ *
+ * The pending target has to survive between polls: once ERG stops re-issuing the same
+ * value, requestResistance goes back to -1 and nothing else would finish the movement.
+ */
+void ftmsbike::resistanceSlewTick() {
+    if (!resistanceSlew.enabled() || !resistanceSlew.pending())
+        return;
+
+    resistance_t next;
+    if (resistanceSlew.step(QDateTime::currentMSecsSinceEpoch(), &next)) {
+        qDebug() << QStringLiteral("resistance slew: ramping to") << next << QStringLiteral("towards")
+                 << resistanceSlew.target();
+        forceResistance(next);
+    }
 }
 
 void ftmsbike::forceResistance(resistance_t requestResistance) {
@@ -480,6 +545,9 @@ void ftmsbike::update() {
             powerForced = false;
             requestPower = -1;
             init();
+            // Auto resistance was just switched off: this is a resync, not a ride command,
+            // so it bypasses the limiter and becomes the new starting point for it.
+            resistanceSlew.sync(currentResistance().value());
             forceResistance(currentResistance().value());
         }
 
@@ -528,7 +596,7 @@ void ftmsbike::update() {
                     } else {
                     init();
 
-                    forceResistance(rR);
+                    commandResistance(rR);
                     }
                 }
             }
@@ -536,7 +604,12 @@ void ftmsbike::update() {
                 requestResistance = -1;
             }
         }
-        
+
+        // The pending slew target outlives requestResistance, so the ramp keeps moving
+        // on its own after the demand that started it is gone.
+        configureResistanceSlew(settings);
+        resistanceSlewTick();
+
         // gpx scenario for example
         if(!virtualBike || !virtualBike->ftmsDeviceConnected()) {
             if ((requestInclination != -100 || (lastGearValue != gears() && requestInclination != -100))) {
@@ -646,7 +719,7 @@ void ftmsbike::update() {
                     qDebug() << "continuous ERG: cadence" << Cadence.value()
                              << "target" << lastRequestedPower().value()
                              << "resistance" << m_lastErgResistance << "->" << newR;
-                    forceResistance(newR);
+                    commandResistance(newR);
                     m_lastErgResistance = newR;
                 }
             }

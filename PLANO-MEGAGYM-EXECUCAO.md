@@ -223,6 +223,50 @@ Duas sessões de free ride de ~20 min no mesmo percurso, uma com `slew=0` e outr
 
 **Artefatos:** dois logs · dois `.fit` · série de `|ΔR|/s` das duas.
 
+### 3.6 O que foi implementado ⚙️
+
+O limitador existe no código. Falta só rodar as duas sessões da §3.5 — que é a parte que
+o computador não faz.
+
+**`src/devices/ftmsbike/resistanceslewlimiter.h`** — o limitador, sem Qt objects e sem
+relógio próprio (quem chama passa o timestamp), justamente para ser testável sem bike.
+Guarda o alvo final e devolve, a cada chamada, o nível mais distante que o atuador
+poderia ter alcançado desde o comando anterior.
+
+Duas decisões que a implementação obrigou a tomar, e que a §3.3 não previa:
+
+- **A fração de nível tem que ser carregada entre ticks.** O `poll_device_time` é 200 ms
+  e a 2 níveis/s um nível leva 500 ms. Descartando o resto a cada tick, a rampa andaria a
+  1,67 níveis/s em vez de 2 — mais lenta que o ímã, somando atraso em vez de tirar. O
+  relógio interno avança exatamente `níveis/taxa`, não até `agora`.
+- **Taxa instantânea entre dois comandos não é a métrica.** Níveis são inteiros: um nível
+  sozinho sempre cai um pouco antes ou depois da hora exata, e entre dois comandos
+  consecutivos a 200 ms de poll aparecem 2,5 níveis/s com a taxa em 2. O que vale — e o
+  que o teste verifica — é que **a distância percorrida desde o início da rampa nunca
+  passa de `taxa × tempo decorrido`**, que com o carry acima vale exatamente. **O critério
+  da §3.5 tem de ser lido assim**: `|ΔR|` acumulado contra o tempo, não par a par.
+
+**`ftmsbike`** — todo comando de resistência passa agora por `commandResistance()`, que é
+o gate: `forcePower()` (bikes em `resistance_lvl_mode`), o bloco de `update()` e o ERG
+contínuo. `forceResistance()` continua sendo o escritor cru. Com as duas taxas em 0 o gate
+chama `forceResistance()` e mais nada — tráfego idêntico ao de hoje.
+
+O tick da rampa fica em `update()`, depois do bloco de resistência: o alvo pendente vive
+no limitador, não em `requestResistance`, então a rampa termina sozinha depois que a
+demanda que a começou sumiu — o ponto de atenção da §3.3.
+
+Três casos que só apareceram ao escrever o teste:
+
+| Caso | Decisão |
+|---|---|
+| Primeiro comando da sessão, limitador sem histórico | Semeia com `currentResistance()` se `resistance_received`; senão passa direto — não há distância sobre a qual medir taxa |
+| ERG reemitindo o mesmo alvo a cada ~1 s | Retarget **não** reinicia o relógio, senão a rampa nunca sairia do lugar |
+| Poll parado (app suspenso, 30 s de buraco) | Crédito limitado a 2 s — o ímã também não andou nesse buraco, então o tempo parado não compra salto |
+
+**Testes:** `tst/Devices/TestResistanceSlewLimiter.h`, 14 casos, incluindo a invariante
+de distância acima e as durações medidas da §1.3 (19 níveis: 9,5 s subindo, 4,75 s
+descendo).
+
 ---
 
 ## 4. Frente B — ERG: o que realmente falta
@@ -366,7 +410,7 @@ para prender o papel de central em `hci1` — hoje o QZ só checa `allDevices()`
 | `zwift_erg` | true | true em treino, false em free ride | correto para o que foi rodado |
 | `virtualbike_forceresistance` | true | true | ok |
 | `zwift_erg_filter` / `_down` | 10 / 10 | testar **5 / 5** | §4.2 |
-| `resistance_slew_up` / `_down` | — | **2 / 4** | novo, §3.4 |
+| `resistance_slew_up` / `_down` | 0 / 0 ⚙️ | **2 / 4** | implementado, §3.6 |
 
 ---
 
@@ -375,7 +419,8 @@ para prender o papel de central em `hci1` — hoje o QZ só checa `allDevices()`
 | O quê | Onde |
 |---|---|
 | Escrita FTMS absoluta (YPBM) | `src/devices/ftmsbike/ftmsbike.cpp:374` |
-| Ponto do limitador de taxa | `ftmsbike.cpp:503–531`; precedente DOMYOS em `:519` |
+| Limitador de taxa | `src/devices/ftmsbike/resistanceslewlimiter.h`; gate em `ftmsbike::commandResistance()`, tick em `update()` |
+| Teste do limitador | `tst/Devices/TestResistanceSlewLimiter.h` |
 | Banda morta do ERG | `src/devices/bike.cpp:110`, `:112` |
 | `resistanceFromPowerRequest` | `src/ergtable.h` |
 | `ergTable`: 10 amostras por par · persistência · serialização | `src/ergtable.h:37` · `:86`, `:90` · `:291`, `:316` |
@@ -395,7 +440,8 @@ para prender o papel de central em `hci1` — hoje o QZ só checa `allDevices()`
 Ordenadas por quanto travam decisão.
 
 1. **O limitador de taxa realmente derruba a potência média?** (§3.5) É o teste
-   confirmatório da premissa do viés. Se não derrubar, a §3.1 está errada.
+   confirmatório da premissa do viés. Se não derrubar, a §3.1 está errada. O código está
+   pronto (§3.6); falta rodar as duas sessões.
 2. **As lacunas de 10–25 s no ERG são a banda morta?** (§4.2) Custo zero, é setting.
 3. **A coexistência central/peripheral no `hci0` do Pi degrada?** (§5.3) Custo: uma sessão
    longa depois que a placa chegar.
