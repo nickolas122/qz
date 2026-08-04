@@ -45,9 +45,10 @@ carrega marca; a ausência de marca é erro de redação.
    calculada sobre o alvo, não sobre o estado dos ímãs. Isso esvazia os critérios de
    potência das Fases 4 e 5 do `PLANO-MEGAGYM` — o laço do ERG fecha sobre o próprio
    comando do QZ (§3.4). Não afeta a `ergTable`.
-11. **A zona morta R 1–13 é da tabela, não dos ímãs ✅.** A perna sente a diferença ao
-   longo dela. São 12 níveis de faixa física real que o firmware achata — e que um bridge
-   com controle direto do atuador recupera (§5.1.1).
+11. **Não existe zona morta ✅ — retratação dupla.** Com a tabela densa a cadência fixa
+   (§5.1.2), o passo cresce suave de +2 para +6 W por nível de R=2 a R=18. O "platô" da
+   `PLANO-MEGAGYM` §2.3 era artefato de amostragem esparsa. Nem os ímãs nem a tabela têm
+   zona morta, e **o bridge não recupera 12 níveis escondidos**.
 12. **Há uma decisão de ordem que custa trabalho se for ignorada:** calibrar a `ergTable`
    antes de decidir a escala de resistência é jogar a calibração fora — a menos que a
    rota escolhida preserve a escala 1–32. ⚙️
@@ -158,9 +159,16 @@ esta configuração:
 
 O defeito §5.3 do `PLANO-MEGAGYM` — log truncado em 40.509.090 bytes com o app ainda
 vivo — foi diagnosticado lá como sem causa no código, com suspeita de storage/SAF do
-Android. No Pi é filesystem comum mais `journalctl`. A hipótese é que o defeito
-desapareça; não há como confirmar antes de rodar. Se confirmar, o item que hoje é
-descrito como bloqueante deixa de existir.
+Android.
+
+**Reproduzido ✅.** O log de 03/08 (`debug-Mon_Aug_3_19_45_12_2026.log`) parou em
+**37.481.436 bytes**, cortado **no meio de uma linha**, cobrindo 848 s de uma sessão de
+2025 s — perdeu 66% da corrida. Dois cortes conhecidos: 40,5 MB e 37,5 MB. **Não é limite
+fixo de bytes nem de tempo** (1318 s contra 848 s), mas os dois na mesma faixa de dezenas
+de MB.
+
+No Pi é filesystem comum mais `journalctl`. A hipótese é que o defeito desapareça; não há
+como confirmar antes de rodar.
 
 ### 2.5 Balanço
 
@@ -601,42 +609,49 @@ Frenagem magnética varia com o inverso do quadrado do entreferro, o que produz 
 convexa e **suave**. O que foi medido tem um degrau em algum lugar entre R=13 e R=16,
 precedido de platô. Degrau é assinatura de mapeamento por tabela, não de física de ímã.
 
-**Ressalva que a §3.4 impõe a esta análise.** Com o desacoplamento confirmado ✅, sabe-se
-que a curva inteira da §2.3 é leitura de uma tabela de firmware indexada pelo alvo — não
-há nada físico nela em ponto nenhum. Logo o cotovelo prova que **a tabela** tem um
-cotovelo, e **não diz nada sobre os ímãs**. A hipótese "o teto de 32 é escolha de
-firmware" continua de pé; a pergunta separada — se existe zona morta *física* entre R 1 e
-13 — tornou-se **inacessível por estes dados** ❓, e só se responde pelo tato ou com
-medidor de potência externo.
+> ⚠️ **TODA ESTA ANÁLISE FOI REFUTADA. Ver §5.1.2.** O cotovelo é artefato da tabela
+> esparsa da §2.3, que tem buracos em R 2–5 e 9–12 e mistura cadências. Com dados densos a
+> cadência fixa a curva é lisa. O texto acima fica registrado para não perder o rastro do
+> erro.
 
-#### 5.1.1 A zona morta é da tabela, não dos ímãs ✅
+#### 5.1.1 A perna sente R 1→13 ✅
 
-**Respondido: subindo R de 1 a 13 pedalando, a perna sente diferença ✅.** Observação
-tátil, não instrumentada — mas direta e suficiente para decidir.
+Observação tátil: subindo R de 1 a 13 pedalando, a perna sente diferença ✅. Descarta zona
+morta física.
 
-Portanto **os ímãs se engajam progressivamente ao longo de 1–13, e a tabela de firmware
-não reporta isso.** Os 12 níveis não são mortos: são resistência física real que o console
-sub-reporta, comprimindo ~1/4 da faixa mecânica em 31 W de watt publicado.
+#### 5.1.2 E a tabela também não tem zona morta ✅ — retratação
 
-Três consequências.
+A sessão de 03/08 (ver `PLANO-EXECUCAO` §1.5.g) preencheu os níveis que faltavam, **a
+cadência fixa em 81 rpm**:
 
-**1. Corrige o `PLANO-MEGAGYM` §2.3.** "Faixa útil: R 13–32" é a faixa útil **da potência
-reportada**, não da bike. A faixa física útil é **1–32**.
+| R | W | Δ | R | W | Δ |
+|---|---|---|---|---|---|
+| 2 | 85 | — | 10 | 109 | +3 |
+| 3 | 87 | +2 | 11 | 113 | +4 |
+| 4 | 90 | +3 | 12 | 117 | +4 |
+| 5 | 92 | +2 | 15 | 131 | +4,7 |
+| 6 | 96 | +4 | 16 | 136 | +5 |
+| 7 | 99 | +3 | 17 | 142 | +6 |
+| 8 | 103 | +4 | 18 | 148 | +6 |
+| 9 | 106 | +3 | | | |
 
-**2. É o terceiro sinal independente de que a tabela é construção, não medição.** Junto
-com a dispersão de 0,00 W (§2.2 de lá) e com o desacoplamento nível↔posição (§3.4), fecha
-o caso: o console publica um número escolhido por alguém, mal calibrado no fundo de
-escala.
+**O passo cresce suavemente de +2 para +6 W por nível. Sem platô, sem cotovelo.** É a curva
+convexa que frenagem magnética por entreferro produz.
 
-**3. Torna todo o eixo de watts não-falsificável sem referência externa.** Se a tabela
-erra a *forma* no fundo, não há motivo para confiar na *escala* no topo: os 316 W
-declarados em R=32 podem estar tão errados quanto os 80 W de R=1. Ver §7.3.
+**Por que a §5.1 errou:** a tabela da `PLANO-MEGAGYM` §2.3 não tem R 2–5 nem 9–12, e
+calcula W/rpm médio misturando cadências. W **não** é proporcional à cadência — a 81 rpm
+R=16 dá 136 W, a 79 rpm dá 131 W, e W/rpm cai de 1,658 para 1,679 ✅. Com buracos mais
+confundimento de cadência, dois pontos distantes produzem uma inclinação falsa.
 
-**Tensão que isso cria com o offset 18** (§6.2 de lá): aquele valor foi escolhido para
-manter tudo dentro de 13–32. Sabendo que 1–13 é fisicamente vivo, um offset menor daria
-mais faixa **física** ao custo de menos faixa de watt **reportado** — e como o MyWhoosh
-calcula velocidade a partir do watt reportado, o preço é andar mais devagar pelo mesmo
-esforço. É escolha, não erro. ❓
+**Consequências, e nenhuma favorece o bridge:**
+
+1. Os 12 níveis baixos **não estão escondidos** — entregam pouco watt por nível porque a
+   física é assim no entreferro largo, e o firmware reporta isso corretamente.
+2. **O ganho 4 da §6.1 não existe.** Foi criado por esta análise errada e está removido.
+3. A hipótese "o teto de 32 é escolha de firmware" (§5.2) **perde o único apoio que
+   tinha** e volta a ❓ puro.
+4. O que continua de pé é a §3.4: a tabela é indexada pelo alvo. Isso está **provado**
+   agora (`PLANO-EXECUCAO` §1.5.f), não mais inferido.
 
 ### 5.2 Três hipóteses
 
@@ -685,10 +700,7 @@ Explicitamente, porque a expectativa natural erra aqui.
 2. **Resolução dentro de R 13–32** ❓ — provável, se o atuador for contínuo ou mais fino
    que 32 passos.
 3. **Faixa acima de R=32** ❓ — vale entre nada e ~130 W de topo. §5.3 decide.
-4. **12 níveis físicos hoje inacessíveis** ✅ — R 1–13 muda a perna (§5.1.1), mas o
-   console os achata em 31 W de watt publicado. Um bridge que comande o atuador direto usa
-   a faixa mecânica inteira em vez de 19 dos 32 níveis. Não é "resolução numa região
-   morta", como escrevi antes: **é faixa real que o firmware esconde.**
+4. ~~12 níveis físicos escondidos~~ — **removido ✅.** Não existem (§5.1.2).
 5. **Estado físico real da resistência** ✅ — trazido pela §3.4. Um bridge que leia a
    posição do atuador (potenciômetro, encoder, contagem de passos) sabe onde o ímã
    **está**; o console só publica onde ele **deveria estar**. Não produz watt real, mas
@@ -704,7 +716,7 @@ Os ganhos da §6.1 não têm o mesmo peso, e a diferença importa mais que a lis
 | Ganho | Estado real |
 |---|---|
 | 1. Rádio do Pi | **Seguro contra um risco não medido.** A degradação BLE (§2.3) tem reportes upstream mas **nenhuma medição nesta configuração** ❓. É a justificativa principal da rota inteira, e está apoiada em incógnita. |
-| 2. 12 níveis físicos | Real ✅ — mas para usá-los é preciso um modelo de potência próprio, o que sem medidor externo é **trocar a ficção da YPOO pela sua** (§5.1.1, §7.3). Só se realiza por inteiro com o item de R$ 2–4 mil. |
+| ~~2. 12 níveis físicos~~ | **Removido ✅** — não existem (§5.1.2). O bridge daria granularidade mais fina dentro de uma curva lisa, não faixa nova. |
 | 3. Estado físico real | Real ✅ — mas só vale o que valer o atraso, que é a incógnita nº 1 e **custa zero medir**. |
 | 4. Paddles limpos | Real, pequeno, e é **defeito de código do QZ** (`bike.cpp:73`, `ftmsbike.cpp:509`) com contorno documentado. Não precisa de hardware. |
 | 5. Latência de controle | Marginal — o elemento lento é o atuador, não o BLE. |
@@ -902,9 +914,9 @@ já diagnosticado, correção localizada, independe de Pi, de bridge e de hardwa
    excursões de 15 níveis, um atuador lento pode nunca chegar, e aí a resistência física é
    um passa-baixa da demanda enquanto o `.fit` registra a demanda. Custo: **zero**.
 2. **O atuador tem curso além de R=32?** (§5.2) Decide o ganho 3 da §6.1 — entre nada e
-   ~130 W de topo. Custo: zero (§5.3). A metade "existe zona morta física?" foi
-   **resolvida: não** ✅ (§5.1.1). Note que saber que 1–13 é vivo **não discrimina** entre
-   as três hipóteses de §5.2 — todas continuam de pé.
+   ~130 W de topo. Custo: zero (§5.3). A pergunta da zona morta está **encerrada: não
+   existe, nem física nem na tabela** ✅ (§5.1.2), e com ela caiu o único indício que
+   sustentava as hipóteses *b*/*c* da §5.2 — que voltam a ❓ puro.
 3. **Existe barramento digital no chicote, e em que nível elétrico?** (§4, §3.3) Decide
    entre MITM barato e substituição do console, e decide se é seguro encostar um GPIO
    nele. A lição da Peloton diz que a resposta pode ser RS-232 ⚙️. Custo: um multímetro.

@@ -270,8 +270,7 @@ que a velocidade vem do volante — e portanto que a curva é física.
 
 | Aceita se | |
 |---|---|
-| Resíduo da 1.5.a estatisticamente indistinguível de zero no transiente | ✅ |
-| C3 mostra inclinação progressiva de A para B | ✅ |
+| ~~Resíduo da 1.5.a~~ · ~~C3~~ | **Desnecessários — a 1.5.f provou por caminho mais curto ✅** |
 
 **Artefatos:** log do QZ das três corridas · série de resíduos · as três curvas de
 decaimento sobrepostas.
@@ -287,6 +286,67 @@ número contra amplitude parcial na perna **é** o desacoplamento, visível a ol
 
 Isso também é a medição da `VIABILIDADE` §3.4.4: se o atuador não acompanha 2 s, não
 acompanha a demanda do MyWhoosh a ~1005 ms de mediana.
+
+#### 1.5.f RESULTADO — H0 provado ✅✅
+
+Sessão de 03/08/2026, treino estruturado no MyWhoosh, `zwift_erg=true` (correto para
+treino, `PLANO-MEGAGYM` §6.1), `bike_resistance_offset=17`, `gears_from_bike=false`,
+marcha 0. Log `debug-Mon_Aug_3_19_45_12_2026.log` alinhado ao `.fit` pelo epoch em ms.
+
+**Não precisou nem do coast-down.** Os degraus de bloco do ERG deram a prova direta:
+
+```
+t=329,99  CMD -> 16          (comando salta de 8 para 16: +8 níveis)
+t=330,67  R=16  W=136  cad=81      <-- 0,68 s depois
+
+t=420,00  CMD ->  2          (comando salta de 16 para 2: -14 níveis)
+t=420,66  R= 2  W= 85  cad=81      <-- 0,66 s depois
+```
+
+Na **primeira amostra de telemetria após o comando**, a bike já reporta o nível novo e o
+watt correspondente, nos dois sentidos.
+
+| Salto | Δ | resposta reportada | tempo físico necessário (1.3) |
+|---|---|---|---|
+| 8 → 16 | +8 | **0,68 s** | 2,7 – 4,0 s a 2–3 níveis/s |
+| 16 → 2 | −14 | **0,66 s** | 2,8 – 3,5 s a 4–5 níveis/s |
+
+Os ímãs não podem ter chegado. **`W = f(R_alvo, cadência)`. H1 está morto, H0 confirmado.** ∎
+
+**Corroboração adicional:** durante o bloco, o ERG oscila ±1 nível a cada ~1 s
+(`CMD→17` em t=334,81, `CMD→16` em t=335,80, e assim por diante) e o watt reportado
+acompanha **cada troca** na amostra seguinte — 142 W em R=17, 136 W em R=16, sempre. Um
+atuador físico não persegue um toggle de ±1 a 1 Hz. Os números perseguem.
+
+E confirma a §3.4.2: o ERG do QZ estava fechando o laço sobre o próprio comando. Ele
+comandou 17, leu 142 W, comandou 16, leu 136 W. Estava dirigindo um número.
+
+**Dispersão zero reproduzida ✅:** 53 pares (R, cadência) com n ≥ 5 amostras, **53 com
+dispersão exatamente 0 (100%)**. Mesma assinatura da `PLANO-MEGAGYM` §2.2, em dados novos.
+
+#### 1.5.g Efeito colateral: a tabela do firmware, densa ✅
+
+O log preencheu os níveis que faltavam na `PLANO-MEGAGYM` §2.3 (R 2–5 e 9–12), **a
+cadência fixa**, eliminando o confundimento de misturar cadências:
+
+| R | W @81 rpm | Δ/nível | | R | W @81 rpm | Δ/nível |
+|---|---|---|---|---|---|---|
+| 2 | 85 | — | | 11 | 113 | +4 |
+| 3 | 87 | +2 | | 12 | 117 | +4 |
+| 4 | 90 | +3 | | 15 | 131 | +4,7 |
+| 5 | 92 | +2 | | 16 | 136 | +5 |
+| 6 | 96 | +4 | | 17 | 142 | +6 |
+| 7 | 99 | +3 | | 18 | 148 | +6 |
+| 8 | 103 | +4 | | | | |
+| 9 | 106 | +3 | | | | |
+| 10 | 109 | +3 | | | | |
+
+**O passo cresce suave de +2 para +6 W por nível. Não há platô, não há cotovelo.** É uma
+curva convexa lisa — exatamente o que frenagem magnética produz.
+
+Isso **derruba a análise da `VIABILIDADE` §5.1**, que via um degrau entre R=13 e R=16. Aquele
+degrau era artefato: a tabela da §2.3 tem buracos em R 2–5 e 9–12 e mistura cadências
+diferentes. Ver a correção lá.
 
 #### 1.5.e O limite honesto
 
