@@ -321,6 +321,31 @@ atuador físico não persegue um toggle de ±1 a 1 Hz. Os números perseguem.
 E confirma a §3.4.2: o ERG do QZ estava fechando o laço sobre o próprio comando. Ele
 comandou 17, leu 142 W, comandou 16, leu 136 W. Estava dirigindo um número.
 
+#### Confirmação independente pelo knob ✅✅
+
+Os outros seis logs são de bancada, com a resistência mexida **pelo knob, sem comando do
+QZ** — caminho de dados completamente diferente. E o console se comporta igual.
+
+`debug-Mon_Aug_3_19_34_06_2026.log`, knob girado rápido:
+
+```
+ t(s)     R      W    cad   W/rpm
+ -1,00     4     68    66   1,030
+ +0,00    22    140    68   2,059     <-- +18 níveis em UMA amostra de 1 s
+ +1,01    22    152    72   2,111
+ +2,01    22    152    72   2,111
+```
+
+**+18 níveis num segundo**, com a cadência praticamente parada (66→68) e o watt dobrando de
+68 para 140. A 2–3 níveis/s, esse movimento levaria **6 a 9 segundos**. E nos 8 s seguintes
+o reportado fica cravado em ~2,06–2,11 W/rpm: nunca reflete a chegada dos ímãs.
+
+Outros eventos no mesmo log: **22→1 em 1,00 s** (−21 níveis) e **1→17 em 1,00 s**.
+
+**Os dois caminhos de entrada — knob e FTMS — reportam o alvo.** Não existe, em nenhuma via,
+um número que reflita a posição física. É a evidência mais limpa do conjunto: sem comando do
+QZ, sem laço de ERG, só uma pessoa girando um botão e o console mentindo na hora.
+
 **Dispersão zero reproduzida ✅:** 53 pares (R, cadência) com n ≥ 5 amostras, **53 com
 dispersão exatamente 0 (100%)**. Mesma assinatura da `PLANO-MEGAGYM` §2.2, em dados novos.
 
