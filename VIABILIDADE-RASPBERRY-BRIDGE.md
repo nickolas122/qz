@@ -755,6 +755,61 @@ As marchas do QZ agem **depois** da demanda FTMS, e o app é cego a elas (`PLANO
 §4.1) ✅ — fora que passam pelo defeito de contagem dupla, 6 níveis por marcha
 (`bike.cpp:73` +1×, `ftmsbike.cpp:509` +5×) ⚙️.
 
+#### 6.2.3 Reavaliação após os dados de 03/08 ✅
+
+Os ganhos foram re-pontuados contra medição, não contra hipótese.
+
+| Ganho | Antes | Agora |
+|---|---|---|
+| 1. Rádio do Pi | único real, não medido | **inalterado** — e é o único que sobrou |
+| ~~2. 12 níveis escondidos~~ | real ✅ | **removido** — não existem (§5.1.2) |
+| 3. Faixa acima de R=32 | ❓ com indício | **❓ sem indício** — o apoio era a §5.1, refutada |
+| 4. Estado físico real | real ✅ | **tem substituto em software** — abaixo |
+| 5. Paddles limpos | real, pequeno | **já entregue pela Etapa 2**, sem hardware |
+| 6. Latência de controle | marginal | **irrelevante** — o atuador a 2–3 níveis/s é o gargalo; BLE é ms |
+
+**O achado que esvazia o ganho 4.** Está provado que o reportado adianta o físico
+(`PLANO-EXECUCAO` §1.5.f) e medido que o atuador faz 2–3 níveis/s subindo, contra demanda a
+~1 Hz. Mas **o bridge não conserta isso**: os ímãs não andam mais rápido porque quem
+comanda mudou. O atraso é mecânico e um bridge o herda inteiro.
+
+O que conserta é **limitar a taxa do comando dentro do QZ**. Se o QZ nunca pedir mais que
+~2 níveis/s, o alvo nunca corre à frente do físico — e como o reportado é o alvo, **o watt
+publicado volta a ser verdade**. Custa responsividade em terreno; mas aquela
+responsividade era falsa, com número instantâneo e ímã lento.
+
+O QZ não tem esse limitador para este device ⚙️: `zwift_erg_filter` é banda morta em watts
+(`bike.cpp:110`), não taxa, e o único rate limit em `ftmsbike.cpp:519` é específico de
+DOMYOS. **É patch pequeno, e conserta o maior problema real encontrado — sem hardware.**
+
+**O que piorou para o bridge.** O console é mais sofisticado do que se supunha: recebe alvo
+absoluto e executa **movimento contínuo com taxas assimétricas** (2–3 subindo, 4–5
+descendo) ✅. Replicar isso é trabalho de controle de posição com compensação de carga, não
+"acionar um motor".
+
+**O que melhorou.** A mesma evidência empurra a incógnita nº 10 para o lado barato: aceitar
+alvo absoluto e executá-lo de uma vez é assinatura de atuador comandado por posição, não de
+ponte H crua. **O bridge ficou mais barato ao mesmo tempo em que ficou menos útil.**
+
+#### 6.2.4 Veredito ✅
+
+**O caso do bridge não enfraqueceu — colapsou.**
+
+Sobra um ganho, ele não foi medido, e tem alternativa mais barata: segundo dongle
+**RTL8761B** mais um patch pequeno para prender o papel de central em `hci1` (§2.3).
+
+Ordem recomendada:
+
+1. **Medição 3.3.** Se o Pi aguentar os dois papéis, o bridge fica sem nenhuma
+   justificativa remanescente.
+2. **Limitador de taxa de resistência no QZ.** Maior retorno por esforço de tudo que resta,
+   e candidato a upstream.
+3. **Etapa 4 vira curiosidade**, não engenharia.
+
+> A caracterização não foi desperdício: produziu a prova do modelo de potência
+> (`PLANO-EXECUCAO` §1.5.f), o atuador medido, a correção dos critérios vazios de ERG do
+> `PLANO-MEGAGYM`, e o limitador de taxa acima.
+
 #### 6.2.2 Degrau intermediário: bridge só-leitura ❓
 
 Existe uma versão de risco muito menor, que o documento ainda não tinha nomeado: **tap
