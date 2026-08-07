@@ -2,23 +2,35 @@
 #SingleInstance Force
 
 ; ---------------------------------------------------------------------------
-; Wired Xbox controller -> MyWhoosh virtual gears (MyShift), via keystrokes.
+; Wired Xbox controller -> virtual gears in MyWhoosh or Rouvy, via keystrokes.
 ;
-; MyWhoosh shifts gears with the "I" (up) and "K" (down) keys. This script
-; polls an XInput pad and forwards the shoulder buttons as those keystrokes,
-; so no companion app (BikeControl) is needed on the PC.
+; Both apps shift from the keyboard: MyWhoosh with "I"/"K", Rouvy with
+; ","/"." (or "+"/"-"). This script polls an XInput pad and forwards the
+; shoulder buttons as those keystrokes, so no companion app (BikeControl) is
+; needed on the PC.
 ;
 ; See README.md for the alternative routes (QZ WebSocket / MQTT bridge).
 ; ---------------------------------------------------------------------------
 
 ; ------------------------------- config ------------------------------------
 
-; Only send keys while this window is active, so the pad doesn't type into
-; other apps. Set to "" to send regardless of which window has focus.
-TARGET_WINDOW := "MyWhoosh"
+; "mywhoosh" or "rouvy".
+PROFILE := "mywhoosh"
 
-KEY_GEAR_UP   := "i"
-KEY_GEAR_DOWN := "k"
+if (PROFILE = "mywhoosh") {
+    ; Only send keys while this window is active, so the pad doesn't type into
+    ; other apps. Set TARGET_WINDOW to "" to send regardless of focus.
+    TARGET_WINDOW := "MyWhoosh"
+    KEY_GEAR_UP   := "i"
+    KEY_GEAR_DOWN := "k"
+} else if (PROFILE = "rouvy") {
+    TARGET_WINDOW := "ROUVY"
+    KEY_GEAR_UP   := "."   ; "+" also works
+    KEY_GEAR_DOWN := ","   ; "-" also works
+} else {
+    MsgBox "Unknown PROFILE: " PROFILE
+    ExitApp
+}
 
 ; XInput button masks (see BTN map below) bound to each action.
 ; Defaults mirror a road bike: right shifter = harder, left shifter = easier.
@@ -68,13 +80,14 @@ XInputButtons(padIndex) {
 
 ; ------------------------------ main loop ----------------------------------
 
-global heldSince := Map(BTN_GEAR_UP, 0, BTN_GEAR_DOWN, 0)
 global nextRepeat := Map(BTN_GEAR_UP, 0, BTN_GEAR_DOWN, 0)
 global prevButtons := 0
 global activePad := -1
 
 Poll(*) {
-    global prevButtons, activePad
+    ; AHK v2 functions see only what they declare, so list every global used.
+    global prevButtons, activePad, TARGET_WINDOW
+    global BTN_GEAR_UP, BTN_GEAR_DOWN, KEY_GEAR_UP, KEY_GEAR_DOWN
 
     buttons := -1
     if (activePad >= 0) {
@@ -107,7 +120,7 @@ Poll(*) {
 }
 
 HandleButton(buttons, mask, key) {
-    global prevButtons, heldSince, nextRepeat
+    global prevButtons, nextRepeat, REPEAT_FIRST_MS, REPEAT_EVERY_MS
 
     down := (buttons & mask) != 0
     wasDown := (prevButtons & mask) != 0
@@ -115,31 +128,34 @@ HandleButton(buttons, mask, key) {
 
     if (down && !wasDown) {
         Shift(key)
-        heldSince[mask] := now
         nextRepeat[mask] := now + REPEAT_FIRST_MS
     } else if (down && REPEAT_FIRST_MS > 0 && now >= nextRepeat[mask]) {
         Shift(key)
         nextRepeat[mask] := now + REPEAT_EVERY_MS
-    } else if (!down) {
-        heldSince[mask] := 0
     }
 }
 
 Shift(key) {
-    SendInput "{" key "}"
+    ; ^!+#{} are Send's own syntax and must be braced; everything else goes
+    ; through as a plain keystroke, which games handle more reliably.
+    if (StrLen(key) = 1 && !InStr("^!+#{}", key))
+        SendInput key
+    else
+        SendInput "{" key "}"
 }
 
 SetTimer Poll, POLL_MS
 
 ; ------------------------------ tray / hotkey ------------------------------
 
-A_IconTip := "Xbox -> MyWhoosh gears (" TOGGLE_HOTKEY " to pause)"
+A_IconTip := "Xbox -> " PROFILE " gears (" TOGGLE_HOTKEY " to pause)"
 
 Hotkey TOGGLE_HOTKEY, TogglePaused
 
 TogglePaused(*) {
+    global POLL_MS, PROFILE
     static paused := false
     paused := !paused
     SetTimer Poll, paused ? 0 : POLL_MS
-    TrayTip paused ? "Paused" : "Running", "Xbox -> MyWhoosh gears", 1
+    TrayTip paused ? "Paused" : "Running", "Xbox -> " PROFILE " gears", 1
 }

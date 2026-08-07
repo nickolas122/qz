@@ -1,7 +1,8 @@
-# Wired Xbox controller → MyWhoosh virtual gears
+# Wired Xbox controller → MyWhoosh / Rouvy virtual gears
 
-Shift MyWhoosh's virtual gears from a wired Xbox controller on Windows, without
-the BikeControl companion app.
+Shift virtual gears from a wired Xbox controller on Windows, without the
+BikeControl companion app. MyWhoosh is the main target; Rouvy works too — see
+[Rouvy](#rouvy) below.
 
 Two routes are provided, and they answer different questions:
 
@@ -116,6 +117,40 @@ is the quickest way to confirm QZ is listening before a ride.
 If QZ runs on a phone or tablet, point `--host` at that device — the WebSocket
 is plain TCP on the LAN, and only the Python side needs Windows (for XInput).
 
+## Rouvy
+
+Both routes work with Rouvy, and the trade-off is different — in Rouvy's favour.
+
+**Rouvy does not speak OpenBikeControl.** It reverse-engineered *Zwift's*
+virtual shifting protocol instead, so it pairs with Zwift Click / Click v2 /
+Play / Ride and Di2, and BikeControl reaches it by emulating that hardware.
+QZ's OpenBikeControl link is therefore irrelevant here — do not enable it for a
+Rouvy session.
+
+**Route A** — set `PROFILE := "rouvy"` at the top of the AHK script. Rouvy
+shifts with `,` / `.` (or `-` / `+`) on the riding screen, so the script sends
+those instead of `I`/`K` and watches for the ROUVY window. Rouvy owns the gears;
+keep QZ's virtual gearing out of the ride.
+
+**Route B** — unchanged: `python qz_gear_bridge.py --host <tablet-ip>`. This is
+the better fit for Rouvy, because QZ's gearing needs no protocol on the app
+side at all: QZ applies the gear to the resistance it sends the trainer, and
+Rouvy simply sees the resulting power. Two consequences:
+
+- Nothing has to be enabled in QZ's OpenBikeControl section, so **Wahoo Direct
+  Connect stays available** and QZ can keep pairing to Rouvy over Wi-Fi — no
+  Bluetooth adapter needed on the PC, unlike the MyWhoosh case above.
+- Turn Rouvy's own virtual shifting off, or two gearboxes fight over the same
+  resistance.
+
+Expect to spend time on QZ's gear-ratio settings rather than on connectivity:
+the recurring upstream complaint about QZ + Rouvy is that a gear change barely
+moves the resistance ([#3514](https://github.com/cagnulein/qdomyos-zwift/issues/3514),
+[#4105](https://github.com/cagnulein/qdomyos-zwift/issues/4105),
+[#3789](https://github.com/cagnulein/qdomyos-zwift/issues/3789) — 246 comments,
+`wontfix`). Worth noting that the Xbox request [#2783](https://github.com/cagnulein/qdomyos-zwift/issues/2783)
+was itself a Rouvy request.
+
 ### Route B variant: MQTT
 
 If a broker is already in the setup, QZ subscribes to control topics and
@@ -169,6 +204,7 @@ keystroke path, in hardware.
 
 ## References
 
+- [Virtual Shifting — ROUVY support](https://support.rouvy.com/hc/en-us/articles/32452137189393-Virtual-Shifting) (the `,` / `.` and `+` / `-` keys)
 - [MyShift — MyWhoosh's Virtual Shifting Explained](https://mywhoosh.com/myshift-mywhooshs-virtual-shifting-explained/)
 - [MyWhoosh keyboard shortcuts](https://mywhooshinfo.com/blog/mywhoosh-keyboard-shortcuts)
 - [MyWhoosh now officially supports BikeControl / OpenBikeControl](https://bikecontrol.app/blog/mywhoosh-bikecontrol-partnership/)
