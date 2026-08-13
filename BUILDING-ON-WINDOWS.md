@@ -206,6 +206,28 @@ arrives:
   the only remedy is to remove the device in Windows Settings and pair it again.**
   Reach for that before rebuilding anything.
 
+  The mechanism is narrower than "no Service Changed handling", and worth stating
+  exactly, because it decides where a fix can go. Qt asks Windows for the *cached*
+  enumeration every time: `qlowenergycontroller_win.cpp` passed
+  `BLUETOOTH_GATT_FLAG_NONE` to `BluetoothGATTGetServices`,
+  `BluetoothGATTGetCharacteristics` and `BluetoothGATTGetDescriptors`, which lets
+  Windows serve whatever it last stored. Nothing ever asks for the device.
+
+  **This is not fixed by changing backend or Qt version.** Qt 5.15's WinRT backend
+  uses the plain `GetGattServicesAsync` / `GetCharacteristicsAsync` /
+  `GetDescriptorsAsync` overloads, which default to `BluetoothCacheMode_Cached`,
+  and never calls a `*WithCacheModeAsync` variant for enumeration - and Qt 6.8 is
+  identical in this respect. Only the *value* reads are explicitly `Uncached`, and
+  on the Win32 backend not even those. The defect follows you everywhere.
+
+  `qt-patches/windows/5.15.2/qlowenergycontroller_win.cpp` now passes
+  `BLUETOOTH_GATT_FLAG_FORCE_READ_FROM_DEVICE` on all three enumeration calls,
+  falling back to the cache once if the forced read fails so that discovery is
+  never made *more* fragile than it was. **That patch is source-only so far: the
+  committed `binary/mingw64/Qt5Bluetooth.dll` predates it and does not contain
+  it.** Until that DLL is rebuilt, the unpair-and-re-pair remedy above is still the
+  only cure on a shipped build.
+
 An earlier version of this file blamed `ftmsbike::stateChanged()` for refusing to
 subscribe until every service reaches `ServiceDiscovered`. That was wrong: a
 Windows debug log from this bike shows `all services discovered!` firing normally.

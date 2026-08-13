@@ -244,6 +244,36 @@ static void closeSystemDevice(HANDLE hDevice)
         ::CloseHandle(hDevice);
 }
 
+/* QZ - enumerate from the device, not from Windows' bond cache.
+ *
+ * Windows answers GATT enumeration out of the attribute database cached in the
+ * bond record, and Qt never asked for anything else: every enumeration call
+ * below passed BLUETOOTH_GATT_FLAG_NONE, which lets Windows serve whatever it
+ * last stored. When a device's attribute table changes - a firmware update, a
+ * mode switch - that cache goes stale and the handles it hands back no longer
+ * exist on the device. This is the ATT_ATTRIBUTE_NOT_FOUND warning in QZ's
+ * Windows logs, and the only cure was to remove the device in Windows Settings
+ * and pair it again.
+ *
+ * Nothing invalidates the cache on its own: no Windows backend in Qt handles
+ * the Service Changed indication, on either the Win32 or the WinRT side, and
+ * WinRT's enumeration is cached in exactly the same way. So this is not fixed
+ * by changing backend or by moving to Qt 6 - it has to be asked for.
+ *
+ * Both calls are forced, not just the first. These APIs are always called twice
+ * - once with a null buffer to learn the count, then again to fill it - and it
+ * is likely that the forced first call refreshes Windows' cache so the second
+ * could safely read it back. Likely is not measured, and enumerating from a
+ * stale cache is the whole defect, so correctness wins over the round trip
+ * until somebody can profile it against real hardware.
+ *
+ * If the forced read fails where a cached one might have succeeded - the device
+ * drops out mid-discovery - fall back to the cache rather than fail discovery
+ * outright. That keeps this strictly no worse than the old behaviour: stale
+ * data still beats no data.
+ */
+static const ULONG QZ_GATT_ENUMERATION_FLAGS = BLUETOOTH_GATT_FLAG_FORCE_READ_FROM_DEVICE;
+
 static QVector<BTH_LE_GATT_SERVICE> enumeratePrimaryGattServices(
         HANDLE hDevice, int *systemErrorCode)
 {
@@ -254,13 +284,14 @@ static QVector<BTH_LE_GATT_SERVICE> enumeratePrimaryGattServices(
 
     QVector<BTH_LE_GATT_SERVICE> foundServices;
     USHORT servicesCount = 0;
+    ULONG flags = QZ_GATT_ENUMERATION_FLAGS;
     for (;;) {
         const HRESULT hr = ::BluetoothGATTGetServices(
                     hDevice,
                     servicesCount,
                     foundServices.isEmpty() ? nullptr : &foundServices[0],
                     &servicesCount,
-                    BLUETOOTH_GATT_FLAG_NONE);
+                    flags);
 
         if (SUCCEEDED(hr)) {
             *systemErrorCode = NO_ERROR;
@@ -269,6 +300,11 @@ static QVector<BTH_LE_GATT_SERVICE> enumeratePrimaryGattServices(
             const int error = WIN32_FROM_HRESULT(hr);
             if (error == ERROR_MORE_DATA) {
                 foundServices.resize(servicesCount);
+            } else if (flags != BLUETOOTH_GATT_FLAG_NONE) {
+                /* QZ - retry from the cache once before giving up. */
+                flags = BLUETOOTH_GATT_FLAG_NONE;
+                servicesCount = 0;
+                foundServices.clear();
             } else {
                 *systemErrorCode = error;
                 return QVector<BTH_LE_GATT_SERVICE>();
@@ -287,6 +323,7 @@ static QVector<BTH_LE_GATT_CHARACTERISTIC> enumerateGattCharacteristics(
 
     QVector<BTH_LE_GATT_CHARACTERISTIC> foundCharacteristics;
     USHORT characteristicsCount = 0;
+    ULONG flags = QZ_GATT_ENUMERATION_FLAGS; /* QZ - see enumeratePrimaryGattServices */
     for (;;) {
         const HRESULT hr = ::BluetoothGATTGetCharacteristics(
                     hService,
@@ -294,7 +331,7 @@ static QVector<BTH_LE_GATT_CHARACTERISTIC> enumerateGattCharacteristics(
                     characteristicsCount,
                     foundCharacteristics.isEmpty() ? nullptr : &foundCharacteristics[0],
                     &characteristicsCount,
-                    BLUETOOTH_GATT_FLAG_NONE);
+                    flags);
 
         if (SUCCEEDED(hr)) {
             *systemErrorCode = NO_ERROR;
@@ -303,6 +340,11 @@ static QVector<BTH_LE_GATT_CHARACTERISTIC> enumerateGattCharacteristics(
             const int error = WIN32_FROM_HRESULT(hr);
             if (error == ERROR_MORE_DATA) {
                 foundCharacteristics.resize(characteristicsCount);
+            } else if (flags != BLUETOOTH_GATT_FLAG_NONE) {
+                /* QZ - retry from the cache once before giving up. */
+                flags = BLUETOOTH_GATT_FLAG_NONE;
+                characteristicsCount = 0;
+                foundCharacteristics.clear();
             } else {
                 *systemErrorCode = error;
                 return QVector<BTH_LE_GATT_CHARACTERISTIC>();
@@ -391,6 +433,7 @@ static QVector<BTH_LE_GATT_DESCRIPTOR> enumerateGattDescriptors(
 
     QVector<BTH_LE_GATT_DESCRIPTOR> foundDescriptors;
     USHORT descriptorsCount = 0;
+    ULONG flags = QZ_GATT_ENUMERATION_FLAGS; /* QZ - see enumeratePrimaryGattServices */
     for (;;) {
         const HRESULT hr = ::BluetoothGATTGetDescriptors(
                     hService,
@@ -398,7 +441,7 @@ static QVector<BTH_LE_GATT_DESCRIPTOR> enumerateGattDescriptors(
                     descriptorsCount,
                     foundDescriptors.isEmpty() ? nullptr : &foundDescriptors[0],
                     &descriptorsCount,
-                    BLUETOOTH_GATT_FLAG_NONE);
+                    flags);
 
         if (SUCCEEDED(hr)) {
             *systemErrorCode = NO_ERROR;
@@ -407,6 +450,11 @@ static QVector<BTH_LE_GATT_DESCRIPTOR> enumerateGattDescriptors(
             const int error = WIN32_FROM_HRESULT(hr);
             if (error == ERROR_MORE_DATA) {
                 foundDescriptors.resize(descriptorsCount);
+            } else if (flags != BLUETOOTH_GATT_FLAG_NONE) {
+                /* QZ - retry from the cache once before giving up. */
+                flags = BLUETOOTH_GATT_FLAG_NONE;
+                descriptorsCount = 0;
+                foundDescriptors.clear();
             } else {
                 *systemErrorCode = error;
                 return QVector<BTH_LE_GATT_DESCRIPTOR>();
