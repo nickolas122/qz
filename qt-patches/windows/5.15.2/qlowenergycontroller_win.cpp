@@ -282,6 +282,15 @@ static QVector<BTH_LE_GATT_SERVICE> enumeratePrimaryGattServices(
         return QVector<BTH_LE_GATT_SERVICE>();
     }
 
+    /* QZ - say so once per process, so a log proves which Qt5Bluetooth.dll is
+     * loaded. The DLL is built from source in CI now, and "is the patched module
+     * actually the one running?" is otherwise unanswerable from a bug report. */
+    static bool loggedEnumerationMode = false;
+    if (!loggedEnumerationMode) {
+        loggedEnumerationMode = true;
+        qCWarning(QT_BT_WINDOWS) << "QZ patched Qt5Bluetooth: GATT enumeration forced from device";
+    }
+
     QVector<BTH_LE_GATT_SERVICE> foundServices;
     USHORT servicesCount = 0;
     ULONG flags = QZ_GATT_ENUMERATION_FLAGS;

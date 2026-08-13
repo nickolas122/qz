@@ -223,10 +223,46 @@ arrives:
   `qt-patches/windows/5.15.2/qlowenergycontroller_win.cpp` now passes
   `BLUETOOTH_GATT_FLAG_FORCE_READ_FROM_DEVICE` on all three enumeration calls,
   falling back to the cache once if the forced read fails so that discovery is
-  never made *more* fragile than it was. **That patch is source-only so far: the
-  committed `binary/mingw64/Qt5Bluetooth.dll` predates it and does not contain
-  it.** Until that DLL is rebuilt, the unpair-and-re-pair remedy above is still the
-  only cure on a shipped build.
+  never made *more* fragile than it was. It is built into the shipped DLL - see
+  below - and announces itself once per run so a log can prove which module is
+  loaded:
+
+  ```
+  qt.bt.windows: QZ patched Qt5Bluetooth: GATT enumeration forced from device
+  ```
+
+  If that line is absent from a Windows log, the build is running stock Qt and the
+  unpair-and-re-pair remedy above is still the only cure.
+
+## The patched Qt Bluetooth module
+
+QZ patches Qt's Bluetooth module. Those patches used to ship as committed DLLs -
+30 MB of mingw binary with no `.prl`, no build script, and no recorded procedure
+for reproducing it. `window-build` now builds `qtconnectivity` from source the same
+way it already builds `qthttpserver`:
+
+1. `qt/qtconnectivity` is checked out at **`v5.15.2`** - the tag must match the Qt
+   the job installs, because a mismatch here is an ABI mismatch.
+2. The three patched sources in `qt-patches/windows/5.15.2/` are copied over the
+   pristine tree.
+3. `qmake -r -- -feature-native-win32-bluetooth` selects the Win32 backend
+   deliberately. It is the opt-in: `winrt_bt` is conditioned on
+   `config.win32 && !features.native-win32-bluetooth && tests.winrt_bt`, and
+   `native-win32-bluetooth` is `autoDetect: false`, so WinRT is the *default* on any
+   win32 build whose compile test passes. That test happens to fail under mingw
+   today, which is the only reason Win32 is selected at all. Asking for it
+   explicitly stops a future toolchain from silently switching backends.
+4. `make install` puts the result in the Qt prefix, so `windeployqt` deploys it
+   like any other Qt module.
+
+The build is cached against the hashes of the three patch files, so editing a patch
+rebuilds the module and leaving them alone costs nothing.
+
+**The `window-msvc*` jobs no longer have their Bluetooth DLLs.** They were removed
+with the mingw one. Re-enabling any of those jobs means wiring the same
+source-build there first, pointed at the MSVC toolchain - and note that an MSVC Qt
+selects the WinRT backend rather than Win32, so it needs the WinRT patches, not the
+Win32 one.
 
 An earlier version of this file blamed `ftmsbike::stateChanged()` for refusing to
 subscribe until every service reaches `ServiceDiscovered`. That was wrong: a

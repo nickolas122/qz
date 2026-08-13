@@ -74,6 +74,17 @@ jobs:
           repository: qt-labs/qthttpserver
           path: "src/qthttpserver"
 
+      # QZ patches Qt's Bluetooth module. The result used to be a committed 30 MB
+      # DLL with no recorded provenance and no way to rebuild it; it is built from
+      # source here instead, exactly the way qthttpserver already is. Pinned to the
+      # tag matching the Qt this job installs - a mismatch here is an ABI mismatch.
+      - name: Checkout qtconnectivity
+        uses: actions/checkout@v4
+        with:
+          repository: qt/qtconnectivity
+          ref: v5.15.2
+          path: "src/qtconnectivity"
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.7'
@@ -195,6 +206,54 @@ jobs:
             make install
             cd ../..
 
+      - name: Cache qtconnectivity build
+        id: cache-qtconnectivity-mingw
+        uses: actions/cache@v4
+        with:
+          path: src/qtconnectivity
+          # Keyed on the patches themselves: edit one and the module rebuilds,
+          # leave them alone and this is a cache hit.
+          key: qtconnectivity-mingw-${{ runner.os }}-qt5.15.2-${{ hashFiles('qt-patches/windows/5.15.2/qlowenergycontroller_win.cpp', 'qt-patches/windows/5.15.2/qlowenergycontroller_winrt.cpp', 'qt-patches/windows/5.15.2/qlowenergycontroller_winrt_new.cpp') }}
+
+      - name: Apply QZ bluetooth patches
+        if: steps.cache-qtconnectivity-mingw.outputs.cache-hit != 'true'
+        run: |
+            cp qt-patches/windows/5.15.2/qlowenergycontroller_win.cpp src/qtconnectivity/src/bluetooth/
+            cp qt-patches/windows/5.15.2/qlowenergycontroller_winrt.cpp src/qtconnectivity/src/bluetooth/
+            cp qt-patches/windows/5.15.2/qlowenergycontroller_winrt_new.cpp src/qtconnectivity/src/bluetooth/
+
+      - name: Build qtconnectivity
+        if: steps.cache-qtconnectivity-mingw.outputs.cache-hit != 'true'
+        run: |
+            cd src\qtconnectivity
+            # Same two obstacles qthttpserver hit - see that step for the long
+            # version. examples/ aborts qmake inside a Qt source tree, and tests/ is
+            # emptied rather than deleted so create_cmake still finds the directory.
+            Remove-Item -Recurse -Force examples -ErrorAction SilentlyContinue
+            Set-Content -Path tests\tests.pro -Value "TEMPLATE = subdirs"
+            # -feature-native-win32-bluetooth selects the Win32 backend on purpose.
+            # It is the opt-in: qtconnectivity's winrt_bt feature is conditioned on
+            # `config.win32 && !features.native-win32-bluetooth && tests.winrt_bt`,
+            # and native-win32-bluetooth is autoDetect:false - so WinRT is the
+            # default on any win32 build whose compile test passes. Today that test
+            # fails under mingw and Win32 is selected by accident. Asking for it
+            # explicitly means a future toolchain that happens to pass the test
+            # cannot silently switch backends and discard the patches applied above.
+            # See WINDOWS-WINRT-PHASE0.md.
+            qmake -r -- -feature-native-win32-bluetooth
+            make -j8
+            cd ../..
+
+      # Installs the patched Qt5Bluetooth.dll over the one aqtinstall laid down, so
+      # windeployqt picks it up like any other Qt module. This replaces the old
+      # "patching qt for bluetooth" step, which copied a committed DLL into the
+      # output directory after the fact.
+      - name: Install qtconnectivity
+        run: |
+            cd src\qtconnectivity
+            make install
+            cd ../..
+
       - name: Secrets
         if: github.ref == 'refs/heads/master'
         run: |
@@ -269,8 +328,9 @@ jobs:
             #../../MSIX-Toolkit/WindowsSDK/10/10.0.20348.0/x64/makeappx.exe pack /d ../output/ /p qz          
         if: matrix.config.python == false
 
-      - name: patching qt for bluetooth
-        run: cp qt-patches/windows/5.15.2/binary/mingw64/*.* ${{ github.workspace }}/src/debug/output/
+      # The patched Qt5Bluetooth.dll is no longer copied in here. It is built from
+      # source and installed into the Qt prefix above, so windeployqt has already
+      # deployed it by this point.
 
       - name: Zip artifact for deployment
         run: Compress-Archive src/debug/output windows-binary.zip
@@ -1362,8 +1422,10 @@ jobs:
             #../../MSIX-Toolkit/WindowsSDK/10/10.0.20348.0/x64/makeappx.exe pack /d ../output/ /p qz          
         if: matrix.config.python == false            
 
-      - name: patching qt for bluetooth
-        run: cp qt-patches/windows/5.15.2/binary/msvc2019/*.* ${{ github.workspace }}/src/debug/output/
+      # The committed msvc2019 Qt5Bluetooth DLLs are gone - they were binaries with
+      # no recorded build procedure. Before this job can be re-enabled it needs the
+      # qtconnectivity source build that window-build now carries, pointed at the
+      # MSVC toolchain. Note that an MSVC Qt selects the WinRT backend, not Win32.
 
       - name: Zip artifact for deployment
         run: Compress-Archive src/debug/output windows-msvc2019-binary.zip
@@ -1547,8 +1609,10 @@ jobs:
             cd appx
             #../../MSIX-Toolkit/WindowsSDK/10/10.0.20348.0/x64/makeappx.exe pack /d ../output/ /p qz                      
 
-      - name: patching qt for bluetooth
-        run: cp qt-patches/windows/5.15.2/binary/msvc2019/*.* ${{ github.workspace }}/src/debug/output/
+      # The committed msvc2019 Qt5Bluetooth DLLs are gone - they were binaries with
+      # no recorded build procedure. Before this job can be re-enabled it needs the
+      # qtconnectivity source build that window-build now carries, pointed at the
+      # MSVC toolchain. Note that an MSVC Qt selects the WinRT backend, not Win32.
 
       - name: Zip artifact for deployment
         run: Compress-Archive src/debug/output windows-msvc2019-ai-server-binary.zip
@@ -1962,8 +2026,10 @@ jobs:
             #../../MSIX-Toolkit/WindowsSDK/10/10.0.20348.0/x64/makeappx.exe pack /d ../output/ /p qz          
         if: matrix.config.python == false            
 
-      - name: patching qt for bluetooth
-        run: cp qt-patches/windows/5.15.2/binary/msvc2019/*.* ${{ github.workspace }}/src/debug/output/
+      # The committed msvc2019 Qt5Bluetooth DLLs are gone - they were binaries with
+      # no recorded build procedure. Before this job can be re-enabled it needs the
+      # qtconnectivity source build that window-build now carries, pointed at the
+      # MSVC toolchain. Note that an MSVC Qt selects the WinRT backend, not Win32.
 
       - name: Zip artifact for deployment
         run: Compress-Archive src/debug/output windows-msvc2022-binary.zip
@@ -2172,8 +2238,10 @@ jobs:
           #../../MSIX-Toolkit/WindowsSDK/10/10.0.20348.0/x64/makeappx.exe pack /d ../output/ /p qz
         if: matrix.config.python == false
 
-      - name: patching qt for bluetooth
-        run: cp qt-patches/windows/5.15.2/binary/msvc2019/*.* ${{ github.workspace }}/src/debug/output/
+      # The committed msvc2019 Qt5Bluetooth DLLs are gone - they were binaries with
+      # no recorded build procedure. Before this job can be re-enabled it needs the
+      # qtconnectivity source build that window-build now carries, pointed at the
+      # MSVC toolchain. Note that an MSVC Qt selects the WinRT backend, not Win32.
 
       - name: Zip artifact for deployment
         run: Compress-Archive src/debug/output windows-msvc2022-pr-binary.zip
