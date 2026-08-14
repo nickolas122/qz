@@ -26,6 +26,18 @@ unpaired at all: it finds services through `SetupDiGetClassDevs(DIGCF_PRESENT)`,
 enumerates devices Windows has already paired. [verified] So this failure class is a Win32 property,
 and Qt 6 is where it stops.
 
+**The console does not require a bond, and Android proves it.** QZ on Android drives this same bike
+— streaming `2ad2` and writing the control point — over Qt's Android backend, which talks to
+`BluetoothGatt` directly and writes CCCDs on an **unbonded** device. That is the standing premise of
+`WINDOWS-BLE-HARDENING.md` Part I: works great on Android, flaky on Windows. So the peripheral's GATT
+server does not demand an authenticated link for the FTMS characteristics, and since that is a
+property of the peripheral it holds on any platform.
+
+This removes the device-side half of the migration's risk outright. What remains is only whether
+*Windows'* stack will do an unpaired GATT write once Qt asks it to — a question about the OS, not
+about the bike. Worth stating plainly because it is the difference between "this might buy nothing"
+and "this should work unless Windows itself refuses".
+
 **The migration is not greenfield.** Upstream has a `qt6` branch with 261 commits on it.
 
 Phase 0's own closing argument already pointed here: *"Qt 6 has no Win32 backend at all, so the
@@ -194,8 +206,9 @@ reference patches rather than merging its branch. Expect the real work to be `bl
 Re-run the `WINDOWS-BLE-HARDENING.md` §1 list: exactly one `all services discovered!`, `2ad9`
 indication subscribed, control granted, `2ad2` streaming on cold launch and on relaunch untouched.
 Then the two Qt 6-specific questions:
-- **Remove the pairing entirely and confirm QZ still connects.** This is the whole point of the
-  migration; if it fails, the migration has bought nothing.
+- **Remove the pairing entirely and confirm QZ still connects and writes.** This is the whole point
+  of the migration. Part 0 establishes the bike is willing, so a failure here indicts Windows or Qt,
+  not the console — and the Android build is the control case to compare against.
 - Do the `ATT_ATTRIBUTE_NOT_FOUND` warnings persist? Phase 0 predicted they would, because every Qt
   enumeration call uses the `Cached` overload on both backends. Qt 6 does not change that by itself.
 
@@ -231,6 +244,4 @@ there is no Route A.
 - Does `TEST_winrt_bt` pass under MSYS2 GCC 16.2 against Qt 6.8.2 sources?
 - Does the `/* QZ rviola` WinRT patch have a Qt 6 equivalent, or is it obsolete?
 - Is Android in scope after the strip?
-- Does an unpaired connection actually work end to end against this console, including CCCD writes?
-  `connectToUnpairedDevice()` existing is not the same as the bike accepting an unauthenticated
-  write, and no amount of source reading settles it — only the bike does.
+- ~~Does this console accept unauthenticated writes?~~ **Answered: yes.** See below.
