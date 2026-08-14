@@ -157,6 +157,15 @@ class bluetooth : public QObject, public SignalHandler {
     QTimer discoveryTimeout;
     bool discoveryFinishedHandled = false;
 
+#ifdef Q_OS_WIN
+    /**
+     * @brief Connect to the last known device when discovery has found nothing.
+     * On Windows a device the OS is already connected to does not advertise, so
+     * discovery cannot see it however long it runs. See the call site.
+     */
+    void connectToLastDeviceIfIdle();
+#endif
+
 #ifdef Q_OS_IOS
     lockscreen *h = nullptr;
 #endif

@@ -68,6 +68,13 @@ loop.exec();
 }*/
 
 void strydrunpowersensor::update() {
+    // See ftmsbike::update(): the update timer can run before deviceDiscovered()
+    // has built the controller and after a teardown has cleared it. On Qt 6 that
+    // null dereference is a hard crash inside QLowEnergyController::state().
+    if (!m_control) {
+        return;
+    }
+
     if (m_control->state() == QLowEnergyController::UnconnectedState) {
         emit disconnected();
         return;

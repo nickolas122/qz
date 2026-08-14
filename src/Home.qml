@@ -296,7 +296,9 @@ HomeForm {
         id: gridView
         objectName: "gridview"
         onMovementEnded: { headerToolbar.visible = (contentY == 0) || window.lockTiles; }
-        Screen.orientationUpdateMask:  Qt.LandscapeOrientation | Qt.PortraitOrientation
+        // Screen.orientationUpdateMask is gone in Qt 6. It only ever asked the
+        // platform to report those two orientations; onPrimaryOrientationChanged
+        // below still fires without it, and that handler is Android-only anyway.
         Screen.onPrimaryOrientationChanged:{
             if(OS_VERSION === "Android")
                 gridView.leftMargin = (Screen.width % cellWidth) / 2;
@@ -609,15 +611,20 @@ HomeForm {
                 }
             }
 
+            // Qt 6 renamed the error signal to errorOccurred() and reversed how the
+            // sink is attached: the player names its videoOutput rather than the
+            // VideoOutput naming its source. Assigning to the old onError is a load
+            // error, not a warning - it takes Home.qml with it, and StackView then
+            // has no initialItem, which is why the window came up empty.
             MediaPlayer {
                 id: videoPlaybackHalf
                 objectName: "videoplaybackhalf"
-                autoPlay: false
                 playbackRate: rootItem.videoRate
+                videoOutput: videoPlayer
 
-                onError: {
-                    if (videoPlaybackHalf.NoError !== error) {
-                        console.log("[qmlvideo] VideoItem.onError error " + error + " errorString " + errorString)
+                onErrorOccurred: (error, errorString) => {
+                    if (MediaPlayer.NoError !== error) {
+                        console.log("[qmlvideo] MediaPlayer error " + error + " errorString " + errorString)
                     }
                 }
             }
@@ -625,7 +632,6 @@ HomeForm {
             VideoOutput {
                 id: videoPlayer
                 anchors.fill: parent
-                source: videoPlaybackHalf
             }
         }
     }

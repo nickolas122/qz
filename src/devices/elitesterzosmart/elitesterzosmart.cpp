@@ -57,6 +57,13 @@ void elitesterzosmart::writeCharacteristic(uint8_t *data, uint8_t data_len, cons
 }
 
 void elitesterzosmart::update() {
+    // See ftmsbike::update(): the update timer can run before deviceDiscovered()
+    // has built the controller and after a teardown has cleared it. On Qt 6 that
+    // null dereference is a hard crash inside QLowEnergyController::state().
+    if (!m_control) {
+        return;
+    }
+
     if (m_control->state() == QLowEnergyController::UnconnectedState) {
 
         emit disconnected();

@@ -38,6 +38,13 @@ elitesquarecontroller::elitesquarecontroller(bluetoothdevice *parentDevice) {
 }
 
 void elitesquarecontroller::update() {
+    // See ftmsbike::update(): the update timer can run before deviceDiscovered()
+    // has built the controller and after a teardown has cleared it. On Qt 6 that
+    // null dereference is a hard crash inside QLowEnergyController::state().
+    if (!m_control) {
+        return;
+    }
+
     // Just a simple heartbeat check - no handshake needed for Elite Square
     if (m_control && m_control->state() == QLowEnergyController::UnconnectedState) {
         // Try to reconnect if disconnected

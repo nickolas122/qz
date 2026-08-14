@@ -26,6 +26,13 @@ heartratebelt::~heartratebelt() {
 }
 
 void heartratebelt::update() {
+    // See ftmsbike::update(): the update timer can run before deviceDiscovered()
+    // has built the controller and after a teardown has cleared it. On Qt 6 that
+    // null dereference is a hard crash inside QLowEnergyController::state().
+    if (!m_control) {
+        return;
+    }
+
     QSettings settings;
     
     // Check if we are in connecting state and more than 10 seconds have passed

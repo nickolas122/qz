@@ -14,15 +14,17 @@ Rectangle {
                             videoPlayback.pause()) }
     }
 
+    // Qt 6: errorOccurred() replaces error(), and the player names its videoOutput
+    // rather than the VideoOutput naming its source. See the same block in Home.qml.
     MediaPlayer {
            id: videoPlayback
            source: rootItem.videoPath
-           autoPlay: false
            playbackRate: rootItem.videoRate
+           videoOutput: videoPlayer
 
-           onError: {
-               if (videoPlayback.NoError !== error) {
-                   console.log("[qmlvideo] VideoItem.onError error " + error + " errorString " + errorString)
+           onErrorOccurred: (error, errorString) => {
+               if (MediaPlayer.NoError !== error) {
+                   console.log("[qmlvideo] MediaPlayer error " + error + " errorString " + errorString)
                }
            }
 
@@ -31,7 +33,6 @@ Rectangle {
     VideoOutput {
              id:videoPlayer
              anchors.fill: parent
-             source: videoPlayback
 
              Component.onCompleted: {
                  console.log("mediaPlayer onCompleted: " + rootItem.videoPath)

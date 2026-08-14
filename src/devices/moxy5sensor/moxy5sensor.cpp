@@ -21,6 +21,13 @@ moxy5sensor::~moxy5sensor() {
 }
 
 void moxy5sensor::update() {
+    // See ftmsbike::update(): the update timer can run before deviceDiscovered()
+    // has built the controller and after a teardown has cleared it. On Qt 6 that
+    // null dereference is a hard crash inside QLowEnergyController::state().
+    if (!m_control) {
+        return;
+    }
+
     QSettings settings;
 
 }

@@ -102,8 +102,62 @@ bluetooth::bluetooth(bool logs, const QString &deviceName, bool noWriteResistanc
         discoveryAgent->setLowEnergyDiscoveryTimeout(10000);
 #endif
         this->startDiscovery();
+
+#ifdef Q_OS_WIN
+        // A device Windows is already connected to never advertises, and Qt's WinRT
+        // discovery only reports what its advertisement watcher hears - so the trainer
+        // is invisible to discovery for exactly as long as the OS holds the link.
+        // Measured on this bike: unpaired and silent, FromBluetoothAddressAsync still
+        // returns it by address and GetGattServicesAsync(Uncached) enumerates all six
+        // services. Windows re-establishes that link on its own the moment the radio
+        // comes up, so on Windows this is the normal case rather than an edge one.
+        //
+        // So: give discovery its chance, and if it comes up empty, hand the stored
+        // address to the very same deviceDiscovered() path. Nothing about device
+        // matching is duplicated - it is the same call discovery would have made.
+        connect(&discoveryTimeout, &QTimer::timeout, this, &bluetooth::connectToLastDeviceIfIdle);
+        discoveryTimeout.setSingleShot(true);
+        discoveryTimeout.start(15000);
+#endif
     }
 }
+
+#ifdef Q_OS_WIN
+void bluetooth::connectToLastDeviceIfIdle() {
+    if (device()) // discovery got there first, which is the happy path
+        return;
+
+    QSettings settings;
+    const QString name =
+        settings.value(QZSettings::bluetooth_lastdevice_name, QZSettings::default_bluetooth_lastdevice_name).toString();
+    const QString address = settings
+                                .value(QZSettings::bluetooth_lastdevice_address,
+                                       QZSettings::default_bluetooth_lastdevice_address)
+                                .toString();
+    if (name.isEmpty() || address.isEmpty()) {
+        debug(QStringLiteral("no previous device to fall back on"));
+        return;
+    }
+
+    const QBluetoothAddress lastAddress(address);
+    if (lastAddress.isNull()) {
+        debug(QStringLiteral("stored device address is not usable: ") + address);
+        return;
+    }
+
+    debug(QStringLiteral("discovery found nothing; trying the last device directly: ") + name + QStringLiteral(" ") +
+          address);
+
+    // The core configuration is not decoration. A QBluetoothDeviceInfo built from
+    // the address/name constructor reports UnknownCoreConfiguration, and Qt 6.8.2's
+    // WinRT backend dereferences a null through that path - the first attempt at
+    // this crashed in Qt6Bluetooth.dll with 0xc0000005 the instant the controller
+    // was created. Saying Low Energy explicitly is what discovery would have set.
+    QBluetoothDeviceInfo info(lastAddress, name, 0);
+    info.setCoreConfigurations(QBluetoothDeviceInfo::LowEnergyCoreConfiguration);
+    deviceDiscovered(info);
+}
+#endif
 
 bluetooth::~bluetooth() {
 

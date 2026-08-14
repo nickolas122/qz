@@ -672,6 +672,16 @@ void ftmsbike::update() {
 
     QSettings settings;
 
+    // update() is driven by a timer that starts as soon as the object exists, so it
+    // can run before deviceDiscovered() has built the controller - and it keeps
+    // running after a teardown has cleared it. Qt 5 happened to survive the null
+    // dereference; on Qt 6 it is a hard crash inside QLowEnergyController::state()
+    // (qlowenergycontroller.cpp:570, reading d_ptr through a null this), which is
+    // what killed the first Qt 6 connection attempts a second after "YPBM found".
+    if (!m_control) {
+        return;
+    }
+
     if (m_control->state() == QLowEnergyController::UnconnectedState) {
         emit disconnected();
         return;

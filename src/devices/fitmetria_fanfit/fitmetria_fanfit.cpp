@@ -22,7 +22,14 @@ fitmetria_fanfit::fitmetria_fanfit(bluetoothdevice *parentDevice) {
     this->parentDevice = parentDevice;
 }
 
-void fitmetria_fanfit::update() {}
+void fitmetria_fanfit::update() {
+    // See ftmsbike::update(): the update timer can run before deviceDiscovered()
+    // has built the controller and after a teardown has cleared it. On Qt 6 that
+    // null dereference is a hard crash inside QLowEnergyController::state().
+    if (!m_control) {
+        return;
+    }
+}
 
 void fitmetria_fanfit::serviceDiscovered(const QBluetoothUuid &gatt) {
     emit debug(QStringLiteral("serviceDiscovered ") + gatt.toString());
