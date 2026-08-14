@@ -47,6 +47,15 @@ win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../src/release/ -lqdom
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../src/debug/ -lqdomyos-zwift
 else:unix: LIBS += -L$$OUT_PWD/../src/ -lqdomyos-zwift
 
+# The static library the tests link carries webserverinfosender.o and
+# windowsblebond.o, so the test binary needs the same two dependencies the app
+# has: Qt's HttpServer module, and bthprops for BluetoothRemoveDevice(). Without
+# them the link fails on Windows with undefined references to QHttpServer::* and
+# BluetoothRemoveDevice. It goes unnoticed in CI because the only job that builds
+# the tests is linux-x86-build, where neither applies.
+qtHaveModule(httpserver): QT += httpserver
+win32:LIBS += -lbthprops
+
 INCLUDEPATH += $$PWD/../src $$PWD/../src/devices $$PWD/../src/fit-sdk
 DEPENDPATH += $$PWD/../src $$PWD/../src/devices
 
