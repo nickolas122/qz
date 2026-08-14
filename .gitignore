@@ -86,3 +86,6 @@ src/android/local.properties
 src/translations/*.qm
 __pycache__/
 *.pyc
+
+# aqtinstall drops this wherever it is run from
+aqtinstall.log
