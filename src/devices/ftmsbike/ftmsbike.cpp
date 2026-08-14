@@ -258,11 +258,24 @@ void ftmsbike::initHandshakeTick() {
 
     if (initHandshake.done()) {
         if (initHandshake.degraded()) {
-            // Worth saying out loud: every future diagnosis of this bike has to treat the control
-            // point as write-only, because nothing it is sent is ever confirmed.
-            qDebug() << QStringLiteral(
-                "FTMS handshake: finished without the bike ever acknowledging - control point "
-                "appears write-only on this console");
+            if (writeAccessDenied) {
+                // Not a quirk of the console - the writes never left the machine. Windows keeps
+                // serving reads from its GATT cache once a bond lapses, so discovery, the battery
+                // level and the connected indicator all stay convincing while every write is
+                // refused. Nothing in QZ can re-establish the bond, so name the remedy.
+                const QString msg = QStringLiteral(
+                    "Trainer control was refused by the operating system - the Bluetooth pairing "
+                    "has lapsed. Remove the trainer in Bluetooth settings and pair it again.");
+                qDebug() << QStringLiteral("FTMS handshake: ") << msg;
+                if (homeform::singleton())
+                    homeform::singleton()->setToastRequested(msg);
+            } else {
+                // Worth saying out loud: every future diagnosis of this bike has to treat the control
+                // point as write-only, because nothing it is sent is ever confirmed.
+                qDebug() << QStringLiteral(
+                    "FTMS handshake: finished without the bike ever acknowledging - control point "
+                    "appears write-only on this console");
+            }
         } else {
             qDebug() << QStringLiteral("FTMS handshake: control granted and start acknowledged");
         }
@@ -968,6 +981,9 @@ void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteris
                 domyosResistanceRetryAfter = now.addMSecs(3000);
                 initDone = false;
                 initHandshake.reset(); // re-init means the handshake runs again from the top
+                // Reaching a response code at all proves writes are getting through, so any
+                // earlier refusal is stale and must not colour the re-run of the handshake.
+                writeAccessDenied = false;
                 qDebug() << "DOMYOS resistance command rejected with CONTROL_NOT_PERMITTED"
                          << "lastRequestedResistance:" << lastDomyosRequestedResistance
                          << "backoffUntil:" << domyosResistanceRetryAfter;
@@ -2383,6 +2399,14 @@ void ftmsbike::errorService(QLowEnergyService::ServiceError err) {
     QMetaEnum metaEnum = QMetaEnum::fromType<QLowEnergyService::ServiceError>();
     emit debug(QStringLiteral("ftmsbike::errorService") + QString::fromLocal8Bit(metaEnum.valueToKey(err)) +
                m_control->errorString());
+
+    // A refused write is the fingerprint of a lapsed bond. Record it rather than
+    // reacting here: these arrive several at a time (every CCCD, then the control
+    // point), and the handshake is the point where we know it actually cost us
+    // something. The error string is localised by the OS, so match on the enum.
+    if (err == QLowEnergyService::CharacteristicWriteError || err == QLowEnergyService::DescriptorWriteError) {
+        writeAccessDenied = true;
+    }
 }
 
 void ftmsbike::error(QLowEnergyController::Error err) {
@@ -2674,6 +2698,9 @@ void ftmsbike::controllerStateChanged(QLowEnergyController::ControllerState stat
         initDone = false;
         initHandshake.reset();
         gearInclinationSent = false;
+        // A re-pair happens while we are disconnected, so the next attempt has to be
+        // judged on its own writes rather than inheriting the previous verdict.
+        writeAccessDenied = false;
 
         consecutiveConnectFailures++;
 

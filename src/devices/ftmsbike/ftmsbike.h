@@ -164,6 +164,12 @@ class ftmsbike : public bike {
 
     bool initDone = false;
     bool initRequest = false;
+    // Set when the stack refuses a write outright rather than the bike ignoring it.
+    // On Windows a lapsed bond denies every write while reads keep being served from
+    // the OS GATT cache, so the connection looks healthy and only the handshake
+    // notices. Distinguishes "console never answers" from "we were never allowed to
+    // ask" when the handshake ends degraded.
+    bool writeAccessDenied = false;
     // Which services still need subscribing, and whether it is time to subscribe
     // any of them. The decision lives in a header with no Qt in it because it has
     // been got wrong twice in opposite directions and neither error was reachable
