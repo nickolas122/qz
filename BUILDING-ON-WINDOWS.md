@@ -1,40 +1,18 @@
 # Getting a Windows build of this fork
 
-Windows binaries for this fork come from **GitHub Actions on the fork**, not from a
-local compiler. This note says why, how to get one, and what is already installed
-should the local route ever become available.
+There are two routes: **locally**, which works now, and **GitHub Actions on the
+fork**, which is what produces the shipped artifacts.
 
-## Why not build locally
+Smart App Control used to make the local route impossible - it blocked
+`C:\msys64\mingw64\bin\g++.exe` outright, so `qmake` stopped with
+`Project ERROR: Cannot run compiler 'g++'` and nothing linked. The machine owner
+turned it off on 2026-08-13. That is permanent (re-enabling requires reinstalling
+Windows), and it also un-blocked the unsigned native Python wheels that made
+`py7zr` fail to import `pybcj` - so `aqt` no longer strictly needs
+`-E "C:\Program Files\7-Zip\7z.exe"`, though passing it does no harm.
 
-Smart App Control is enforced on the development machine:
-
-```
-HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy
-VerifiedAndReputablePolicyState = 1        # 1 = enforced
-```
-
-It blocks binaries per-file by signature and reputation, and it blocks
-`C:\msys64\mingw64\bin\g++.exe`:
-
-```
-Uma política de Controle de Aplicativo bloqueou este arquivo
-```
-
-so `qmake` stops with `Project ERROR: Cannot run compiler 'g++'` and nothing links.
-The decision is not consistent across a single package - `gcc.exe` from the same
-MSYS2 install runs fine - so there is no subset of the toolchain to retreat to. It
-also blocks unsigned native Python wheels; `py7zr` fails to import its `pybcj`
-extension, which is why `aqt` has to be pointed at a real 7-Zip with
-`-E "C:\Program Files\7-Zip\7z.exe"`.
-
-**Do not turn Smart App Control off to work around this.** Disabling it is
-permanent: re-enabling requires reinstalling Windows. That is the machine owner's
-call, and the CI route below costs nothing by comparison.
-
-Note that enforcement is not a blanket ban on unsigned binaries - the released QZ
-nightly `qdomyos-zwift.exe` runs on this machine untouched. A freshly built binary
-carries no reputation, so whether it runs is worth confirming early rather than
-after a long debugging session.
+**The same error message now means something else entirely.** See
+[Building locally](#building-locally) - the first thing it catches is PATH order.
 
 ## Getting a build
 
@@ -137,13 +115,16 @@ as "find the newer run".
 Gating rather than deleting keeps the diff against upstream to one line per job, so
 a merge conflicts on a line instead of on a missing block.
 
-## The local toolchain, if it is ever usable
+## Building locally
 
-Everything but the compiler policy is already in place, so if Smart App Control is
-ever off this needs no further setup:
+A full build takes about two and a half minutes on this machine, against roughly
+twenty for a CI round trip, so this is the loop worth using while iterating.
 
-- **MSYS2** with `mingw-w64-x86_64-toolchain` and `mingw-w64-x86_64-qt5-webview`.
-  The webview package matters: Qt's official mingw 5.15.2 build ships no WebView.
+What is installed:
+
+- **MSYS2** with `mingw-w64-x86_64-toolchain` (currently GCC 16.2) and
+  `mingw-w64-x86_64-qt5-webview`. The webview package matters: Qt's official mingw
+  5.15.2 build ships no WebView.
 - **Qt 5.15.2** `win64_mingw81` plus `qtnetworkauth` and `qtcharts`, in `C:\Qt`,
   installed with `aqt` (`pip install aqtinstall`).
 - **CMake** and **7-Zip**.
@@ -155,18 +136,108 @@ ever off this needs no further setup:
   not reference `zwiftplay`, and upstream CI does not check either of them out for
   the Windows jobs.
 
-Then, following the CI job:
+### PATH order is load-bearing
 
-```sh
-cp qHttpServerBin/5.15.2/headers/* src/qthttpserver/src/3rdparty/http-parser/
-cd src/qthttpserver && qmake && mingw32-make -j8 && mingw32-make install && cd ../..
-lrelease src/qdomyos-zwift.pri
-qmake && mingw32-make -j8
-cd src/debug && mkdir output && cp qdomyos-zwift.* output/ && cd output
-windeployqt --qmldir ../../ qdomyos-zwift.exe
-# then libwinpthread-1.dll, libgcc_s_seh-1.dll, libstdc++-6.dll from C:/msys64/mingw64/bin
-# and windows_openssl/*
+`C:\msys64\mingw64\bin` must come **before** `C:\Qt\5.15.2\mingw81_64\bin`:
+
+```powershell
+$env:PATH = "C:\msys64\mingw64\bin;C:\Qt\5.15.2\mingw81_64\bin;" + $env:PATH
 ```
+
+Qt's `bin` ships its own `libstdc++-6.dll`, `libgcc_s_seh-1.dll` and
+`libwinpthread-1.dll`, all dated May 2018 - they are the GCC 8.1 runtime Qt was
+built with. Put that directory first and GCC 16's `cc1plus.exe` loads the 2018
+`libstdc++`, fails to start, and exits 1 printing **nothing at all**. qmake's
+compiler probe in `mkspecs/features/toolchain.prf` sees the non-zero status and
+reports:
+
+```
+Project ERROR: Cannot run compiler 'g++'. Output:
+===================
+===================
+```
+
+which is the exact message Smart App Control used to produce, for a completely
+different reason. `g++ --version` works fine from the same shell either way,
+because that path does not need `cc1plus`. To confirm which one you have, run the
+probe qmake actually runs:
+
+```
+cmd /c "g++ -E C:/Qt/5.15.2/mingw81_64/mkspecs/features/data/macros.cpp"
+```
+
+Exit 0 with `QMAKE_GCC_MAJOR_VERSION = 16` at the end means the toolchain is fine.
+
+### qthttpserver, and why the header-repair loop is not optional here
+
+`window-build` calls the forwarding-header repair in `main.yml` a "guard" that
+reported *25 scanned, 0 repaired*. That is true on the runner, which has
+Strawberry Perl. This machine has only MSYS2's and Git's perl, both of which
+report POSIX paths, so `syncqt.pl` decides `<srcbase>` and `<bldbase>` are
+different roots and writes every forwarding header as a relative path climbing
+between them. Locally the same loop reports **25 scanned, 23 repaired**, and
+without it nothing that includes a QtHttpServer header compiles.
+
+```powershell
+$env:PATH = "C:\msys64\mingw64\bin;C:\Qt\5.15.2\mingw81_64\bin;" + $env:PATH + ";C:\msys64\usr\bin"
+cd src\qthttpserver
+cp ..\..\qHttpServerBin\5.15.2\headers\* src\3rdparty\http-parser\
+Remove-Item -Recurse -Force examples -ErrorAction SilentlyContinue
+Set-Content -Path tests\tests.pro -Value "TEMPLATE = subdirs"
+qmake -r
+# then the repair loop from .github/workflows/main.yml, verbatim
+mingw32-make -j8
+mingw32-make install
+```
+
+`C:\msys64\usr\bin` goes at the *end* of PATH: syncqt needs a perl, but that
+directory also carries an MSYS `make`, `find` and `sort` that should not win.
+
+### The build itself
+
+```powershell
+lrelease src/qdomyos-zwift.pri
+qmake
+mingw32-make debug -j8
+```
+
+**`debug`, not the default target.** qmake generates debug and release makefiles
+for every subproject; left to itself `make` builds `src` in debug and then tries
+to build `tst` in release, which stops at
+
+```
+No rule to make target '.../src/release/libqdomyos-zwift.a'
+```
+
+Naming `debug` keeps all three subprojects on the same side. It also matches CI,
+which archives `src/debug/output`.
+
+Then the tests, which are worth running because `linux-x86-build` is the only CI
+job that builds them:
+
+```powershell
+tst\debug\qdomyos-zwift-tests.exe
+```
+
+### Running what you built
+
+Do **not** run `src\debug\qdomyos-zwift.exe` in place. With `C:\msys64\mingw64\bin`
+first on PATH it loads MSYS2's Qt - the build banner says `Qt 5.15.19` instead of
+`Qt 5.15.2` - and the QML modules resolve against the wrong prefix, so the engine
+fails to load a single component. Deploy it the way CI does, into its own
+directory:
+
+```powershell
+$env:PATH = "C:\Qt\5.15.2\mingw81_64\bin;C:\msys64\mingw64\bin;" + $env:PATH   # note: reversed
+mkdir out; cp src\debug\qdomyos-zwift.exe out; cd out
+windeployqt --qmldir ..\ qdomyos-zwift.exe
+cp C:\msys64\mingw64\bin\libwinpthread-1.dll,C:\msys64\mingw64\bin\libgcc_s_seh-1.dll,C:\msys64\mingw64\bin\libstdc++-6.dll .
+cp ..\windows_openssl\*.* .
+```
+
+Qt's `bin` goes first *for running* and last *for building*; the DLLs it shadows
+are the ones windeployqt is about to copy anyway. The banner on the first line of
+the log is the check: `QZ build <sha> Qt 5.15.2 on Windows ...`.
 
 ## Testing the binary
 
