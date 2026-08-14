@@ -186,7 +186,10 @@ bool operator<(const QMqttTopicName &lhs, const QMqttTopicName &rhs) Q_DECL_NOTH
 */
 uint qHash(const QMqttTopicName &name, uint seed) Q_DECL_NOTHROW
 {
-    return qHash(name.d->name, seed);
+    // See the identical call in qmqtttopicfilter.cpp: the QStringView is what
+    // keeps MSVC from finding this overload and qHash(const QString &, size_t)
+    // equally good.
+    return qHash(QStringView(name.d->name), seed);
 }
 
 #ifndef QT_NO_DATASTREAM

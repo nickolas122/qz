@@ -1,10 +1,20 @@
 #include <QRegularExpression>
 #include "deviceindex.h"
 
-std::vector<QString> DeviceIndex::allDevices;
-QMap<QString, QString> DeviceIndex::allIdentifiers;
+std::vector<QString> &DeviceIndex::allDevices() {
+    static std::vector<QString> instance;
+    return instance;
+}
 
-static const QRegularExpression validIdentifierRegex("^\\w+$");
+QMap<QString, QString> &DeviceIndex::allIdentifiers() {
+    static QMap<QString, QString> instance;
+    return instance;
+}
+
+static const QRegularExpression &validIdentifierRegex() {
+    static const QRegularExpression instance("^\\w+$");
+    return instance;
+}
 
 const QString DeviceIndex::AddDevice(const QString &name, const QString& identifier)
 {
@@ -14,15 +24,15 @@ const QString DeviceIndex::AddDevice(const QString &name, const QString& identif
     if(identifier==nullptr || identifier=="")
         throw std::invalid_argument("Identifier must be provided.");
 
-    if(!validIdentifierRegex.match(identifier).hasMatch())
+    if(!validIdentifierRegex().match(identifier).hasMatch())
         throw std::invalid_argument("Identifier must be alphanumeric");
 
-    if(allIdentifiers.contains(name)) {
+    if(allIdentifiers().contains(name)) {
         throw std::invalid_argument("Device name already defined: " + name.toStdString());
     }
 
-    allDevices.push_back(name);
-    allIdentifiers[name] = identifier;
+    allDevices().push_back(name);
+    allIdentifiers()[name] = identifier;
 
     return name;
 }
@@ -30,10 +40,13 @@ const QString DeviceIndex::AddDevice(const QString &name, const QString& identif
 DeviceIndex::DeviceIndex() {}
 
 
-const QString DeviceIndex::Identifier(const QString &deviceName) { return allIdentifiers[deviceName]; }
+const QString DeviceIndex::Identifier(const QString &deviceName) { return allIdentifiers().value(deviceName); }
 
 #define DEFINE_DEVICE(DeviceKey, DeviceName) \
-        const QString DeviceIndex::DeviceKey = AddDevice(QStringLiteral(DeviceName), QStringLiteral(#DeviceKey));
+        const QString &DeviceIndex::DeviceKey() { \
+            static const QString instance = AddDevice(QStringLiteral(DeviceName), QStringLiteral(#DeviceKey)); \
+            return instance; \
+        }
 
 
 DEFINE_DEVICE(ActivioTreadmill, "Activio Treadmill");

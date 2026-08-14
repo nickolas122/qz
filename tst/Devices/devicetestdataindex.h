@@ -8,8 +8,10 @@
 
 class DeviceTestDataIndex {
 private:
-    static QMap<QString,const BluetoothDeviceTestData*> testData;
-    static bool isInitialized;
+    // Function-local, for the reason spelled out in deviceindex.h: these are
+    // touched during another translation unit's static initialisation.
+    static QMap<QString,const BluetoothDeviceTestData*> &testData();
+    static bool &isInitialized();
 
     static class BluetoothDeviceTestDataBuilder *  RegisterNewDeviceTestData(const QString& name);
 public:

@@ -11,7 +11,10 @@
 
 
 
-bool DeviceTestDataIndex::isInitialized = false;
+bool &DeviceTestDataIndex::isInitialized() {
+    static bool instance = false;
+    return instance;
+}
 
 /**
  * @brief hex2bytes Converts a hexadecimal string to bytes, 2 characters at a time.
@@ -31,13 +34,19 @@ static QByteArray hex2bytes(const std::string& s)
 }
 
 
-QMap<QString,const BluetoothDeviceTestData*> DeviceTestDataIndex::testData;
+QMap<QString,const BluetoothDeviceTestData*> &DeviceTestDataIndex::testData() {
+    static QMap<QString,const BluetoothDeviceTestData*> instance;
+    return instance;
+}
 
 
 const std::vector<QString> DeviceTestDataIndex::Names() {
+    // INSTANTIATE_TEST_SUITE_P calls this during static initialisation, long
+    // before main() gets to Initialize(). Initialize() is idempotent.
+    Initialize();
     std::vector<QString> result;
 
-    for(auto key : testData.keys())
+    for(auto key : testData().keys())
         result.push_back(key);
 
     return result;
@@ -46,7 +55,7 @@ const std::vector<QString> DeviceTestDataIndex::Names() {
 const std::vector<const BluetoothDeviceTestData *> DeviceTestDataIndex::TestData() {
     std::vector<const BluetoothDeviceTestData*> result;
 
-    for(auto item : testData)
+    for(auto item : testData())
         result.push_back(item);
 
     return result;
@@ -54,19 +63,19 @@ const std::vector<const BluetoothDeviceTestData *> DeviceTestDataIndex::TestData
 
 BluetoothDeviceTestDataBuilder *  DeviceTestDataIndex::RegisterNewDeviceTestData(const QString& name)
 {
-    auto existing = testData.value(name, nullptr);
+    auto existing = testData().value(name, nullptr);
     if(existing)
         delete existing;
     BluetoothDeviceTestDataBuilder * result = new BluetoothDeviceTestDataBuilder(name);
-    testData.insert(name, result);
+    testData().insert(name, result);
     return result;
 }
 
 const BluetoothDeviceTestData *DeviceTestDataIndex::GetTestData(const QString &name) {
-    if(!isInitialized)
+    if(!isInitialized())
         throw std::invalid_argument("Device test data is not initialized.");
 
-    return testData.value(name, nullptr);
+    return testData().value(name, nullptr);
 }
 
 
@@ -76,7 +85,7 @@ QMultiMap<DeviceTypeId, const BluetoothDeviceTestData*> DeviceTestDataIndex::Whe
     if(typeIds.empty())
         return result;
 
-    for(auto item : qAsConst(testData)) {
+    for(auto item : qAsConst(testData())) {
         if(typeIds.count(item->ExpectedDeviceType()))
             result.insert(item->ExpectedDeviceType(), item);
     }
@@ -86,14 +95,14 @@ QMultiMap<DeviceTypeId, const BluetoothDeviceTestData*> DeviceTestDataIndex::Whe
 
 void DeviceTestDataIndex::Initialize() {
 
-    if(isInitialized)
+    if(isInitialized())
         return;
 
     const QString testIP = "1.2.3.4";
 
     // CSC Bike (Named)
     QString cscBikeName = "CyclingSpeedCadenceBike-";
-    RegisterNewDeviceTestData(DeviceIndex::CSCBike_Named)
+    RegisterNewDeviceTestData(DeviceIndex::CSCBike_Named())
         ->expectDevice<cscbike>()        
         ->acceptDeviceName(cscBikeName, DeviceNameComparison::StartsWith)
         ->rejectDeviceName("X" + cscBikeName, DeviceNameComparison::Exact)
@@ -103,7 +112,7 @@ void DeviceTestDataIndex::Initialize() {
         });
 
     cscBikeName = "CyclingSpeedCadenceBike-";
-    RegisterNewDeviceTestData(DeviceIndex::CSCBike)
+    RegisterNewDeviceTestData(DeviceIndex::CSCBike())
         ->expectDevice<cscbike>()
         ->acceptDeviceName(QStringLiteral("JOROTO-BK-"), DeviceNameComparison::StartsWithIgnoreCase)
         ->configureSettingsWith(
@@ -146,7 +155,7 @@ void DeviceTestDataIndex::Initialize() {
 
     // TODO: check if this is actually used
     // Elite Sterzo Smart
-    RegisterNewDeviceTestData(DeviceIndex::EliteSterzoSmart)
+    RegisterNewDeviceTestData(DeviceIndex::EliteSterzoSmart())
         ->expectDevice<elitesterzosmart>()
         ->disable("Unable to detect with current logic");
 
@@ -156,14 +165,14 @@ void DeviceTestDataIndex::Initialize() {
     };
 
     // FTMS Bike Hammer Racer S
-    RegisterNewDeviceTestData(DeviceIndex::FTMSBikeHammerRacerS)
+    RegisterNewDeviceTestData(DeviceIndex::FTMSBikeHammerRacerS())
         ->expectDevice<ftmsbike>()        
         ->acceptDeviceName("FS-", DeviceNameComparison::StartsWith)
         ->configureSettingsWith(QZSettings::hammer_racer_s)
         ->excluding(ftmsBikeConfigureExclusions);
 
     // FTMS Bike Hammer 64123
-    RegisterNewDeviceTestData(DeviceIndex::FTMSBikeHammer)
+    RegisterNewDeviceTestData(DeviceIndex::FTMSBikeHammer())
         ->expectDevice<ftmsbike>()
         ->acceptDeviceName("HAMMER ", DeviceNameComparison::StartsWithIgnoreCase)
         ->configureSettingsWith(
@@ -186,7 +195,7 @@ void DeviceTestDataIndex::Initialize() {
         ->excluding(ftmsBikeConfigureExclusions);
 
     // FTMS Bike IConsole
-    RegisterNewDeviceTestData(DeviceIndex::FTMSBikeIConsole)
+    RegisterNewDeviceTestData(DeviceIndex::FTMSBikeIConsole())
         ->expectDevice<ftmsbike>()
         ->acceptDeviceName("ICONSOLE+", DeviceNameComparison::StartsWithIgnoreCase)
         ->configureSettingsWith(QZSettings::toorx_ftms)
@@ -249,7 +258,7 @@ void DeviceTestDataIndex::Initialize() {
         "UBIKE FTMS",
         "INRIDE"
     };
-    RegisterNewDeviceTestData(DeviceIndex::FTMSBike)
+    RegisterNewDeviceTestData(DeviceIndex::FTMSBike())
         ->expectDevice<ftmsbike>()
         ->acceptDeviceNames(acceptableFTMSNames, DeviceNameComparison::StartsWithIgnoreCase)
         ->acceptDeviceName("DI", DeviceNameComparison::StartsWithIgnoreCase, 2) // Elite smart trainer #1682)
@@ -281,7 +290,7 @@ void DeviceTestDataIndex::Initialize() {
 
     // FTMS Accessory
     QString ftmsAccessoryName = "accessory";
-    RegisterNewDeviceTestData(DeviceIndex::FTMSAccessory)
+    RegisterNewDeviceTestData(DeviceIndex::FTMSAccessory())
         ->expectDevice<ftmsbike>()        
         ->acceptDeviceName(ftmsAccessoryName, DeviceNameComparison::StartsWithIgnoreCase)
         ->configureSettingsWith(
@@ -294,7 +303,7 @@ void DeviceTestDataIndex::Initialize() {
 
 
     // FTMS "BIKE-"
-    RegisterNewDeviceTestData(DeviceIndex::FTMSBike3)
+    RegisterNewDeviceTestData(DeviceIndex::FTMSBike3())
         ->expectDevice<ftmsbike>()
         ->acceptDeviceName("BIKE-", DeviceNameComparison::StartsWithIgnoreCase)
         ->excluding(ftmsBikeConfigureExclusions)
@@ -310,7 +319,7 @@ void DeviceTestDataIndex::Initialize() {
         });
 
     // FTMS Bike 2
-    RegisterNewDeviceTestData(DeviceIndex::FTMSBike2)
+    RegisterNewDeviceTestData(DeviceIndex::FTMSBike2())
         ->expectDevice<ftmsbike>()
         ->acceptDeviceNames({"GLT",
                              "SPORT01-"}, // Labgrey Magnetic Exercise Bike https://www.amazon.co.uk/dp/B0CXMF1NPY?_encoding=UTF8&psc=1&ref=cm_sw_r_cp_ud_dp_PE420HA7RD7WJBZPN075&ref_=cm_sw_r_cp_ud_dp_PE420HA7RD7WJBZPN075&social_share=cm_sw_r_cp_ud_dp_PE420HA7RD7WJBZPN075&skipTwisterOG=1,
@@ -320,7 +329,7 @@ void DeviceTestDataIndex::Initialize() {
 
     // Power (Stages) Bike
     QString powerSensorName = "WattsItCalled";
-    RegisterNewDeviceTestData(DeviceIndex::StagesPowerBike)
+    RegisterNewDeviceTestData(DeviceIndex::StagesPowerBike())
         ->expectDevice<stagesbike>()
         ->acceptDeviceName(powerSensorName+"Suffix", DeviceNameComparison::Exact) // needs a non-trivial name, but could be anything
         ->configureSettingsWith([powerSensorName](const DeviceDiscoveryInfo& info, bool enable, std::vector<DeviceDiscoveryInfo>& configurations) -> void {
@@ -349,7 +358,7 @@ void DeviceTestDataIndex::Initialize() {
         });
 
     // StrydeRun Power Sensor
-    RegisterNewDeviceTestData(DeviceIndex::StrydeRunTreadmill_PowerSensor)
+    RegisterNewDeviceTestData(DeviceIndex::StrydeRunTreadmill_PowerSensor())
         ->expectDevice<strydrunpowersensor>()        
         ->acceptDeviceName("", DeviceNameComparison::StartsWith,1) // accept any name
         ->configureSettingsWith(
@@ -380,7 +389,7 @@ void DeviceTestDataIndex::Initialize() {
                 }
             });
 
-    RegisterNewDeviceTestData(DeviceIndex::StrydeRunTreadmill_PowerSensor2)
+    RegisterNewDeviceTestData(DeviceIndex::StrydeRunTreadmill_PowerSensor2())
         ->expectDevice<strydrunpowersensor>()
         ->acceptDeviceNames({"TREADMILL", "S10"}, DeviceNameComparison::StartsWithIgnoreCase)
         ->configureSettingsWith(QBluetoothUuid((quint16)0x1814));
@@ -404,7 +413,7 @@ void DeviceTestDataIndex::Initialize() {
     // TODO: revisit
     // Zwift Runpod
     QString zwiftRunPodPowerSensorName = "WattsItCalled";
-    RegisterNewDeviceTestData(DeviceIndex::ZwiftRunpod)
+    RegisterNewDeviceTestData(DeviceIndex::ZwiftRunpod())
         ->expectDevice<strydrunpowersensor>()        
         ->acceptDeviceName("ZWIFT RUNPOD", DeviceNameComparison::StartsWithIgnoreCase)
         ->configureSettingsWith(
@@ -443,15 +452,15 @@ void DeviceTestDataIndex::Initialize() {
             });
 
 
-    isInitialized = true;
+    isInitialized() = true;
 
     // Debug log the type ids
-    for(auto deviceTestData : testData) {
+    for(auto deviceTestData : testData()) {
         qDebug() << "Device: " << deviceTestData->Name() << " expected device type id: " << deviceTestData->ExpectedDeviceType();
     }
 
     // Validate the test data
-    for(auto deviceTestData : testData) {
+    for(auto deviceTestData : testData()) {
 
         try {
             auto exclusions = deviceTestData->Exclusions();

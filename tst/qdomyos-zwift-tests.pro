@@ -10,6 +10,13 @@ CONFIG -= app_bundle
 CONFIG += thread
 CONFIG += androidextras
 
+# The library these tests link is built with _ITERATOR_DEBUG_LEVEL=0
+# (src/qdomyos-zwift.pri), and MSVC refuses to link objects that disagree about
+# it - a debug build defaults to 2, so gtest-all.obj and every object in
+# qdomyos-zwift.lib come out on opposite sides. Harmless under mingw, where the
+# macro means nothing.
+win32:DEFINES += _ITERATOR_DEBUG_LEVEL=0
+
 SOURCES += \
         Devices/bluetoothdevicetestdata.cpp \
         Devices/bluetoothdevicetestdatabuilder.cpp \
@@ -38,7 +45,12 @@ SOURCES += \
 
 # Avoid the "File too big" error building in Windows. This has happened when a template class is used with Google Test / typed tests
 # to produce a large number of classes.
-win32:QMAKE_CXXFLAGS += -Wa,-mbig-obj
+#
+# Both spellings are needed: -Wa,-mbig-obj is passed to GNU as and cl rejects it
+# outright, /bigobj is the MSVC equivalent. This used to be a bare win32: scope,
+# which handed the GCC flag to cl and stopped the build at moc_predefs.h.
+mingw: QMAKE_CXXFLAGS += -Wa,-mbig-obj
+msvc: QMAKE_CXXFLAGS += /bigobj
 
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../src/release/ -lqdomyos-zwift
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../src/debug/ -lqdomyos-zwift
@@ -52,6 +64,10 @@ else:unix: LIBS += -L$$OUT_PWD/../src/ -lqdomyos-zwift
 # the tests is linux-x86-build, where neither applies.
 qtHaveModule(httpserver): QT += httpserver
 win32:LIBS += -lbthprops
+# Under msvc the library also carries zwift_messages.pb.obj and trainprogram's
+# use of it, so the test binary needs the same protobuf set src/qdomyos-zwift.pri
+# links. The -L for it comes from the build's vcpkg path.
+win32:!mingw:LIBS += -llibprotobuf -llibprotoc -labseil_dll -llibprotobuf-lite -ldbghelp
 
 INCLUDEPATH += $$PWD/../src $$PWD/../src/devices $$PWD/../src/fit-sdk
 DEPENDPATH += $$PWD/../src $$PWD/../src/devices

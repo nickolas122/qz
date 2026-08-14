@@ -1,5 +1,5 @@
 import QtQuick 2.4
-import QtCharts 2.2
+import QtCharts
 import Qt.labs.settings 1.0
 import QtQuick.Controls 2.15
 

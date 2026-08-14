@@ -296,7 +296,15 @@ bool operator<(const QMqttTopicFilter &lhs, const QMqttTopicFilter &rhs) Q_DECL_
 */
 uint qHash(const QMqttTopicFilter &filter, uint seed) Q_DECL_NOTHROW
 {
-    return qHash(filter.d->filter, seed);
+    // Through a QStringView on purpose. Passing the QString straight in is
+    // ambiguous under MSVC: QMqttTopicFilter and QMqttTopicName both construct
+    // implicitly from QString, so those overloads match argument one exactly and
+    // lose on the seed, while qHash(const QString &, size_t) matches the seed and
+    // loses on argument one - neither is better in every position. A QStringView
+    // converts to none of them, which leaves qHash(QStringView, ...) alone, and Qt
+    // implements the QString overload as exactly that call, so the value is the
+    // same on both Qt versions.
+    return qHash(QStringView(filter.d->filter), seed);
 }
 
 #ifndef QT_NO_DATASTREAM

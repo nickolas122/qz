@@ -9,8 +9,13 @@
  */
 class DeviceIndex
 {
-    static std::vector<QString> allDevices;
-    static QMap<QString, QString> allIdentifiers;
+    // Function-local statics, not static members. These are read during the static
+    // initialisation of other translation units - INSTANTIATE_TEST_SUITE_P calls
+    // DeviceTestDataIndex::Names() before main() - and a static member of another TU
+    // may not be constructed yet at that point. MSVC orders the TUs differently from
+    // GCC and turned that latent UB into an empty parameter name at registration.
+    static std::vector<QString> &allDevices();
+    static QMap<QString, QString> &allIdentifiers();
 
     /**
      * @brief Adds a device variant to the index.
@@ -28,7 +33,7 @@ public:
      * @return
      */
     static const std::vector<QString> DeviceNames() {
-        return allDevices;
+        return allDevices();
     }
 
     /**
@@ -38,7 +43,7 @@ public:
      */
     static const QString Identifier(const QString& deviceName);
 
-#define DEFINE_DEVICE(ProductKey, ProductName) static const QString ProductKey;
+#define DEFINE_DEVICE(ProductKey, ProductName) static const QString &ProductKey();
 
 
     DEFINE_DEVICE(ActivioTreadmill, "Activio Treadmill");
