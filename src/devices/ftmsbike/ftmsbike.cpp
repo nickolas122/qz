@@ -2,6 +2,7 @@
 #include "devices/cscbike/cscbike.h"
 #include "speedracex_defaults.h"
 #include "homeform.h"
+#include "windowsblebond.h"
 #include "virtualdevices/virtualbike.h"
 #include <QBluetoothLocalDevice>
 #include <QDateTime>
@@ -262,10 +263,27 @@ void ftmsbike::initHandshakeTick() {
                 // Not a quirk of the console - the writes never left the machine. Windows keeps
                 // serving reads from its GATT cache once a bond lapses, so discovery, the battery
                 // level and the connected indicator all stay convincing while every write is
-                // refused. Nothing in QZ can re-establish the bond, so name the remedy.
-                const QString msg = QStringLiteral(
-                    "Trainer control was refused by the operating system - the Bluetooth pairing "
-                    "has lapsed. Remove the trainer in Bluetooth settings and pair it again.");
+                // refused.
+                //
+                // Every command the handshake had was refused, so this connection is already
+                // useless and dropping the stale pairing cannot cost anything that still works.
+                // Do it once per session: if pairing again does not help, repeatedly tearing the
+                // record down would be destructive rather than persistent.
+                QString msg;
+                if (!bondRepairAttempted &&
+                    windowsblebond::removeBond(bluetoothDevice.address().toUInt64())) {
+                    bondRepairAttempted = true;
+                    // The other half cannot be automated - see windowsblebond.h - so open the
+                    // pane that can finish it rather than describing where to find it.
+                    windowsblebond::openPairingSettings();
+                    msg = QStringLiteral(
+                        "Trainer control was refused - the Bluetooth pairing had lapsed. QZ removed "
+                        "the stale pairing: pair the trainer again to restore control.");
+                } else {
+                    msg = QStringLiteral(
+                        "Trainer control was refused by the operating system - the Bluetooth pairing "
+                        "has lapsed. Remove the trainer in Bluetooth settings and pair it again.");
+                }
                 qDebug() << QStringLiteral("FTMS handshake: ") << msg;
                 if (homeform::singleton())
                     homeform::singleton()->setToastRequested(msg);

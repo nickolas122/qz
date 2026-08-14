@@ -170,6 +170,10 @@ class ftmsbike : public bike {
     // notices. Distinguishes "console never answers" from "we were never allowed to
     // ask" when the handshake ends degraded.
     bool writeAccessDenied = false;
+    // Deliberately not cleared on reconnect, unlike writeAccessDenied: dropping the
+    // pairing is a one-shot remedy, and a bond that lapses again after being rebuilt
+    // is a different problem that tearing the record down repeatedly will not fix.
+    bool bondRepairAttempted = false;
     // Which services still need subscribing, and whether it is time to subscribe
     // any of them. The decision lives in a header with no Qt in it because it has
     // been got wrong twice in opposite directions and neither error was reachable

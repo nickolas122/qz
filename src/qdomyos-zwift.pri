@@ -31,7 +31,9 @@ CONFIG += qmltypes
 #unix:!android: CONFIG += webengine
 
 win32:DEFINES += _ITERATOR_DEBUG_LEVEL=0
-win32:!mingw:LIBS += -llibprotobuf -llibprotoc -labseil_dll -llibprotobuf-lite -ldbghelp -L$$PWD 
+win32:!mingw:LIBS += -llibprotobuf -llibprotoc -labseil_dll -llibprotobuf-lite -ldbghelp -L$$PWD
+# BluetoothRemoveDevice(), for dropping a lapsed pairing - see windowsblebond.cpp.
+win32:LIBS += -lbthprops
 
 QML_IMPORT_NAME = org.cagnulein.qdomyoszwift
 QML_IMPORT_MAJOR_VERSION = 1
@@ -167,6 +169,7 @@ devices/volavabike/volavabike.cpp \
 handleurl.cpp \
 devices/iconceptelliptical/iconceptelliptical.cpp \
 localipaddress.cpp \
+windowsblebond.cpp \
 rtssosd.cpp \
 devices/pelotonbike/pelotonbike.cpp \
 devices/schwinn170bike/schwinn170bike.cpp \
@@ -486,6 +489,7 @@ devices/discoveryoptions.h \
 handleurl.h \
 devices/iconceptelliptical/iconceptelliptical.h \
 localipaddress.h \
+windowsblebond.h \
 rtssosd.h \
 devices/pelotonbike/pelotonbike.h \
 devices/schwinn170bike/schwinn170bike.h \
