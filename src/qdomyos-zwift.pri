@@ -43,11 +43,20 @@ QML_IMPORT_PATH =
 # Additional import path used to resolve QML modules just for Qt Quick Designer
 QML_DESIGNER_IMPORT_PATH =
 
-win32:QMAKE_LFLAGS_DEBUG += -static-libstdc++ -static-libgcc -llibcrypto-1_1-x64 -llibssl-1_1-x64 -L$$PWD/../windows_openssl
-win32:QMAKE_LFLAGS_RELEASE += -static-libstdc++ -static-libgcc -llibcrypto-1_1-x64 -llibssl-1_1-x64 -L$$PWD/../windows_openssl
+# Every flag here is GCC's, and win32 is not only mingw: on the MSVC build link.exe
+# is handed -static-libstdc++ and -l..., which it cannot parse. The bundled OpenSSL
+# in windows_openssl/ is a mingw import-library pair for the same reason. Qt's own
+# TLS backend loads OpenSSL at runtime, so an MSVC build needs neither.
+mingw {
+    QMAKE_LFLAGS_DEBUG += -static-libstdc++ -static-libgcc -llibcrypto-1_1-x64 -llibssl-1_1-x64 -L$$PWD/../windows_openssl
+    QMAKE_LFLAGS_RELEASE += -static-libstdc++ -static-libgcc -llibcrypto-1_1-x64 -llibssl-1_1-x64 -L$$PWD/../windows_openssl
+}
 
-QMAKE_LFLAGS_RELEASE += -s
-QMAKE_CXXFLAGS += -fno-sized-deallocation
+# -s (strip) and -fno-sized-deallocation are likewise GCC/clang spellings.
+gcc {
+    QMAKE_LFLAGS_RELEASE += -s
+    QMAKE_CXXFLAGS += -fno-sized-deallocation
+}
 mingw: QMAKE_CXXFLAGS += -Wa,-mbig-obj
 msvc {
    win32:QMAKE_CXXFLAGS_DEBUG += /RTC1
