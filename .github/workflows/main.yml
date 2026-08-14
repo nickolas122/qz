@@ -492,6 +492,175 @@ jobs:
 #          #depot2Path: StandaloneLinux64
 #          releaseBranch: prerelease
 
+  # The Qt 6 Windows build, and the reason the fork has an MSVC job at all.
+  #
+  # Qt ships a working WinRT Bluetooth backend only for MSVC: QT_FEATURE_winrt_bt
+  # is 1 in the msvc2022 package and -1 in every mingw one (6.8.2, 6.9.3, 6.10.3
+  # and llvm-mingw alike), where you get qlowenergycontroller_dummy.cpp instead.
+  # WINDOWS-QT6-PHASE1.md has the measurements and why building it under mingw is
+  # a fork of Qt rather than a build of it.
+  #
+  # window-build stays on mingw + Qt 5.15.2 until this one has been proven against
+  # the bike - it is the known-good artifact, and the two do not conflict.
+  #
+  # Differences from window-build worth knowing:
+  #   - no qthttpserver checkout: Qt 6 has QtHttpServer as a real module.
+  #   - no qtconnectivity source build: the WinRT backend is already in the package,
+  #     and the fork's Qt 5 patches are all against backends Qt 6 does not have.
+  #   - protobuf comes from vcpkg, because zwift_messages.pb.cc is compiled only
+  #     under msvc (see the `msvc {` block in src/qdomyos-zwift.pri).
+  window-qt6-build:
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout smtpclient
+        uses: actions/checkout@v4
+        with:
+          repository: bluetiger9/SmtpClient-for-Qt
+          path: "src/smtpclient/"
+          ref: 863843c34e03bcfd0dc0d75ad3a4c1e3d0a06d94   # v2.0: the first SmtpClient with Qt 6 support
+      - name: Checkout googletest
+        uses: actions/checkout@v4
+        with:
+          repository: google/googletest
+          path: "tst/googletest/"
+          ref: "release-1.12.1"
+
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.8.2'
+          host: 'windows'
+          modules: 'qtconnectivity qtpositioning qtnetworkauth qtwebsockets qtspeech qtlocation qtmultimedia qtcharts qthttpserver qtshadertools qtimageformats'
+          target: "desktop"
+          arch: win64_msvc2022_64
+          dir: "${{github.workspace}}/qt/"
+          install-deps: "true"
+          cache: 'true'
+          cache-key-prefix: 'install-qt-action-windows-qt6'
+          aqtversion: '==3.3.0'
+
+      - name: Install MSVC compiler
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Cache vcpkg
+        id: cache-vcpkg-qt6
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.workspace }}\vcpkg\installed
+          key: vcpkg-qt6-x64-windows-protobuf-abseil-v1
+
+      - name: Clone vcpkg
+        if: steps.cache-vcpkg-qt6.outputs.cache-hit != 'true'
+        run: git clone https://github.com/microsoft/vcpkg.git
+        working-directory: ${{ runner.workspace }}
+
+      - name: Bootstrap vcpkg
+        if: steps.cache-vcpkg-qt6.outputs.cache-hit != 'true'
+        run: .\vcpkg\bootstrap-vcpkg.bat
+        working-directory: ${{ runner.workspace }}
+
+      # Pinned to the same baseline the msvc2022 job uses. zwift_messages.pb.h
+      # refuses anything older than protobuf 4.25.0 and anything whose runtime
+      # demands a protoc newer than 4.25.1, so this is not a version to float.
+      - name: Create vcpkg.json
+        if: steps.cache-vcpkg-qt6.outputs.cache-hit != 'true'
+        working-directory: ${{ runner.workspace }}
+        run: |
+          echo '{
+            "name": "qdomyos-zwift",
+            "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+            "dependencies": [
+              "protobuf",
+              "protobuf-c",
+              "abseil"
+            ],
+            "builtin-baseline": "8c2fcacefba009d63672f9d137f192765e632c9f"
+          }' > vcpkg.json
+
+      - name: Install dependencies
+        if: steps.cache-vcpkg-qt6.outputs.cache-hit != 'true'
+        run: |
+           .\vcpkg\vcpkg install --triplet x64-windows --x-install-root=${{ runner.workspace }}\vcpkg\installed
+        working-directory: ${{ runner.workspace }}
+
+      - name: Secrets
+        if: github.ref == 'refs/heads/master'
+        run: |
+          cd src
+          echo "#define STRAVA_SECRET_KEY ${{ secrets.strava_secret_key }}" > secret.h
+          echo "#define PELOTON_SECRET_KEY ${{ secrets.peloton_secret_key }}" >> secret.h
+          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" >> secret.h
+          echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
+          echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
+          echo "#define INTERVALSICU_CLIENT_ID ${{ secrets.intervalsicu_client_id }}" >> secret.h
+          echo "#define INTERVALSICU_CLIENT_SECRET ${{ secrets.intervalsicu_client_secret }}" >> secret.h
+          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
+          cd ..
+
+      # Every command's status is checked. window-build does not do this, and as a
+      # result it has been reporting success while `make` failed on the tst
+      # subproject - in a pwsh run: block only the last command's exit code reaches
+      # GitHub, and there are half a dozen cp's after the build.
+      - name: Build
+        run: |
+            $vcpkg = "${{ runner.workspace }}\vcpkg\installed\x64-windows"
+            lrelease src/qdomyos-zwift.pri
+            if ($LASTEXITCODE -ne 0) { throw "lrelease failed: $LASTEXITCODE" }
+            # protobuf's headers and import libraries are handed to qmake rather than
+            # copied into src/, so the source tree stays clean.
+            qmake "INCLUDEPATH+=$vcpkg/include" "LIBS+=-L$vcpkg/lib"
+            if ($LASTEXITCODE -ne 0) { throw "qmake failed: $LASTEXITCODE" }
+            # `debug`, not the default target: qmake writes debug and release
+            # makefiles for every subproject, and left alone nmake builds src in
+            # debug and then tries tst in release, against a library that was never
+            # built. Naming the target keeps all three on the same side.
+            nmake debug
+            if ($LASTEXITCODE -ne 0) { throw "nmake failed: $LASTEXITCODE" }
+
+      - name: Run the tests
+        run: |
+            tst\debug\qdomyos-zwift-tests.exe
+            if ($LASTEXITCODE -ne 0) { throw "tests failed: $LASTEXITCODE" }
+
+      - name: Deploy
+        run: |
+            $vcpkg = "${{ runner.workspace }}\vcpkg\installed\x64-windows"
+            cd src/debug
+            mkdir output
+            cp qdomyos-zwift.exe output/
+            cd output
+            windeployqt --qmldir ../../ qdomyos-zwift.exe
+            if ($LASTEXITCODE -ne 0) { throw "windeployqt failed: $LASTEXITCODE" }
+            cp ../../../icons/iOS/iTunesArtwork@2x.png .
+            cp ../../AppxManifest.xml .
+            Copy-Item -Path "$vcpkg\bin\*.dll" -Destination . -Verbose
+            mkdir adb
+            cp ../../adb/* adb/
+
+      - name: Zip artifact for deployment
+        run: Compress-Archive src/debug/output windows-qt6-binary.zip
+
+      - name: Archive windows qt6 binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-qt6-binary
+          path: windows-qt6-binary.zip
+
+      # The exe alone, for dropping into an existing install while iterating. Only
+      # valid while the Qt DLL set is unchanged - the build banner QZ logs on launch
+      # is the check.
+      - name: Archive windows qt6 exe only
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-qt6-exe-only
+          path: src/debug/output/qdomyos-zwift.exe
+          compression-level: 9
+          retention-days: 7
+
   # Re-enabled as a tests-only job: this is the only job in the workflow that runs
   # the gtest suite at all, and 753ff0e5 disabled it when the fork was cut down to
   # Android + Windows. Every test written since has been run by hand in a build VM.
