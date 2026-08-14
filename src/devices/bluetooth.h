@@ -20,145 +20,44 @@
 #include "devices/discoveryoptions.h"
 #include "qzsettings.h"
 
-#include "devices/activiotreadmill/activiotreadmill.h"
-#include "devices/speraxtreadmill/speraxtreadmill.h"
-#include "devices/antbike/antbike.h"
-#include "devices/android_antbike/android_antbike.h"
-#include "devices/apexbike/apexbike.h"
-#include "devices/volavabike/volavabike.h"
-#include "devices/bhfitnesselliptical/bhfitnesselliptical.h"
-#include "devices/bkoolbike/bkoolbike.h"
+// The abstract device types. These used to arrive transitively through whichever
+// concrete device header happened to include them; with the device zoo gone they
+// have to be named.
+#include "devices/bike.h"
 #include "devices/bluetoothdevice.h"
-#include "devices/bowflext216treadmill/bowflext216treadmill.h"
-#include "devices/bowflextreadmill/bowflextreadmill.h"
-#include "devices/chronobike/chronobike.h"
+#include "devices/elliptical.h"
+#include "devices/jumprope.h"
+#include "devices/rower.h"
+#include "devices/stairclimber.h"
+#include "devices/treadmill.h"
 #include "devices/coresensor/coresensor.h"
-#ifndef Q_OS_IOS
-#include "devices/computrainerbike/computrainerbike.h"
-#include "devices/kettlerusbbike/kettlerusbbike.h"
-#include "devices/freebeatbike/freebeatbike.h"
-#include "devices/csaferower/csaferower.h"
-#include "devices/csafeelliptical/csafeelliptical.h"
-#endif
-#include "devices/concept2skierg/concept2skierg.h"
-#include "devices/crossrope/crossrope.h"
 #include "devices/cscbike/cscbike.h"
-#include "devices/cycleopsphantombike/cycleopsphantombike.h"
-#include "devices/deeruntreadmill/deerruntreadmill.h"
-#include "devices/domyosbike/domyosbike.h"
-#include "devices/domyoselliptical/domyoselliptical.h"
-#include "devices/domyosrower/domyosrower.h"
-#include "devices/domyostreadmill/domyostreadmill.h"
 
-#include "devices/echelonconnectsport/echelonconnectsport.h"
-#include "devices/echelonrower/echelonrower.h"
-#include "devices/echelonstairclimber/echelonstairclimber.h"
 #include "devices/eliteariafan/eliteariafan.h"
 #include "devices/eliterizer/eliterizer.h"
 #include "devices/elitesquarecontroller/elitesquarecontroller.h"
 #include "devices/elitesterzosmart/elitesterzosmart.h"
-#include "devices/eslinkertreadmill/eslinkertreadmill.h"
-#include "devices/fakebike/fakebike.h"
-#include "devices/fakeelliptical/fakeelliptical.h"
-#include "devices/fakerower/fakerower.h"
-#include "devices/faketreadmill/faketreadmill.h"
 #include "devices/fitmetria_fanfit/fitmetria_fanfit.h"
-#include "devices/fitplusbike/fitplusbike.h"
 
-#include "devices/fitshowtreadmill/fitshowtreadmill.h"
-#include "devices/flywheelbike/flywheelbike.h"
 #include "devices/ftmsbike/ftmsbike.h"
-#include "devices/ftmsrower/ftmsrower.h"
-#include "devices/focustreadmill/focustreadmill.h"
 #include "devices/heartratebelt/heartratebelt.h"
-#include "devices/horizongr7bike/horizongr7bike.h"
-#include "devices/horizontreadmill/horizontreadmill.h"
-#include "devices/iconceptbike/iconceptbike.h"
-#include "devices/iconceptelliptical/iconceptelliptical.h"
-#include "devices/inspirebike/inspirebike.h"
-#include "devices/keepbike/keepbike.h"
-#include "devices/kineticinroadbike/kineticinroadbike.h"
-#include "devices/kingsmithr1protreadmill/kingsmithr1protreadmill.h"
-#include "devices/kingsmithr2treadmill/kingsmithr2treadmill.h"
-#include "devices/lifefitnesstreadmill/lifefitnesstreadmill.h"
-#include "devices/lifespanbike/lifespanbike.h"
-#include "devices/lifespantreadmill/lifespantreadmill.h"
-#include "devices/m3ibike/m3ibike.h"
-#include "devices/mcfbike/mcfbike.h"
-#include "devices/mepanelbike/mepanelbike.h"
 #include "devices/moxy5sensor/moxy5sensor.h"
-#include "devices/nautilusbike/nautilusbike.h"
-#include "devices/nautiluselliptical/nautiluselliptical.h"
-#include "devices/nautilustreadmill/nautilustreadmill.h"
-#include "devices/nordictrackelliptical/nordictrackelliptical.h"
-#include "devices/nordictrackifitadbbike/nordictrackifitadbbike.h"
-#include "devices/nordictrackifitadbelliptical/nordictrackifitadbelliptical.h"
-#include "devices/nordictrackifitadbrower/nordictrackifitadbrower.h"
-#include "devices/nordictrackifitadbtreadmill/nordictrackifitadbtreadmill.h"
-#include "devices/npecablebike/npecablebike.h"
-#include "devices/octaneelliptical/octaneelliptical.h"
-#include "devices/octanetreadmill/octanetreadmill.h"
-#include "devices/pafersbike/pafersbike.h"
-#include "devices/paferstreadmill/paferstreadmill.h"
-#include "devices/pelotonbike/pelotonbike.h"
-#include "devices/pitpatbike/pitpatbike.h"
-#include "devices/proformbike/proformbike.h"
-#include "devices/proformelliptical/proformelliptical.h"
-#include "devices/proformellipticaltrainer/proformellipticaltrainer.h"
-#include "devices/proformrower/proformrower.h"
-#include "devices/proformtreadmill/proformtreadmill.h"
-#include "devices/proformtelnetbike/proformtelnetbike.h"
-#include "devices/proformwifibike/proformwifibike.h"
-#include "devices/proformwifitreadmill/proformwifitreadmill.h"
-#include "devices/schwinn170bike/schwinn170bike.h"
-#include "devices/schwinnic4bike/schwinnic4bike.h"
 #include "signalhandler.h"
-#include "devices/skandikawiribike/skandikawiribike.h"
-#include "devices/smartrowrower/smartrowrower.h"
-#include "devices/sunnyfitstepper/sunnyfitstepper.h"
 #include "devices/smartspin2k/smartspin2k.h"
-#include "devices/snodebike/snodebike.h"
+// Kept for the generic BLE power meter: a bike paired with a separate power
+// sensor gets a stagesbike as the sensor, not as the bike. See the
+// power_sensor_name branch in bluetooth::connectedAndDiscovered().
+#include "devices/stagesbike/stagesbike.h"
 #include "devices/strydrunpowersensor/strydrunpowersensor.h"
 
-#include "devices/shuaa5treadmill/shuaa5treadmill.h"
-#include "devices/solebike/solebike.h"
-#include "devices/soleelliptical/soleelliptical.h"
-#include "devices/solef80treadmill/solef80treadmill.h"
 
-#include "devices/spirittreadmill/spirittreadmill.h"
-#include "devices/sportsplusbike/sportsplusbike.h"
-#include "devices/sportsplusrower/sportsplusrower.h"
-#include "devices/sportstechbike/sportstechbike.h"
-#include "devices/sportstechelliptical/sportstechelliptical.h"
-#include "devices/sportstechrower/sportstechrower.h"
 #include "devices/sramAXSController/sramAXSController.h"
-#include "devices/stagesbike/stagesbike.h"
-#include "devices/kettlerc12bike/kettlerc12bike.h"
 
-#include "devices/renphobike/renphobike.h"
-#include "devices/tacxneo2/tacxneo2.h"
-#include "devices/technogymmyruntreadmill/technogymmyruntreadmill.h"
-#include "devices/technogymmyruntreadmillrfcomm/technogymmyruntreadmillrfcomm.h"
 
-#include "devices/echelonstride/echelonstride.h"
 
 #include "templateinfosenderbuilder.h"
-#include "technogymbike/technogymbike.h"
-#include "devices/toorxtreadmill/toorxtreadmill.h"
-#include "devices/iconsolebike/iconsolebike.h"
 #include "devices/treadmill.h"
-#include "devices/truetreadmill/truetreadmill.h"
-#include "devices/trxappgateusbbike/trxappgateusbbike.h"
-#include "devices/trxappgateusbelliptical/trxappgateusbelliptical.h"
-#include "devices/trxappgateusbrower/trxappgateusbrower.h"
-#include "devices/trxappgateusbtreadmill/trxappgateusbtreadmill.h"
-#include "devices/waterrowerusb/waterrowerusb.h"
-#include "devices/ultrasportbike/ultrasportbike.h"
 #include "devices/wahookickrheadwind/wahookickrheadwind.h"
-#include "devices/wahookickrsnapbike/wahookickrsnapbike.h"
-#include "devices/yesoulbike/yesoulbike.h"
-#include "devices/ypooelliptical/ypooelliptical.h"
-#include "devices/ziprotreadmill/ziprotreadmill.h"
 
 #include "zwift_play/zwiftPlayDevice.h"
 #include "zwift_play/zwiftclickremote.h"
@@ -190,135 +89,21 @@ class bluetooth : public QObject, public SignalHandler {
     bool useDiscovery = false;
     QFile *debugCommsLog = nullptr;
     QBluetoothDeviceDiscoveryAgent *discoveryAgent = nullptr;
-    antbike *antBike = nullptr;
-    android_antbike *android_antBike = nullptr;
-    apexbike *apexBike = nullptr;
-    volavabike *volavaBike = nullptr;
-    bkoolbike *bkoolBike = nullptr;
-    bhfitnesselliptical *bhFitnessElliptical = nullptr;
-    bowflextreadmill *bowflexTreadmill = nullptr;
-    bowflext216treadmill *bowflexT216Treadmill = nullptr;
     coresensor* coreSensor = nullptr;
-    crossrope *crossRope = nullptr;
-    fitshowtreadmill *fitshowTreadmill = nullptr;
-    focustreadmill *focusTreadmill = nullptr;
-#ifndef Q_OS_IOS
-    computrainerbike *computrainerBike = nullptr;
-    kettlerusbbike *kettlerUsbBike = nullptr;
-    freebeatbike *freebeatBike = nullptr;
-    csaferower *csafeRower = nullptr;
-    csafeelliptical *csafeElliptical = nullptr;
-#endif
-    concept2skierg *concept2Skierg = nullptr;
-    cycleopsphantombike *cycleopsphantomBike = nullptr;
-    deerruntreadmill *deerrunTreadmill = nullptr;
-    domyostreadmill *domyos = nullptr;
-    domyosbike *domyosBike = nullptr;
-    domyosrower *domyosRower = nullptr;
-    domyoselliptical *domyosElliptical = nullptr;
-    toorxtreadmill *toorx = nullptr;
-    iconsolebike *iconsole = nullptr;
-    iconceptbike *iConceptBike = nullptr;
-    iconceptelliptical *iConceptElliptical = nullptr;
-    trxappgateusbtreadmill *trxappgateusb = nullptr;
-    spirittreadmill *spiritTreadmill = nullptr;
-    activiotreadmill *activioTreadmill = nullptr;
-    speraxtreadmill *speraXTreadmill = nullptr;
-    nautilusbike *nautilusBike = nullptr;
-    nautiluselliptical *nautilusElliptical = nullptr;
-    nautilustreadmill *nautilusTreadmill = nullptr;
-    trxappgateusbbike *trxappgateusbBike = nullptr;
-    trxappgateusbrower *trxappgateusbRower = nullptr;
-    trxappgateusbelliptical *trxappgateusbElliptical = nullptr;
-    echelonconnectsport *echelonConnectSport = nullptr;
-    yesoulbike *yesoulBike = nullptr;
-    flywheelbike *flywheelBike = nullptr;
     moxy5sensor *moxy5Sensor = nullptr;
-    nordictrackelliptical *nordictrackElliptical = nullptr;
-    nordictrackifitadbtreadmill *nordictrackifitadbTreadmill = nullptr;
-    nordictrackifitadbbike *nordictrackifitadbBike = nullptr;
-    nordictrackifitadbelliptical *nordictrackifitadbElliptical = nullptr;
-    nordictrackifitadbrower *nordictrackifitadbRower = nullptr;
-    octaneelliptical *octaneElliptical = nullptr;
-    octanetreadmill *octaneTreadmill = nullptr;
-    pelotonbike *pelotonBike = nullptr;
-    proformrower *proformRower = nullptr;
-    proformbike *proformBike = nullptr;
-    proformtelnetbike *proformTelnetBike = nullptr;
-    proformwifibike *proformWifiBike = nullptr;
-    proformwifitreadmill *proformWifiTreadmill = nullptr;
-    proformelliptical *proformElliptical = nullptr;
-    proformellipticaltrainer *proformEllipticalTrainer = nullptr;
-    proformtreadmill *proformTreadmill = nullptr;
-    horizontreadmill *horizonTreadmill = nullptr;
-    technogymmyruntreadmill *technogymmyrunTreadmill = nullptr;
-#ifndef Q_OS_IOS
-    technogymmyruntreadmillrfcomm *technogymmyrunrfcommTreadmill = nullptr;
-#endif
-    truetreadmill *trueTreadmill = nullptr;
-    horizongr7bike *horizonGr7Bike = nullptr;
-    schwinnic4bike *schwinnIC4Bike = nullptr;
-    technogymbike* technogymBike = nullptr;
-    sportstechbike *sportsTechBike = nullptr;
-    sportstechelliptical *sportsTechElliptical = nullptr;
-    sportstechrower *sportsTechRower = nullptr;
-    sportsplusbike *sportsPlusBike = nullptr;
-    sportsplusrower *sportsPlusRower = nullptr;
-    inspirebike *inspireBike = nullptr;
-    snodebike *snodeBike = nullptr;
-    eslinkertreadmill *eslinkerTreadmill = nullptr;
-    m3ibike *m3iBike = nullptr;
-    mepanelbike *mepanelBike = nullptr;
-    skandikawiribike *skandikaWiriBike = nullptr;
     cscbike *cscBike = nullptr;
-    mcfbike *mcfBike = nullptr;
-    npecablebike *npeCableBike = nullptr;
-    stagesbike *stagesBike = nullptr;
-    kettlerc12bike *kettlerC12Bike = nullptr;
-    solebike *soleBike = nullptr;
-    soleelliptical *soleElliptical = nullptr;
-    solef80treadmill *soleF80 = nullptr;
-    schwinn170bike *schwinn170Bike = nullptr;
-    chronobike *chronoBike = nullptr;
-    fitplusbike *fitPlusBike = nullptr;
-    echelonrower *echelonRower = nullptr;
-    ftmsrower *ftmsRower = nullptr;
-    smartrowrower *smartrowRower = nullptr;
-    waterrowerusb *waterRowerUSB = nullptr;
-    sunnyfitstepper *sunnyfitStepper = nullptr;
-    echelonstride *echelonStride = nullptr;
-    echelonstairclimber *echelonStairclimber = nullptr;
-    lifefitnesstreadmill *lifefitnessTreadmill = nullptr;
-    lifespanbike *lifespanBike = nullptr;
-    lifespantreadmill *lifespanTreadmill = nullptr;
-    keepbike *keepBike = nullptr;
-    kingsmithr1protreadmill *kingsmithR1ProTreadmill = nullptr;
-    kingsmithr2treadmill *kingsmithR2Treadmill = nullptr;
     ftmsbike *ftmsBike = nullptr;
-    pafersbike *pafersBike = nullptr;
-    paferstreadmill *pafersTreadmill = nullptr;
-    tacxneo2 *tacxneo2Bike = nullptr;
-    pitpatbike *pitpatBike = nullptr;
-    renphobike *renphoBike = nullptr;
-    shuaa5treadmill *shuaA5Treadmill = nullptr;
     heartratebelt *heartRateBelt = nullptr;
     smartspin2k *ftmsAccessory = nullptr;
     cscbike *cadenceSensor = nullptr;
+    // power_sensor_as_bike: the power meter drives the session on its own, the
+    // mirror image of powerTreadmill below.
+    stagesbike *powerBike = nullptr;
     stagesbike *powerSensor = nullptr;
     strydrunpowersensor *powerSensorRun = nullptr;
-    stagesbike *powerBike = nullptr;
-    ultrasportbike *ultraSportBike = nullptr;
-    wahookickrsnapbike *wahooKickrSnapBike = nullptr;
-    ypooelliptical *ypooElliptical = nullptr;
-    ziprotreadmill *ziproTreadmill = nullptr;
-    kineticinroadbike *kineticInroadBike = nullptr;
     strydrunpowersensor *powerTreadmill = nullptr;
     eliterizer *eliteRizer = nullptr;
     elitesterzosmart *eliteSterzoSmart = nullptr;
-    fakebike *fakeBike = nullptr;
-    fakeelliptical *fakeElliptical = nullptr;
-    fakerower *fakeRower = nullptr;
-    faketreadmill *fakeTreadmill = nullptr;
     QList<fitmetria_fanfit *> fitmetriaFanfit;
     QList<wahookickrheadwind *> wahookickrHeadWind;
     QList<eliteariafan *> eliteAriaFan;

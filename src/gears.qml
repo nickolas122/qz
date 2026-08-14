@@ -44,7 +44,6 @@ ScrollView {
         if (settings.gear_configuration) {
             gearRows = stringToGearRows(settings.gear_configuration)
         }
-        restoreDefaultWheelDiameter.connect(rootItem.restoreDefaultWheelDiameter)
         console.log("Component.onCompleted " + settings.gear_crankset_size + " " + settings.gear_cog_size + " " + settings.gear_wheel_size + " " + settings.gear_circumference)
         wheelSizeCombo.currentIndex = initialWheelSizeIndex
         selectedCranksetSize = settings.gear_crankset_size
@@ -316,7 +315,6 @@ ScrollView {
     // Signals to notify when values change
     signal settingsChanged()
     signal gearConfigurationChanged(var gearRows)
-    signal restoreDefaultWheelDiameter()
 
     ColumnLayout {
         anchors.fill: parent
@@ -517,27 +515,6 @@ ScrollView {
                 }
 
                 // Restore Default Wheel Diameter Button
-                Button {
-                    text: "Restore Default Setting to the Trainer"
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 50
-                    font.bold: true
-                    background: Rectangle {
-                        color: "#9C27B0"
-                        radius: 4
-                    }
-                    contentItem: Text {
-                        text: parent.text
-                        font: parent.font
-                        color: "white"
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-                    onClicked: {
-                        // Emit signal to restore default wheel diameter in the trainer
-                        restoreDefaultWheelDiameter()
-                    }
-                }
             }
         }
 

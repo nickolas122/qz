@@ -1,8 +1,10 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "devices/domyostreadmill/domyostreadmill.h"
 #include "qdebugfixup.h"
+// For the `bluetooth *` in the constructors below, which used to be declared
+// transitively via a concrete device header.
+#include "devices/bluetooth.h"
 #include "sessionline.h"
 #include "trainprogram.h"
 #include <QDialog>

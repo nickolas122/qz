@@ -14,7 +14,6 @@
 #include "logwriter.h"
 #include "bluetooth.h"
 #include "devices/dircon/dirconmanager.h"
-#include "devices/domyostreadmill/domyostreadmill.h"
 #include "homeform.h"
 #include "mainwindow.h"
 #include "qfit.h"

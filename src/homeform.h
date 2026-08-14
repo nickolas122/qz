@@ -17,6 +17,9 @@
 #include "sessionline.h"
 #include "smtpclient/src/SmtpMime"
 #include "trainprogram.h"
+// autoInclinationEnabled() below casts VirtualDevice() to virtualtreadmill. The
+// declaration used to arrive transitively through a concrete device header.
+#include "virtualdevices/virtualtreadmill.h"
 #include "workoutmodel.h"
 #include "fitbackupwriter.h"
 #include <QChart>
@@ -203,8 +206,6 @@ class homeform : public QObject {
     Q_PROPERTY(bool clipboardWorkoutPromptRequested READ clipboardWorkoutPromptRequested NOTIFY clipboardWorkoutPromptRequestedChanged WRITE setClipboardWorkoutPromptRequested)
     Q_PROPERTY(QString clipboardWorkoutPromptName READ clipboardWorkoutPromptName NOTIFY clipboardWorkoutPromptNameChanged)
     Q_PROPERTY(bool clipboardWorkoutDeletePromptRequested READ clipboardWorkoutDeletePromptRequested NOTIFY clipboardWorkoutDeletePromptRequestedChanged WRITE setClipboardWorkoutDeletePromptRequested)
-    Q_PROPERTY(bool echelonBridgeSwitchPromptRequested READ echelonBridgeSwitchPromptRequested NOTIFY echelonBridgeSwitchPromptRequestedChanged WRITE setEchelonBridgeSwitchPromptRequested)
-    Q_PROPERTY(bool echelonEnablePromptRequested READ echelonEnablePromptRequested NOTIFY echelonEnablePromptRequestedChanged WRITE setEchelonEnablePromptRequested)
 
     // workout preview
     Q_PROPERTY(int preview_workout_points READ preview_workout_points NOTIFY previewWorkoutPointsChanged)
@@ -518,8 +519,6 @@ class homeform : public QObject {
     QString garminWorkoutPromptDate() { return m_garminWorkoutPromptDate; }
     bool garminFtpPromptRequested() { return m_garminFtpPromptRequested; }
     QString garminFtpPromptMessage() { return m_garminFtpPromptMessage; }
-    bool echelonBridgeSwitchPromptRequested() { return m_echelonBridgeSwitchPromptRequested; }
-    bool echelonEnablePromptRequested() { return m_echelonEnablePromptRequested; }
     void setPelotonProvider(const QString &value) { m_pelotonProvider = value; }
     bool generalPopupVisible();
     bool pelotonPopupVisible();
@@ -617,20 +616,6 @@ class homeform : public QObject {
         m_clipboardWorkoutDeletePromptRequested = value;
         emit clipboardWorkoutDeletePromptRequestedChanged(value);
     }
-    void setEchelonBridgeSwitchPromptRequested(bool value) {
-        if (m_echelonBridgeSwitchPromptRequested == value) {
-            return;
-        }
-        m_echelonBridgeSwitchPromptRequested = value;
-        emit echelonBridgeSwitchPromptRequestedChanged(value);
-    }
-    void setEchelonEnablePromptRequested(bool value) {
-        if (m_echelonEnablePromptRequested == value) {
-            return;
-        }
-        m_echelonEnablePromptRequested = value;
-        emit echelonEnablePromptRequestedChanged(value);
-    }
     Q_INVOKABLE void garmin_connect_login();
     Q_INVOKABLE void garmin_submit_mfa_code(const QString &mfaCode);
     Q_INVOKABLE void garmin_connect_logout();
@@ -643,10 +628,6 @@ class homeform : public QObject {
     Q_INVOKABLE void clipboard_dismiss_workout_prompt();
     Q_INVOKABLE void clipboard_delete_finished_workout();
     Q_INVOKABLE void clipboard_keep_finished_workout();
-    Q_INVOKABLE void echelon_switch_to_classic_bridge();
-    Q_INVOKABLE void echelon_dismiss_bridge_switch_prompt();
-    Q_INVOKABLE void echelon_enable_virtual_bridge();
-    Q_INVOKABLE void echelon_dismiss_enable_prompt();
 
     Q_INVOKABLE bool isStravaLoggedIn();
     Q_INVOKABLE bool isPelotonLoggedIn();
@@ -1026,8 +1007,6 @@ public:
     bool m_garminFtpPromptRequested = false;
     bool m_clipboardWorkoutPromptRequested = false;
     bool m_clipboardWorkoutDeletePromptRequested = false;
-    bool m_echelonBridgeSwitchPromptRequested = false;
-    bool m_echelonEnablePromptRequested = false;
     QString m_garminWorkoutPromptName = QStringLiteral("");
     QString m_garminWorkoutPromptDate = QStringLiteral("");
     QString m_garminWorkoutPromptFile = QStringLiteral("");
@@ -1258,7 +1237,6 @@ public:
     void strava_upload_file_prepare();
     void garmin_upload_file_prepare();
     void garmin_download_todays_workout();
-    void handleRestoreDefaultWheelDiameter();
     void StartFromDevice();  // Called when physical start button pressed on hardware
     void PauseFromDevice();  // Called when physical pause button pressed on hardware
     void StopFromDevice();   // Called when physical stop button pressed on hardware
@@ -1300,8 +1278,6 @@ public:
     void clipboardWorkoutPromptRequestedChanged(bool value);
     void clipboardWorkoutPromptNameChanged(QString value);
     void clipboardWorkoutDeletePromptRequestedChanged(bool value);
-    void echelonBridgeSwitchPromptRequestedChanged(bool value);
-    void echelonEnablePromptRequestedChanged(bool value);
     void generalPopupVisibleChanged(bool value);
     void pelotonPopupVisibleChanged(bool value);
     void licensePopupVisibleChanged(bool value);
@@ -1341,7 +1317,6 @@ public:
     void intervalsicuAuthUrlChanged(QString value);
     void intervalsicuWebVisibleChanged(bool value);
 
-    void restoreDefaultWheelDiameter();
 
     void workoutEventStateChanged(bluetoothdevice::WORKOUT_EVENT_STATE state);
 

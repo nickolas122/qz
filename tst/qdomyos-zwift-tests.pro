@@ -28,10 +28,7 @@ SOURCES += \
         ToolTests/zwiftworkouttestsuite.cpp \
         Tools/testsettings.cpp \
         Tools/typeidgenerator.cpp \
-        Devices/TestSchwinn411510EParser.cpp \
         Devices/TestZwiftRideController.cpp \
-        Devices/TestApexBikeParser.cpp \
-        Devices/TestKeepBikeParser.cpp \
         Devices/TestResistanceSlewLimiter.cpp \
         Devices/TestFtmsControlPointHandshake.cpp \
         Devices/TestServiceSubscriptionPlan.cpp \
@@ -74,14 +71,9 @@ HEADERS += \
     Devices/deviceindex.h \
     Devices/devicenamepatterngroup.h \
     Devices/devicetestdataindex.h \
-    Devices/TestSchwinn411510EParser.h \
-    Devices/TestApexBikeParser.h \
-    Devices/TestKeepBikeParser.h \
     Devices/TestResistanceSlewLimiter.h \
     Devices/TestFtmsControlPointHandshake.h \
     Devices/TestServiceSubscriptionPlan.h \
-    Devices/TestOctaneTreadmillZR8.h \
-    Devices/TestSunnyfitStepper.h \
     Erg/ergtabletestsuite.h \
     Erg/TestErgTableSelection.h \
     Erg/TestErgAutoMode.h \

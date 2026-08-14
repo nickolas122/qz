@@ -30,6 +30,20 @@ tst/test-results/
 
 src/*.o
 
+# What a local Windows mingw build leaves behind. Unlike the Linux layout above,
+# qmake's win32-g++ spec puts every object, moc file and binary under a debug/ or
+# release/ subdirectory, and generates the resource script and the @file lists the
+# linker is handed.
+src/debug/
+src/release/
+src/translations/debug/
+src/translations/release/
+tst/debug/
+tst/release/
+src/object_script.*
+tst/object_script.*
+src/qdomyos-zwift_resource.rc
+
 src/moc_*
 src/qrc_*
 

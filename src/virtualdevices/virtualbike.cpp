@@ -1,6 +1,5 @@
 #include "virtualdevices/virtualbike.h"
 #include "devices/bike.h"
-#include "devices/echelonconnectsport/echelonconnectsport.h"
 #include <QThread>
 #include <QDataStream>
 #include <QMetaEnum>
@@ -33,10 +32,10 @@ virtualbike::virtualbike(bluetoothdevice *t, bool noWriteResistance, bool noHear
     bool heart_only =
         settings.value(QZSettings::virtual_device_onlyheart, QZSettings::default_virtual_device_onlyheart).toBool();
     bool echelon = isEchelonVirtualEnabled();
-    const bool useRealEchelonName = echelon && dynamic_cast<echelonconnectsport *>(Bike) &&
-                                    !Bike->bluetoothDevice.name().isEmpty();
-    const QString echelonAdvertisingName =
-        useRealEchelonName ? Bike->bluetoothDevice.name() : QStringLiteral("ECHEX-5s-113399");
+    // The advertised name used to borrow the real bike's name when QZ was itself
+    // driving an Echelon Connect Sport. That device is gone, so the emulation
+    // always advertises under its own name.
+    const QString echelonAdvertisingName = QStringLiteral("ECHEX-5s-113399");
     bool ifit = settings.value(QZSettings::virtual_device_ifit, QZSettings::default_virtual_device_ifit).toBool();
     bool garmin_bluetooth_compatibility = settings.value(QZSettings::garmin_bluetooth_compatibility, QZSettings::default_garmin_bluetooth_compatibility).toBool();
     bool zwift_play_emulator = settings.value(QZSettings::zwift_play_emulator, QZSettings::default_zwift_play_emulator).toBool();
@@ -1149,14 +1148,6 @@ void virtualbike::characteristicChanged(const QLowEnergyCharacteristic &characte
 
     //******************** ECHELON ***************
     if (characteristic.uuid().toString().contains(QStringLiteral("0bf669f2-45f2-11e7-9598-0800200c9a66"))) {
-        if (auto *realEchelon = dynamic_cast<echelonconnectsport *>(Bike); realEchelon && realEchelon->connected()) {
-            // When QZ is backed by a real Echelon Connect Sport, the virtual bike must not synthesize
-            // any handshake reply. We forward the exact app payload to the bike and let the bike's own
-            // notifications be mirrored back to the client.
-            realEchelon->proxyVirtualBikeCommand(newValue);
-            return;
-        }
-
         QLowEnergyCharacteristic characteristic =
             service->characteristic(QBluetoothUuid(QStringLiteral("0bf669f3-45f2-11e7-9598-0800200c9a66")));
         QLowEnergyCharacteristic characteristic2 =
@@ -1391,10 +1382,10 @@ void virtualbike::reconnect() {
     bool heart_only =
         settings.value(QZSettings::virtual_device_onlyheart, QZSettings::default_virtual_device_onlyheart).toBool();
     bool echelon = isEchelonVirtualEnabled();
-    const bool useRealEchelonName = echelon && dynamic_cast<echelonconnectsport *>(Bike) &&
-                                    !Bike->bluetoothDevice.name().isEmpty();
-    const QString echelonAdvertisingName =
-        useRealEchelonName ? Bike->bluetoothDevice.name() : QStringLiteral("ECHEX-5s-113399");
+    // The advertised name used to borrow the real bike's name when QZ was itself
+    // driving an Echelon Connect Sport. That device is gone, so the emulation
+    // always advertises under its own name.
+    const QString echelonAdvertisingName = QStringLiteral("ECHEX-5s-113399");
     bool ifit = settings.value(QZSettings::virtual_device_ifit, QZSettings::default_virtual_device_ifit).toBool();
 
     qDebug() << QStringLiteral("virtualbike::reconnect");

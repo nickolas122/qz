@@ -1,6 +1,4 @@
 #include "homeform.h"
-#include "devices/echelonconnectsport/echelonconnectsport.h"
-#include "devices/fakebike/fakebike.h"
 #ifdef Q_OS_IOS
 #include "ios/lockscreen.h"
 #include "ios/ios_liveactivity.h"
@@ -929,7 +927,6 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
     connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::activityDescriptionChanged, this,
             &homeform::setActivityDescription);
     engine->rootContext()->setContextProperty(QStringLiteral("rootItem"), (QObject *)this);
-    connect(this, &homeform::restoreDefaultWheelDiameter, this, &homeform::handleRestoreDefaultWheelDiameter);
 
     this->trainProgram = new trainprogram(QList<trainrow>(), bl);
 
@@ -1693,7 +1690,7 @@ void homeform::backup() {
                                  Q_ARG(QString, filename),
                                  Q_ARG(QList<SessionLine>, Session),
                                  Q_ARG(BLUETOOTH_TYPE, dev->deviceType()),
-                                 Q_ARG(uint32_t, qobject_cast<m3ibike *>(dev) ? QFIT_PROCESS_DISTANCENOISE : QFIT_PROCESS_NONE),
+                                 Q_ARG(uint32_t, QFIT_PROCESS_NONE),
                                  Q_ARG(FIT_SPORT, stravaPelotonWorkoutType),
                                  Q_ARG(QString, workoutName()),
                                  Q_ARG(QString, dev->bluetoothDevice.name()));
@@ -6061,18 +6058,6 @@ QString homeform::signal() {
     return QStringLiteral("icons/icons/signal-1.png");
 }
 
-void homeform::handleRestoreDefaultWheelDiameter() {
-    if (bluetoothManager && bluetoothManager->device() &&
-        bluetoothManager->device()->deviceType() == BIKE) {
-
-        // Controlla se il dispositivo è un wahookickrsnapbike
-        wahookickrsnapbike* kickrBike = dynamic_cast<wahookickrsnapbike*>(bluetoothManager->device());
-        if (kickrBike) {
-            kickrBike->restoreDefaultWheelDiameter();
-        }
-    }
-}
-
 void homeform::updateRtssOsd() {
     bluetoothdevice *device = bluetoothManager ? bluetoothManager->device() : nullptr;
     if (!device) {
@@ -9355,7 +9340,7 @@ void homeform::fit_save_clicked() {
         }
         
         qfit::save(filename, Session, dev->deviceType(),
-                   qobject_cast<m3ibike *>(dev) ? QFIT_PROCESS_DISTANCENOISE : QFIT_PROCESS_NONE,
+                   QFIT_PROCESS_NONE,
                    stravaPelotonWorkoutType, workoutName, dev->bluetoothDevice.name(),
                    workoutSource, pelotonWorkoutId, pelotonUrl, trainingProgramFile,
                    m_workoutRpe, m_workoutFeel);
@@ -10277,51 +10262,6 @@ void homeform::garmin_dismiss_ftp_update() {
     m_garminFtpPromptMessage.clear();
     emit garminFtpPromptMessageChanged(m_garminFtpPromptMessage);
     setGarminFtpPromptRequested(false);
-}
-
-void homeform::echelon_switch_to_classic_bridge() {
-    setEchelonBridgeSwitchPromptRequested(false);
-
-    if (!bluetoothManager || !bluetoothManager->device()) {
-        setToastRequested(QStringLiteral("No active Echelon device found"));
-        return;
-    }
-
-    if (auto *echelonBike = dynamic_cast<echelonconnectsport *>(bluetoothManager->device())) {
-        echelonBike->switchToClassicVirtualBikeBridge();
-        return;
-    }
-
-    if (auto *testBike = dynamic_cast<fakebike *>(bluetoothManager->device())) {
-        testBike->switchToClassicVirtualBikeBridge();
-        return;
-    }
-
-    setToastRequested(QStringLiteral("The connected device is neither an Echelon Connect Sport nor a fakebike"));
-}
-
-void homeform::echelon_dismiss_bridge_switch_prompt() {
-    setEchelonBridgeSwitchPromptRequested(false);
-}
-
-void homeform::echelon_enable_virtual_bridge() {
-    setEchelonEnablePromptRequested(false);
-
-    if (!bluetoothManager || !bluetoothManager->device()) {
-        setToastRequested(QStringLiteral("No active Echelon device found"));
-        return;
-    }
-
-    if (auto *echelonBike = dynamic_cast<echelonconnectsport *>(bluetoothManager->device())) {
-        echelonBike->enableVirtualEchelonBridge();
-        return;
-    }
-
-    setToastRequested(QStringLiteral("The connected device is not an Echelon Connect Sport"));
-}
-
-void homeform::echelon_dismiss_enable_prompt() {
-    setEchelonEnablePromptRequested(false);
 }
 
 bool homeform::isStravaLoggedIn() {
