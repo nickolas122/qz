@@ -37,7 +37,7 @@ int CharacteristicWriteProcessor2AD9::writeProcess(quint16 uuid, const QByteArra
                     Bike->changeResistance(uresistance);
                 }
                 qDebug() << QStringLiteral("new requested resistance ") + QString::number(uresistance) +
-                                QStringLiteral(" enabled ") + force_resistance;
+                                QStringLiteral(" enabled ") + QString::number(force_resistance);
                 reply.append((quint8)FTMS_RESPONSE_CODE);
                 reply.append((quint8)FTMS_SET_TARGET_RESISTANCE_LEVEL);
                 reply.append((quint8)FTMS_SUCCESS);

@@ -3,6 +3,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkReply>
+#include <QTcpServer>
 #include <QtWebSockets/QWebSocket>
 
 WebServerInfoSender::WebServerInfoSender(const QString &id, QObject *parent) : TemplateInfoSender(id, parent) {
@@ -236,7 +237,14 @@ void WebServerInfoSender::processFetcher(QWebSocket *sender, const QByteArray &d
 }
 
 void WebServerInfoSender::onNewConnection() {
+    // Qt 5's qt-labs QHttpServer handed back a raw QWebSocket*; Qt 6's module
+    // returns a unique_ptr, so ownership has to be taken explicitly. Everything
+    // below - and the clients list - still works on a raw pointer.
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QWebSocket *pSocket = httpServer->nextPendingWebSocketConnection().release();
+#else
     QWebSocket *pSocket = httpServer->nextPendingWebSocketConnection();
+#endif
     QUrl requestUrl = pSocket->requestUrl();
     qDebug() << QStringLiteral("WebSocket connection") << requestUrl;
 

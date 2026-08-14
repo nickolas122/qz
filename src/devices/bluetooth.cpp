@@ -32,7 +32,7 @@ static void updateDiscoveredDevice(QList<QBluetoothDeviceInfo> &devices, const Q
 #else
                 updated.setServiceUuids(device.serviceUuids().toVector());
 #endif
-                const QHash<quint16, QByteArray> manufacturerData = device.manufacturerData();
+                const auto manufacturerData = device.manufacturerData();
                 for (auto it = manufacturerData.cbegin(); it != manufacturerData.cend(); ++it) {
                     updated.setManufacturerData(it.key(), it.value());
                 }
@@ -1889,6 +1889,6 @@ bool bluetooth::fitmetria_fanfit_isconnected(const QBluetoothDeviceInfo &device)
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
 void bluetooth::deviceUpdated(const QBluetoothDeviceInfo &device, QBluetoothDeviceInfo::Fields updateFields) {
 
-    debug("deviceUpdated " + device.name() + " " + updateFields);
+    debug("deviceUpdated " + device.name() + " " + QString::number(static_cast<int>(updateFields)));
 }
 #endif

@@ -1,4 +1,6 @@
 #include "eliterizer.h"
+
+#include "qtbluetoothcompat.h"
 #include <QBluetoothLocalDevice>
 #include <QDateTime>
 #include <QFile>
@@ -158,10 +160,10 @@ void eliterizer::stateChanged(QLowEnergyService::ServiceState state) {
 
         auto characteristics_list = gattCommunicationChannelService->characteristics();
         for (const QLowEnergyCharacteristic &c : qAsConst(characteristics_list)) {
-            qDebug() << QStringLiteral("char uuid") << c.uuid() << QStringLiteral("handle") << c.handle();
+            qDebug() << QStringLiteral("char uuid") << c.uuid();
             auto descriptors_list = c.descriptors();
             for (const QLowEnergyDescriptor &d : qAsConst(descriptors_list)) {
-                qDebug() << QStringLiteral("descriptor uuid") << d.uuid() << QStringLiteral("handle") << d.handle();
+                qDebug() << QStringLiteral("descriptor uuid") << d.uuid();
             }
         }
 
@@ -192,11 +194,11 @@ void eliterizer::stateChanged(QLowEnergyService::ServiceState state) {
         descriptor.append((char)0x01);
         descriptor.append((char)0x00);
         gattCommunicationChannelService->writeDescriptor(
-            gattNotifyCharacteristic.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration), descriptor);
+            gattNotifyCharacteristic.descriptor(QBluetoothUuid::DescriptorType::ClientCharacteristicConfiguration), descriptor);
         gattCommunicationChannelService->writeDescriptor(
-            gattNotify2Characteristic.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration), descriptor);
+            gattNotify2Characteristic.descriptor(QBluetoothUuid::DescriptorType::ClientCharacteristicConfiguration), descriptor);
         gattCommunicationChannelService->writeDescriptor(
-            gattNotify3Characteristic.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration), descriptor);
+            gattNotify3Characteristic.descriptor(QBluetoothUuid::DescriptorType::ClientCharacteristicConfiguration), descriptor);
     }
 }
 
@@ -256,12 +258,12 @@ void eliterizer::deviceDiscovered(const QBluetoothDeviceInfo &device) {
         connect(m_control, &QLowEnergyController::serviceDiscovered, this, &eliterizer::serviceDiscovered);
         connect(m_control, &QLowEnergyController::discoveryFinished, this, &eliterizer::serviceScanDone);
         connect(m_control,
-                static_cast<void (QLowEnergyController::*)(QLowEnergyController::Error)>(&QLowEnergyController::error),
+                QZ_LE_CONTROLLER_ERROR_SIGNAL,
                 this, &eliterizer::error);
         connect(m_control, &QLowEnergyController::stateChanged, this, &eliterizer::controllerStateChanged);
 
         connect(m_control,
-                static_cast<void (QLowEnergyController::*)(QLowEnergyController::Error)>(&QLowEnergyController::error),
+                QZ_LE_CONTROLLER_ERROR_SIGNAL,
                 this, [this](QLowEnergyController::Error error) {
                     Q_UNUSED(error);
                     Q_UNUSED(this);

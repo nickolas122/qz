@@ -1,4 +1,6 @@
 #include "cycplusbc2controller.h"
+
+#include "qtbluetoothcompat.h"
 #include "homeform.h"
 #include <QBluetoothLocalDevice>
 #include <QDateTime>
@@ -87,7 +89,7 @@ void cycplusbc2controller::stateChanged(QLowEnergyService::ServiceState state) {
 
         connect(s, &QLowEnergyService::characteristicChanged, this, &cycplusbc2controller::characteristicChanged);
         connect(s, &QLowEnergyService::characteristicRead, this, &cycplusbc2controller::characteristicChanged);
-        connect(s, static_cast<void (QLowEnergyService::*)(QLowEnergyService::ServiceError)>(&QLowEnergyService::error),
+        connect(s, QZ_LE_SERVICE_ERROR_SIGNAL,
                 this, &cycplusbc2controller::errorService);
         connect(s, &QLowEnergyService::descriptorWritten, this, &cycplusbc2controller::descriptorWritten);
 
@@ -95,7 +97,7 @@ void cycplusbc2controller::stateChanged(QLowEnergyService::ServiceState state) {
 
         const auto characteristics_list = s->characteristics();
         for (const QLowEnergyCharacteristic &c : qAsConst(characteristics_list)) {
-            qDebug() << QStringLiteral("char uuid") << c.uuid() << QStringLiteral("handle") << c.handle();
+            qDebug() << QStringLiteral("char uuid") << c.uuid();
 
             if (c.uuid() != TX_CHARACTERISTIC_UUID) {
                 continue;
@@ -103,7 +105,7 @@ void cycplusbc2controller::stateChanged(QLowEnergyService::ServiceState state) {
 
             gattNotifyCharacteristic = c;
             if ((c.properties() & QLowEnergyCharacteristic::Notify) == QLowEnergyCharacteristic::Notify) {
-                const auto cccd = c.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration);
+                const auto cccd = c.descriptor(QBluetoothUuid::DescriptorType::ClientCharacteristicConfiguration);
                 if (cccd.isValid()) {
                     QByteArray descriptor;
                     descriptor.append((char)0x01);
@@ -166,12 +168,12 @@ void cycplusbc2controller::deviceDiscovered(const QBluetoothDeviceInfo &device) 
     connect(m_control, &QLowEnergyController::serviceDiscovered, this, &cycplusbc2controller::serviceDiscovered);
     connect(m_control, &QLowEnergyController::discoveryFinished, this, &cycplusbc2controller::serviceScanDone);
     connect(m_control,
-            static_cast<void (QLowEnergyController::*)(QLowEnergyController::Error)>(&QLowEnergyController::error),
+            QZ_LE_CONTROLLER_ERROR_SIGNAL,
             this, &cycplusbc2controller::error);
     connect(m_control, &QLowEnergyController::stateChanged, this, &cycplusbc2controller::controllerStateChanged);
 
     connect(m_control,
-            static_cast<void (QLowEnergyController::*)(QLowEnergyController::Error)>(&QLowEnergyController::error),
+            QZ_LE_CONTROLLER_ERROR_SIGNAL,
             this, [this](QLowEnergyController::Error error) {
                 Q_UNUSED(error);
                 emit debug(QStringLiteral("Cannot connect to remote device."));

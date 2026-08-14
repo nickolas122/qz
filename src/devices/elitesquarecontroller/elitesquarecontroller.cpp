@@ -1,4 +1,6 @@
 #include "homeform.h"
+
+#include "qtbluetoothcompat.h"
 #include "elitesquarecontroller.h"
 #include <QBluetoothLocalDevice>
 #include <QDateTime>
@@ -179,7 +181,7 @@ void elitesquarecontroller::stateChanged(QLowEnergyService::ServiceState state) 
             // establish hook into notifications
             connect(s, &QLowEnergyService::characteristicChanged, this, &elitesquarecontroller::characteristicChanged);
             connect(
-                s, static_cast<void (QLowEnergyService::*)(QLowEnergyService::ServiceError)>(&QLowEnergyService::error),
+                s, QZ_LE_SERVICE_ERROR_SIGNAL,
                 this, &elitesquarecontroller::errorService);
             connect(s, &QLowEnergyService::descriptorWritten, this, &elitesquarecontroller::descriptorWritten);
 
@@ -200,8 +202,8 @@ void elitesquarecontroller::stateChanged(QLowEnergyService::ServiceState state) 
                             QByteArray descriptor;
                             descriptor.append((char)0x01);
                             descriptor.append((char)0x00);
-                            if (c.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration).isValid()) {
-                                s->writeDescriptor(c.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration), descriptor);
+                            if (c.descriptor(QBluetoothUuid::DescriptorType::ClientCharacteristicConfiguration).isValid()) {
+                                s->writeDescriptor(c.descriptor(QBluetoothUuid::DescriptorType::ClientCharacteristicConfiguration), descriptor);
                                 connectionEstablished = true;
                                 qDebug() << QStringLiteral("Elite Square notification subscribed!");
                             } else {
@@ -258,12 +260,12 @@ void elitesquarecontroller::deviceDiscovered(const QBluetoothDeviceInfo &device)
         connect(m_control, &QLowEnergyController::serviceDiscovered, this, &elitesquarecontroller::serviceDiscovered);
         connect(m_control, &QLowEnergyController::discoveryFinished, this, &elitesquarecontroller::serviceScanDone);
         connect(m_control,
-                static_cast<void (QLowEnergyController::*)(QLowEnergyController::Error)>(&QLowEnergyController::error),
+                QZ_LE_CONTROLLER_ERROR_SIGNAL,
                 this, &elitesquarecontroller::error);
         connect(m_control, &QLowEnergyController::stateChanged, this, &elitesquarecontroller::controllerStateChanged);
 
         connect(m_control,
-                static_cast<void (QLowEnergyController::*)(QLowEnergyController::Error)>(&QLowEnergyController::error),
+                QZ_LE_CONTROLLER_ERROR_SIGNAL,
                 this, [this](QLowEnergyController::Error error) {
                     Q_UNUSED(error);
                     Q_UNUSED(this);

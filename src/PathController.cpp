@@ -1,11 +1,6 @@
-
-#include <wobjectimpl.h>
-
 #include "PathController.h"
 
 #include <QtDebug>
-
-W_OBJECT_IMPL(PathController)
 
 PathController::PathController(QObject *parent)
 : QObject(parent)

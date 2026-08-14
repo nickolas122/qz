@@ -223,6 +223,10 @@ devices/smartspin2k/smartspin2k.cpp \
 devices/stagesbike/stagesbike.cpp \
 smtpclient/src/emailaddress.cpp \
 smtpclient/src/mimeattachment.cpp \
+smtpclient/src/mimebase64encoder.cpp \
+smtpclient/src/mimebase64formatter.cpp \
+smtpclient/src/mimebytearrayattachment.cpp \
+smtpclient/src/mimecontentencoder.cpp \
 smtpclient/src/mimecontentformatter.cpp \
 smtpclient/src/mimefile.cpp \
 smtpclient/src/mimehtml.cpp \
@@ -230,6 +234,8 @@ smtpclient/src/mimeinlinefile.cpp \
 smtpclient/src/mimemessage.cpp \
 smtpclient/src/mimemultipart.cpp \
 smtpclient/src/mimepart.cpp \
+smtpclient/src/mimeqpencoder.cpp \
+smtpclient/src/mimeqpformatter.cpp \
 smtpclient/src/mimetext.cpp \
 smtpclient/src/quotedprintable.cpp \
 smtpclient/src/smtpclient.cpp \
@@ -634,6 +640,10 @@ devices/stagesbike/stagesbike.h \
 smtpclient/src/SmtpMime \
 smtpclient/src/emailaddress.h \
 smtpclient/src/mimeattachment.h \
+smtpclient/src/mimebase64encoder.h \
+smtpclient/src/mimebase64formatter.h \
+smtpclient/src/mimebytearrayattachment.h \
+smtpclient/src/mimecontentencoder.h \
 smtpclient/src/mimecontentformatter.h \
 smtpclient/src/mimefile.h \
 smtpclient/src/mimehtml.h \
@@ -641,10 +651,12 @@ smtpclient/src/mimeinlinefile.h \
 smtpclient/src/mimemessage.h \
 smtpclient/src/mimemultipart.h \
 smtpclient/src/mimepart.h \
+smtpclient/src/mimeqpencoder.h \
+smtpclient/src/mimeqpformatter.h \
 smtpclient/src/mimetext.h \
 smtpclient/src/quotedprintable.h \
 smtpclient/src/smtpclient.h \
-smtpclient/src/smtpexports.h \
+smtpclient/src/smtpmime_global.h \
 devices/strydrunpowersensor/strydrunpowersensor.h \
 tcpclientinfosender.h \
 templateinfosender.h \
@@ -657,8 +669,6 @@ trainprogram.h \
 virtualdevices/virtualbike.h \
 virtualdevices/virtualrower.h \
 virtualdevices/virtualtreadmill.h \
-wobjectdefs.h \
-wobjectimpl.h \
 scanrecordresult.h \
 windows_zwift_incline_paddleocr_thread.h \
 zwiftworkout.h

@@ -2,8 +2,26 @@
 #include "devices/elliptical.h"
 #include "devices/ftmsbike/ftmsbike.h"
 #include "devices/treadmill.h"
-#include "devices/wahookickrsnapbike/wahookickrsnapbike.h"
 #include <QtMath>
+
+// The opcodes of the Wahoo proprietary control characteristic (0xe005) that QZ
+// emulates for Zwift. They used to be read from wahookickrsnapbike, which was a
+// physical device and is gone; this processor is virtual-device code and only
+// ever needed the numbers.
+namespace {
+enum WahooOperationCode : uint8_t {
+    _unlock = 32,
+    _setResistanceMode = 64,
+    _setStandardMode = 65,
+    _setErgMode = 66,
+    _setSimMode = 67,
+    _setSimCRR = 68,
+    _setSimWindResistance = 69,
+    _setSimGrade = 70,
+    _setSimWindSpeed = 71,
+    _setWheelCircumference = 72,
+};
+} // namespace
 
 CharacteristicWriteProcessorE005::CharacteristicWriteProcessorE005(double bikeResistanceGain,
                                                                    int8_t bikeResistanceOffset, bluetoothdevice *bike,
@@ -21,19 +39,19 @@ int CharacteristicWriteProcessorE005::writeProcess(quint16 uuid, const QByteArra
         if (dt == BIKE) {
             char cmd = data.at(0);
             emit ftmsCharacteristicChanged(QLowEnergyCharacteristic(), data);
-            if (cmd == wahookickrsnapbike::_setSimMode && data.count() >= 7) {
+            if (cmd == _setSimMode && data.count() >= 7) {
                 weight = ((double)((uint16_t)data.at(1)) + (((uint16_t)data.at(2)) >> 8)) / 100.0;
                 rrc = ((double)((uint16_t)data.at(3)) + (((uint16_t)data.at(4)) >> 8)) / 1000.0;
                 wrc = ((double)((uint16_t)data.at(5)) + (((uint16_t)data.at(6)) >> 8)) / 1000.0;
                 qDebug() << "weight" << weight << "rrc" << rrc << "wrc" << wrc;
-            } else if (cmd == wahookickrsnapbike::_setSimGrade && data.count() >= 3) {
+            } else if (cmd == _setSimGrade && data.count() >= 3) {
                 uint16_t grade;
                 double fgrade;
                 grade = (uint16_t)((uint8_t)data.at(1)) + (((uint16_t)((uint8_t)data.at(2))) << 8);
                 fgrade = (((((double)grade) / 65535.0) * 2) - 1.0) * 100.0;
                 qDebug() << "grade" << grade << "fgrade" << fgrade;
                 changeSlope(fgrade * 100.0, rrc, wrc);
-            } else if (cmd == wahookickrsnapbike::_setErgMode && data.count() >= 3) {
+            } else if (cmd == _setErgMode && data.count() >= 3) {
                 uint16_t watts;
                 watts = (uint16_t)((uint8_t)data.at(1)) + (((uint16_t)((uint8_t)data.at(2))) << 8);
                 qDebug() << "erg mode" << watts;

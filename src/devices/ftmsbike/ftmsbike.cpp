@@ -1,4 +1,6 @@
 #include "ftmsbike.h"
+
+#include "qtbluetoothcompat.h"
 #include "devices/cscbike/cscbike.h"
 #include "speedracex_defaults.h"
 #include "homeform.h"
@@ -1380,7 +1382,7 @@ void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteris
 
         lastRefreshCharacteristicChanged2AD2 = now;
         ftmsFrameReceived = true;
-    } else if (characteristic.uuid() == QBluetoothUuid::CyclingPowerMeasurement && !ftmsFrameReceived) {
+    } else if (characteristic.uuid() == QBluetoothUuid::CharacteristicType::CyclingPowerMeasurement && !ftmsFrameReceived) {
         uint16_t flags = (((uint16_t)((uint8_t)newValue.at(1)) << 8) | (uint16_t)((uint8_t)newValue.at(0)));
         bool cadence_present = false;
         bool wheel_revs = false;
@@ -1983,7 +1985,7 @@ void ftmsbike::subscribeToServices() {
         connect(s, &QLowEnergyService::characteristicWritten, this, &ftmsbike::characteristicWritten);
         connect(s, &QLowEnergyService::characteristicRead, this, &ftmsbike::characteristicRead);
         connect(
-            s, static_cast<void (QLowEnergyService::*)(QLowEnergyService::ServiceError)>(&QLowEnergyService::error),
+            s, QZ_LE_SERVICE_ERROR_SIGNAL,
             this, &ftmsbike::errorService);
         connect(s, &QLowEnergyService::descriptorWritten, this, &ftmsbike::descriptorWritten);
         connect(s, &QLowEnergyService::descriptorRead, this, &ftmsbike::descriptorRead);
@@ -2013,22 +2015,22 @@ void ftmsbike::subscribeToServices() {
 
         auto characteristics_list = s->characteristics();
         for (const QLowEnergyCharacteristic &c : qAsConst(characteristics_list)) {
-            qDebug() << QStringLiteral("char uuid") << c.uuid() << QStringLiteral("handle") << c.handle() << c.properties();
+            qDebug() << QStringLiteral("char uuid") << c.uuid() << c.properties();
             auto descriptors_list = c.descriptors();
             for (const QLowEnergyDescriptor &d : qAsConst(descriptors_list)) {
-                qDebug() << QStringLiteral("descriptor uuid") << d.uuid() << QStringLiteral("handle") << d.handle();
+                qDebug() << QStringLiteral("descriptor uuid") << d.uuid();
             }
 
             if ((c.properties() & QLowEnergyCharacteristic::Notify) == QLowEnergyCharacteristic::Notify) {
                 QByteArray descriptor;
                 descriptor.append((char)0x01);
                 descriptor.append((char)0x00);
-                if (c.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration).isValid()) {
-                    s->writeDescriptor(c.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration), descriptor);
+                if (c.descriptor(QBluetoothUuid::DescriptorType::ClientCharacteristicConfiguration).isValid()) {
+                    s->writeDescriptor(c.descriptor(QBluetoothUuid::DescriptorType::ClientCharacteristicConfiguration), descriptor);
                 } else {
                     qDebug() << QStringLiteral("ClientCharacteristicConfiguration") << c.uuid()
-                             << c.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration).uuid()
-                             << c.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration).handle()
+                             << c.descriptor(QBluetoothUuid::DescriptorType::ClientCharacteristicConfiguration).uuid()
+
                              << QStringLiteral(" is not valid");
                 }
 
@@ -2038,12 +2040,12 @@ void ftmsbike::subscribeToServices() {
                 QByteArray descriptor;
                 descriptor.append((char)0x02);
                 descriptor.append((char)0x00);
-                if (c.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration).isValid()) {
-                    s->writeDescriptor(c.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration), descriptor);
+                if (c.descriptor(QBluetoothUuid::DescriptorType::ClientCharacteristicConfiguration).isValid()) {
+                    s->writeDescriptor(c.descriptor(QBluetoothUuid::DescriptorType::ClientCharacteristicConfiguration), descriptor);
                 } else {
                     qDebug() << QStringLiteral("ClientCharacteristicConfiguration") << c.uuid()
-                             << c.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration).uuid()
-                             << c.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration).handle()
+                             << c.descriptor(QBluetoothUuid::DescriptorType::ClientCharacteristicConfiguration).uuid()
+
                              << QStringLiteral(" is not valid");
                 }
 
@@ -2643,12 +2645,12 @@ void ftmsbike::deviceDiscovered(const QBluetoothDeviceInfo &device) {
         connect(m_control, &QLowEnergyController::serviceDiscovered, this, &ftmsbike::serviceDiscovered);
         connect(m_control, &QLowEnergyController::discoveryFinished, this, &ftmsbike::serviceScanDone);
         connect(m_control,
-                static_cast<void (QLowEnergyController::*)(QLowEnergyController::Error)>(&QLowEnergyController::error),
+                QZ_LE_CONTROLLER_ERROR_SIGNAL,
                 this, &ftmsbike::error);
         connect(m_control, &QLowEnergyController::stateChanged, this, &ftmsbike::controllerStateChanged);
 
         connect(m_control,
-                static_cast<void (QLowEnergyController::*)(QLowEnergyController::Error)>(&QLowEnergyController::error),
+                QZ_LE_CONTROLLER_ERROR_SIGNAL,
                 this, [this](QLowEnergyController::Error error) {
                     Q_UNUSED(error);
                     Q_UNUSED(this);

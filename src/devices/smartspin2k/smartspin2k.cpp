@@ -1,4 +1,6 @@
 #include "smartspin2k.h"
+
+#include "qtbluetoothcompat.h"
 #include "devices/ftmsbike/ftmsbike.h"
 #include <QBluetoothLocalDevice>
 #include <QDateTime>
@@ -414,7 +416,7 @@ void smartspin2k::stateChanged(QLowEnergyService::ServiceState state) {
         descriptor.append((char)0x02);
         descriptor.append((char)0x00);
         gattCommunicationChannelService->writeDescriptor(
-            gattWriteCharacteristic.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration), descriptor);
+            gattWriteCharacteristic.descriptor(QBluetoothUuid::DescriptorType::ClientCharacteristicConfiguration), descriptor);
     }
 }
 
@@ -485,12 +487,12 @@ void smartspin2k::deviceDiscovered(const QBluetoothDeviceInfo &device) {
         connect(m_control, &QLowEnergyController::serviceDiscovered, this, &smartspin2k::serviceDiscovered);
         connect(m_control, &QLowEnergyController::discoveryFinished, this, &smartspin2k::serviceScanDone);
         connect(m_control,
-                static_cast<void (QLowEnergyController::*)(QLowEnergyController::Error)>(&QLowEnergyController::error),
+                QZ_LE_CONTROLLER_ERROR_SIGNAL,
                 this, &smartspin2k::error);
         connect(m_control, &QLowEnergyController::stateChanged, this, &smartspin2k::controllerStateChanged);
 
         connect(m_control,
-                static_cast<void (QLowEnergyController::*)(QLowEnergyController::Error)>(&QLowEnergyController::error),
+                QZ_LE_CONTROLLER_ERROR_SIGNAL,
                 this, [this](QLowEnergyController::Error error) {
                     Q_UNUSED(error);
                     Q_UNUSED(this);

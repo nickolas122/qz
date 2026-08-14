@@ -29,7 +29,7 @@ void CharacteristicWriteProcessor::changeSlope(int16_t iresistance, uint8_t crr,
     double min_inclination = settings.value(QZSettings::min_inclination, QZSettings::default_min_inclination).toDouble();
 
     qDebug() << QStringLiteral("new requested resistance zwift erg grade ") + QString::number(iresistance) +
-                    QStringLiteral(" enabled ") + force_resistance;
+                    QStringLiteral(" enabled ") + QString::number(force_resistance);
     double resistance = ((double)iresistance * 1.5) / 100.0;
     qDebug() << QStringLiteral("calculated erg grade ") + QString::number(resistance);
 

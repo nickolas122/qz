@@ -1,17 +1,23 @@
 #ifndef APPLICATION_PATHCONTROLLER_H
 #define APPLICATION_PATHCONTROLLER_H
 
-#include <wobjectdefs.h>
-
 #include <QGeoPath>
 #include <QGeoPositionInfoSource>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 
+// This class used to be declared with Verdigris (W_OBJECT/W_PROPERTY/W_SIGNAL)
+// rather than moc. The vendored copy of Verdigris was from 2018 and did not
+// compile against Qt 6 - it reaches for QMetaObject::QueryPropertyUser and
+// QByteArrayDataPtr, both gone - and it existed in this tree for exactly one
+// class of three properties. Plain Q_OBJECT does the same job.
 class PathController : public QObject {
-    // Q_OBJECT
-    W_OBJECT(PathController)
+    Q_OBJECT
+
+    Q_PROPERTY(QGeoPath geopath READ geoPath WRITE setGeoPath NOTIFY geopathChanged)
+    Q_PROPERTY(QGeoCoordinate center READ center WRITE setCenter NOTIFY centerChanged)
+    Q_PROPERTY(double distance READ distance WRITE setDistance NOTIFY distanceChanged)
 
   public:
     PathController(QObject *parent = 0);
@@ -26,11 +32,7 @@ class PathController : public QObject {
         emit geopathChanged();
     }
 
-    void geopathChanged() W_SIGNAL(geopathChanged)
-
-        QGeoCoordinate center() const {
-        return mCenter;
-    }
+    QGeoCoordinate center() const { return mCenter; }
 
     void setCenter(const QGeoCoordinate &center) {
         if (center == mCenter) {
@@ -40,11 +42,7 @@ class PathController : public QObject {
         emit centerChanged();
     }
 
-    void centerChanged() W_SIGNAL(centerChanged)
-
-    double distance() const {
-        return mDistance;
-    }
+    double distance() const { return mDistance; }
 
     void setDistance(double distance) {
         if (qFuzzyCompare(distance, mDistance)) {
@@ -54,15 +52,15 @@ class PathController : public QObject {
         emit distanceChanged();
     }
 
-    void distanceChanged() W_SIGNAL(distanceChanged)
+  signals:
+    void geopathChanged();
+    void centerChanged();
+    void distanceChanged();
 
-        private : QGeoPath mGeoPath;
+  private:
+    QGeoPath mGeoPath;
     QGeoCoordinate mCenter;
     double mDistance = 0.0;
-
-    W_PROPERTY(QGeoPath, geopath READ geoPath WRITE setGeoPath NOTIFY geopathChanged)
-    W_PROPERTY(QGeoCoordinate, center READ center WRITE setCenter NOTIFY centerChanged)
-    W_PROPERTY(double, distance READ distance WRITE setDistance NOTIFY distanceChanged)
 };
 
 #endif // APPLICATION_PATHCONTROLLER_H

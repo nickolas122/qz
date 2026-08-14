@@ -30,17 +30,19 @@ conditions are met:
 #include <QCryptographicHash>
 #include <QDataStream>
 #include <QDateTime>
+#include <QIODevice>
+#include <QRandomGenerator>
 #include <QtDebug>
 #include <QtGlobal>
 
 SimpleCrypt::SimpleCrypt()
     : m_key(0), m_compressionMode(CompressionAuto), m_protectionMode(ProtectionChecksum), m_lastError(ErrorNoError) {
-    qsrand(uint(QDateTime::currentMSecsSinceEpoch() & 0xFFFF));
+    // Qt 6 dropped qsrand/qrand; QRandomGenerator::global() seeds itself.
 }
 
 SimpleCrypt::SimpleCrypt(quint64 key)
     : m_key(key), m_compressionMode(CompressionAuto), m_protectionMode(ProtectionChecksum), m_lastError(ErrorNoError) {
-    qsrand(uint(QDateTime::currentMSecsSinceEpoch() & 0xFFFF));
+    // Qt 6 dropped qsrand/qrand; QRandomGenerator::global() seeds itself.
     splitKey();
 }
 
@@ -101,7 +103,7 @@ QByteArray SimpleCrypt::encryptToByteArray(QByteArray plaintext) {
     }
 
     // prepend a random char to the string
-    char randomChar = char(qrand() & 0xFF);
+    char randomChar = char(QRandomGenerator::global()->generate() & 0xFF);
     ba = randomChar + integrityProtection + ba;
 
     int pos(0);

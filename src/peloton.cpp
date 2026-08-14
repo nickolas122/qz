@@ -1,3 +1,5 @@
+#include "qtoauthcompat.h"
+
 #if __has_include("secret.h")
 #include "secret.h"
 #else
@@ -2792,24 +2794,27 @@ void peloton::peloton_connect_clicked() {
 }
 
 QAbstractOAuth::ModifyParametersFunction peloton::buildModifyParametersFunction(const QUrl &clientIdentifier, const QUrl &clientIdentifierSharedKey) {
-    return [this, clientIdentifier, clientIdentifierSharedKey](QAbstractOAuth::Stage stage, QVariantMap *parameters) {
+    return [this, clientIdentifier, clientIdentifierSharedKey](QAbstractOAuth::Stage stage, auto *parameters) {
+        // Qt 6 changed ModifyParametersFunction's second argument from QVariantMap*
+        // to QMultiMap<QString, QVariant>*; the generic lambda absorbs that, and
+        // qzOAuthSetParameter() absorbs QMultiMap::insert() appending where
+        // QMap::insert() replaced. See qtoauthcompat.h.
         if (stage == QAbstractOAuth::Stage::RequestingAuthorization) {
-            parameters->insert(QStringLiteral("audience"), QStringLiteral("https://api-3p.onepeloton.com/"));
-            parameters->insert(QStringLiteral("responseType"), QStringLiteral("code")); /* Request refresh token*/
-            parameters->insert(QStringLiteral("approval_prompt"),
-                               QStringLiteral("force")); /* force user check scope again */
-            parameters->insert(QStringLiteral("redirect_uri"), kPelotonRedirectUri);
+            qzOAuthSetParameter(parameters, QStringLiteral("audience"), QStringLiteral("https://api-3p.onepeloton.com/"));
+            qzOAuthSetParameter(parameters, QStringLiteral("responseType"), QStringLiteral("code")); /* Request refresh token*/
+            qzOAuthSetParameter(parameters, QStringLiteral("approval_prompt"), QStringLiteral("force")); /* force user check scope again */
+            qzOAuthSetParameter(parameters, QStringLiteral("redirect_uri"), kPelotonRedirectUri);
             pelotonPendingState = parameters->value(QStringLiteral("state")).toString();
             QByteArray code = parameters->value(QStringLiteral("code")).toByteArray();
             // DON'T TOUCH THIS LINE, THANKS Roberto Viola
-            (*parameters)[QStringLiteral("code")] = QUrl::fromPercentEncoding(code); // NOTE: Old code replaced by
+            qzOAuthSetParameter(parameters, QStringLiteral("code"), QUrl::fromPercentEncoding(code)); // NOTE: Old code replaced by
         }
         if (stage == QAbstractOAuth::Stage::RequestingAccessToken) {
-            parameters->insert(QStringLiteral("redirect_uri"), kPelotonRedirectUri);
+            qzOAuthSetParameter(parameters, QStringLiteral("redirect_uri"), kPelotonRedirectUri);
         }
         if (stage == QAbstractOAuth::Stage::RefreshingAccessToken) {
-            parameters->insert(QStringLiteral("client_id"), clientIdentifier);
-            parameters->insert(QStringLiteral("client_secret"), clientIdentifierSharedKey);
+            qzOAuthSetParameter(parameters, QStringLiteral("client_id"), clientIdentifier);
+            qzOAuthSetParameter(parameters, QStringLiteral("client_secret"), clientIdentifierSharedKey);
         }
     };
 }

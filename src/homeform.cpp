@@ -1,4 +1,5 @@
 #include "homeform.h"
+#include "qtoauthcompat.h"
 #ifdef Q_OS_IOS
 #include "ios/lockscreen.h"
 #include "ios/ios_liveactivity.h"
@@ -317,12 +318,16 @@ class MailSenderThread : public QThread {
         return;
 #endif
 
-// We need to set the username (your email address) and the password
-// for smtp authentication.
-#ifdef SMTP_PASSWORD
+        // We need the username (your email address) and the password for smtp
+        // authentication. SmtpClient-for-Qt v2.0 takes them at login() rather than
+        // through setUser()/setPassword(), so they are held here until the retry
+        // loop below. Declared outside the #ifdef because the login() call that
+        // uses them is compiled either way - the #else branches just never reach it.
+        QString smtpUser, smtpPassword;
+#ifdef SMTP_USERNAME
 #define _STR(x) #x
 #define STRINGIFY(x) _STR(x)
-        smtp.setUser(STRINGIFY(SMTP_USERNAME));
+        smtpUser = QStringLiteral(STRINGIFY(SMTP_USERNAME));
 #else
 #pragma message "smtp username is unset!"
         qDebug() << QStringLiteral("SMTP username is unset, email not sent");
@@ -332,7 +337,7 @@ class MailSenderThread : public QThread {
 #ifdef SMTP_PASSWORD
 #define _STR(x) #x
 #define STRINGIFY(x) _STR(x)
-        smtp.setPassword(STRINGIFY(SMTP_PASSWORD));
+        smtpPassword = QStringLiteral(STRINGIFY(SMTP_PASSWORD));
 #else
 #pragma message "smtp password is unset!"
         qDebug() << QStringLiteral("SMTP password is unset, email not sent");
@@ -340,21 +345,28 @@ class MailSenderThread : public QThread {
         return;
 #endif
 
-        // responseTimeout: time to wait for each SMTP command reply (including
-        // "250 OK" after DATA). 30s gives Brevo time to accept a large attachment
-        // without the client timing out and retrying (which would send a duplicate).
-        // sendMessageTimeout: time allowed for the raw socket write of the body; 120s
-        // covers a 10MB attachment even on a slow mobile connection.
-        smtp.setResponseTimeout(30000);
-        smtp.setSendMessageTimeout(120000);
-
         showToast(QObject::tr("Sending workout email..."));
 
+        // v2.0 is asynchronous: connectToHost(), login() and sendMail() return
+        // void and completion is awaited with waitFor*(). The two timeouts the
+        // synchronous API used to carry are expressed here instead. 30s per SMTP
+        // command reply gives Brevo time to accept a large attachment without the
+        // client timing out and retrying (which would send a duplicate); 120s for
+        // the body covers a 10MB attachment on a slow mobile connection.
         bool r = false;
         uint8_t i = 0;
         while (!r) {
             qDebug() << "trying to send email #" << i;
-            r = smtp.connectToHost() && smtp.login() && smtp.sendMail(*message);
+            smtp.connectToHost();
+            r = smtp.waitForReadyConnected(30000);
+            if (r) {
+                smtp.login(smtpUser, smtpPassword);
+                r = smtp.waitForAuthenticated(30000);
+            }
+            if (r) {
+                smtp.sendMail(*message);
+                r = smtp.waitForMailSent(120000);
+            }
             if (i++ == 3)
                 break;
             if (!r)
@@ -7679,11 +7691,12 @@ void homeform::update() {
                 if ((seconds / 60) <
                     settings.value(QZSettings::trainprogram_total, QZSettings::default_trainprogram_total).toUInt()) {
                     qDebug() << QStringLiteral("trainprogram random seconds ") + QString::number(seconds) +
-                                    QStringLiteral(" last_change ") + last_seconds + QStringLiteral(" period ") +
-                                    settings
+                                    QStringLiteral(" last_change ") + QString::number(last_seconds) +
+                                    QStringLiteral(" period ") +
+                                    QString::number(settings
                                         .value(QZSettings::trainprogram_period_seconds,
                                                QZSettings::default_trainprogram_period_seconds)
-                                        .toUInt();
+                                        .toUInt());
                     if (last_seconds == 0 ||
                         ((seconds - last_seconds) >= settings
                                                          .value(QZSettings::trainprogram_period_seconds,
@@ -9552,18 +9565,21 @@ QStringList homeform::metrics() { return bluetoothdevice::metrics(); }
 
 QAbstractOAuth::ModifyParametersFunction
 homeform::buildModifyParametersFunction(const QUrl &clientIdentifier, const QUrl &clientIdentifierSharedKey) {
-    return [clientIdentifier, clientIdentifierSharedKey](QAbstractOAuth::Stage stage, QVariantMap *parameters) {
+    return [clientIdentifier, clientIdentifierSharedKey](QAbstractOAuth::Stage stage, auto *parameters) {
+        // Qt 6 changed ModifyParametersFunction's second argument from QVariantMap*
+        // to QMultiMap<QString, QVariant>*; the generic lambda absorbs that, and
+        // qzOAuthSetParameter() absorbs QMultiMap::insert() appending where
+        // QMap::insert() replaced. See qtoauthcompat.h.
         if (stage == QAbstractOAuth::Stage::RequestingAuthorization) {
-            parameters->insert(QStringLiteral("responseType"), QStringLiteral("code")); /* Request refresh token*/
-            parameters->insert(QStringLiteral("approval_prompt"),
-                               QStringLiteral("force")); /* force user check scope again */
+            qzOAuthSetParameter(parameters, QStringLiteral("responseType"), QStringLiteral("code")); /* Request refresh token*/
+            qzOAuthSetParameter(parameters, QStringLiteral("approval_prompt"), QStringLiteral("force")); /* force user check scope again */
             QByteArray code = parameters->value(QStringLiteral("code")).toByteArray();
             // DON'T TOUCH THIS LINE, THANKS Roberto Viola
-            (*parameters)[QStringLiteral("code")] = QUrl::fromPercentEncoding(code); // NOTE: Old code replaced by
+            qzOAuthSetParameter(parameters, QStringLiteral("code"), QUrl::fromPercentEncoding(code)); // NOTE: Old code replaced by
         }
         if (stage == QAbstractOAuth::Stage::RefreshingAccessToken) {
-            parameters->insert(QStringLiteral("client_id"), clientIdentifier);
-            parameters->insert(QStringLiteral("client_secret"), clientIdentifierSharedKey);
+            qzOAuthSetParameter(parameters, QStringLiteral("client_id"), clientIdentifier);
+            qzOAuthSetParameter(parameters, QStringLiteral("client_secret"), clientIdentifierSharedKey);
         }
     };
 }
@@ -10584,9 +10600,10 @@ void homeform::sendMail() {
 
     MimeMessage *message = new MimeMessage;
 
-    message->setSender(new EmailAddress(QStringLiteral("no-reply@qzapp.it"), QStringLiteral("QZ")));
-    message->addRecipient(new EmailAddress(settings.value(QZSettings::user_email, QLatin1String("")).toString(),
-                                          settings.value(QZSettings::user_email, QLatin1String("")).toString()));
+    // SmtpClient-for-Qt v2.0 takes addresses by value rather than by owning pointer.
+    message->setSender(EmailAddress(QStringLiteral("no-reply@qzapp.it"), QStringLiteral("QZ")));
+    message->addRecipient(EmailAddress(settings.value(QZSettings::user_email, QLatin1String("")).toString(),
+                                       settings.value(QZSettings::user_email, QLatin1String("")).toString()));
     if (!Session.isEmpty()) {
         QString title = Session.constFirst().time.toString();
         if (!stravaPelotonActivityName.isEmpty()) {
@@ -11863,7 +11880,7 @@ void homeform::intervalsicu_download_workout_completed(QNetworkReply *reply) {
 
                 // Sanitize filename
                 QString safeName = workoutName;
-                safeName.replace(QRegExp("[^a-zA-Z0-9_\\-]"), "_");
+                safeName.replace(QRegularExpression("[^a-zA-Z0-9_\\-]"), "_");
 
                 // Add date prefix
                 QString today = QDate::currentDate().toString("yyyy-MM-dd");

@@ -55,7 +55,7 @@ jobs:
         with:
           repository: bluetiger9/SmtpClient-for-Qt
           path: "src/smtpclient/"
-          ref: 3fa4a0fe5797070339422cf18b5e9ed8dcb91f9c
+          ref: 863843c34e03bcfd0dc0d75ad3a4c1e3d0a06d94   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:
@@ -430,7 +430,7 @@ jobs:
 #        with:
 #          repository: bluetiger9/SmtpClient-for-Qt
 #          path: "src/smtpclient/"
-#          ref: 3fa4a0fe5797070339422cf18b5e9ed8dcb91f9c
+#          ref: 863843c34e03bcfd0dc0d75ad3a4c1e3d0a06d94   # v2.0: the first SmtpClient with Qt 6 support
 #
 #
 #      - uses: msys2/setup-msys2@v2
@@ -530,7 +530,7 @@ jobs:
         with:
           repository: bluetiger9/SmtpClient-for-Qt
           path: "src/smtpclient/"
-          ref: 3fa4a0fe5797070339422cf18b5e9ed8dcb91f9c
+          ref: 863843c34e03bcfd0dc0d75ad3a4c1e3d0a06d94   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:
@@ -1137,7 +1137,7 @@ jobs:
         with:
           repository: bluetiger9/SmtpClient-for-Qt
           path: "src/smtpclient/"
-          ref: 3fa4a0fe5797070339422cf18b5e9ed8dcb91f9c
+          ref: 863843c34e03bcfd0dc0d75ad3a4c1e3d0a06d94   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:
@@ -1231,7 +1231,7 @@ jobs:
         with:
           repository: bluetiger9/SmtpClient-for-Qt
           path: "src/smtpclient/"
-          ref: 3fa4a0fe5797070339422cf18b5e9ed8dcb91f9c
+          ref: 863843c34e03bcfd0dc0d75ad3a4c1e3d0a06d94   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:
@@ -1461,7 +1461,7 @@ jobs:
         with:
           repository: bluetiger9/SmtpClient-for-Qt
           path: "src/smtpclient/"
-          ref: 3fa4a0fe5797070339422cf18b5e9ed8dcb91f9c
+          ref: 863843c34e03bcfd0dc0d75ad3a4c1e3d0a06d94   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:
