@@ -3328,6 +3328,51 @@ class QZSettings {
     static constexpr double default_resistance_slew_down = 0.0;
 
     /**
+     *@brief gamepad_enabled Read an XInput gamepad (wired or Bluetooth Xbox pad, or any pad in its
+     *X-input mode) and let it shift gears and toggle ERG. Unlike the keyboard shortcuts, which are
+     *Qt.WindowShortcut and so need QZ in front, this works while the training app owns the screen.
+     *Windows only.
+     */
+    static const QString gamepad_enabled;
+    static constexpr bool default_gamepad_enabled = false;
+
+    /**
+     *@brief gamepad_gear_up Buttons that shift up, comma separated, from: a, b, x, y, lb, rb, lt,
+     *rt, start, back, l3, r3, dpad_up, dpad_down, dpad_left, dpad_right. Both triggers by default,
+     *so the shifter is complete under either hand whichever way the pad is mounted on the bars.
+     */
+    static const QString gamepad_gear_up;
+    static const QString default_gamepad_gear_up;
+
+    /**
+     *@brief gamepad_gear_down Buttons that shift down. Same names as gamepad_gear_up; both bumpers
+     *by default, pairing with the triggers above.
+     */
+    static const QString gamepad_gear_down;
+    static const QString default_gamepad_gear_down;
+
+    /**
+     *@brief gamepad_erg_mode Buttons that toggle ERG mode, the same action as the ERG tile. Never
+     *repeats while held, whatever the repeat settings say.
+     */
+    static const QString gamepad_erg_mode;
+    static const QString default_gamepad_erg_mode;
+
+    /**
+     *@brief gamepad_repeat_delay Milliseconds a shift button must be held before it starts
+     *repeating. 0 disables repeating entirely, giving exactly one shift per press.
+     */
+    static const QString gamepad_repeat_delay;
+    static constexpr int default_gamepad_repeat_delay = 400;
+
+    /**
+     *@brief gamepad_repeat_rate Milliseconds between repeats once repeating has started. Values
+     *below the 50 ms poll interval are clamped to it.
+     */
+    static const QString gamepad_repeat_rate;
+    static constexpr int default_gamepad_repeat_rate = 150;
+
+    /**
      * @brief Write the QSettings values using the constants from this namespace.
      * @param showDefaults Optionally indicates if the default should be shown with the key.
      */

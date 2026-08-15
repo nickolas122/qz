@@ -1281,8 +1281,17 @@ const QString QZSettings::shortcut_start_stop = QStringLiteral("shortcut_start_s
 const QString QZSettings::default_shortcut_start_stop = QStringLiteral("");
 const QString QZSettings::shortcut_stop = QStringLiteral("shortcut_stop");
 const QString QZSettings::default_shortcut_stop = QStringLiteral("");
+const QString QZSettings::gamepad_enabled = QStringLiteral("gamepad_enabled");
+const QString QZSettings::gamepad_gear_up = QStringLiteral("gamepad_gear_up");
+const QString QZSettings::default_gamepad_gear_up = QStringLiteral("rt,lt");
+const QString QZSettings::gamepad_gear_down = QStringLiteral("gamepad_gear_down");
+const QString QZSettings::default_gamepad_gear_down = QStringLiteral("rb,lb");
+const QString QZSettings::gamepad_erg_mode = QStringLiteral("gamepad_erg_mode");
+const QString QZSettings::default_gamepad_erg_mode = QStringLiteral("y");
+const QString QZSettings::gamepad_repeat_delay = QStringLiteral("gamepad_repeat_delay");
+const QString QZSettings::gamepad_repeat_rate = QStringLiteral("gamepad_repeat_rate");
 
-const uint32_t allSettingsCount = 1003;
+const uint32_t allSettingsCount = 1009;
 
 QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::cryptoKeySettingsProfiles, QZSettings::default_cryptoKeySettingsProfiles},
@@ -2310,6 +2319,12 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::freebeat_serialport, QZSettings::default_freebeat_serialport},
     {QZSettings::resistance_slew_up, QZSettings::default_resistance_slew_up},
     {QZSettings::resistance_slew_down, QZSettings::default_resistance_slew_down},
+    {QZSettings::gamepad_enabled, QZSettings::default_gamepad_enabled},
+    {QZSettings::gamepad_gear_up, QZSettings::default_gamepad_gear_up},
+    {QZSettings::gamepad_gear_down, QZSettings::default_gamepad_gear_down},
+    {QZSettings::gamepad_erg_mode, QZSettings::default_gamepad_erg_mode},
+    {QZSettings::gamepad_repeat_delay, QZSettings::default_gamepad_repeat_delay},
+    {QZSettings::gamepad_repeat_rate, QZSettings::default_gamepad_repeat_rate},
 };
 
 void QZSettings::qDebugAllSettings(bool showDefaults) {

@@ -4,20 +4,24 @@ Shift virtual gears from a wired Xbox controller on Windows, without the
 BikeControl or ROUVY Companion apps. (The directory keeps its original
 MyWhoosh-only name; Rouvy support was added later.)
 
-Two routes are provided, and they answer different questions:
+Three routes are provided, and they answer different questions:
 
-| | Route A — keystrokes | Route B — QZ bridge |
-|---|---|---|
-| Script | `xbox-mywhoosh-gears.ahk` | `qz_gear_bridge.py` |
-| Apps | MyWhoosh and Rouvy | MyWhoosh |
-| Path | pad → AutoHotkey → shift keys → app | pad → Python → QZ WebSocket → OpenBikeControl → MyWhoosh |
-| Who owns the gears | the app | QZ (gear table, gear→resistance mapping, gear tile) |
-| Needs QZ running | no | yes, on a host the PC can reach |
-| Needs the app focused | yes | no |
+| | Route A — keystrokes | Route B — QZ bridge | Route C — QZ reads the pad |
+|---|---|---|---|
+| Script | `xbox-mywhoosh-gears.ahk` | `qz_gear_bridge.py` | none, it is part of QZ |
+| Apps | MyWhoosh and Rouvy | MyWhoosh | any, and none |
+| Path | pad → AutoHotkey → shift keys → app | pad → Python → QZ WebSocket → OpenBikeControl → MyWhoosh | pad → QZ |
+| Who owns the gears | the app | QZ (gear table, gear→resistance mapping, gear tile) | QZ |
+| Needs QZ running | no | yes, on a host the PC can reach | yes, on this PC |
+| Needs the app focused | yes | no | no |
+| Also toggles ERG | no | no | yes |
 
-Start with Route A. Move to Route B only if you want QZ's gearing model rather
-than MyWhoosh's. Route B is MyWhoosh-only — it works by speaking
-OpenBikeControl, which Rouvy does not implement.
+**Route C is the one to use when QZ owns the gears and runs on the same Windows
+PC as the training app** — no second process, no network hop, and the training
+app is not involved at all: it sees whatever resistance QZ's gearing produces,
+the same as if you had pressed the gear tile. Route A remains the answer when the
+*app's* own virtual gears are the ones you want to shift, and Route B when QZ
+runs on a different device from MyWhoosh.
 
 ## Route A — AutoHotkey sends each app's own shift keys
 
@@ -243,14 +247,88 @@ If a broker is already in the setup, QZ subscribes to control topics and
 functions (`src/mqttpublisher.cpp:421`). Same result as the WebSocket bridge,
 one more moving part.
 
+## Route C — QZ reads the pad itself
+
+Settings → Bike Options → **Gamepad (Windows)** → *Enable Gamepad Control*. That
+is the whole of the setup: no restart, no second process, nothing to install. The
+switch is only shown on Windows.
+
+| Pad | Action | Setting |
+|---|---|---|
+| `RT` or `LT` | Gear up — hold to repeat | `gamepad_gear_up`, default `rt,lt` |
+| `RB` or `LB` | Gear down — hold to repeat | `gamepad_gear_down`, default `rb,lb` |
+| `Y` | ERG mode on/off | `gamepad_erg_mode`, default `y` |
+
+Triggers shift up and bumpers shift down, left and right alike, so a complete
+shifter sits under either hand however the pad ends up mounted — the same rule as
+Route A, for the same reason. Each setting is a comma-separated list drawn from
+`a, b, x, y, lb, rb, lt, rt, start, back, l3, r3, dpad_up, dpad_down, dpad_left,
+dpad_right`; an empty list disables that action rather than binding it to
+everything.
+
+Shifting repeats while held, after `gamepad_repeat_delay` (400 ms) and then every
+`gamepad_repeat_rate` (150 ms). A delay of 0 gives exactly one shift per press.
+ERG never repeats, whatever those two say — a toggle that repeated would just
+flicker the mode on and off under a resting thumb.
+
+The pad goes to the same three entry points the keyboard shortcuts and the
+on-screen tiles use — `keyboardPlus("gears")`, `keyboardMinus("gears")` and
+`keyboardLargeButton("erg_mode")` (`src/main.cpp`, wired where `homeform` is
+constructed) — so it inherits their rules exactly:
+
+- **Gear changes need auto resistance on.** With it off the gear tile does
+  nothing either.
+- **ERG needs a bike connected.** The toggle flips `zwift_erg`, the same setting
+  the ERG tile and the Zwift ERG switch write.
+
+### Which controllers work
+
+XInput is the whole of the backend (`src/gamepadcontroller.cpp`), which decides
+the answer:
+
+- **Wired Xbox controller** — works.
+- **Xbox Wireless Controller over Bluetooth** — works, identically. Windows
+  presents a BT-paired Xbox pad as an ordinary XInput device, so wireless needs
+  no separate handling and no separate setting.
+- **Third-party pads in X-input mode** (8BitDo and friends, usually a switch on
+  the back) — work, for the same reason.
+- **DualSense, DualShock, Switch Pro** — do *not*. These pair as plain HID and
+  are invisible to XInput. They would need a second backend
+  (`Windows.Gaming.Input`'s `RawGameController`) beside the current one, or a
+  shim like DS4Windows or Steam Input to present them as an Xbox pad.
+
+`xinput1_4.dll` is resolved with `LoadLibrary` at startup rather than linked, so
+a machine without it logs one line and carries on instead of failing to start.
+All four XInput slots are scanned, the first connected pad wins, and a pad that
+is unplugged mid-ride is picked back up when it returns — an empty slot is
+re-probed every 2 s rather than every poll, because querying one is deliberately
+expensive.
+
+### When a button does nothing
+
+QZ's debug log answers every step of this: enable *Settings → Debug → Save debug
+log*. The relevant lines all start with `gamepadcontroller:`.
+
+1. `no XInput available` — the DLL was not found. Nothing else will happen.
+2. Nothing at all after that line — the switch is off. It is re-read every 2 s,
+   so it takes a moment to take effect.
+3. `pad connected on slot N` never appears — Windows is not seeing the pad as
+   XInput. Check it in *Game Controllers* (`joy.cpl`), and check the X/D switch
+   if the pad has one.
+4. `gear up` is logged but nothing moves — auto resistance is off, or the gear is
+   already at the end of its range.
+5. `unknown button <name>` — a typo in the mapping; the rest of that list still
+   applies.
+
 ## Why not QZ's built-in keyboard shortcuts
 
 QZ has shortcut settings including *Gears + / -*
 (`src/settings-shortcuts.qml:219`), but they are declared with
 `context: Qt.WindowShortcut` (`src/main.qml:1546`) — they fire only while the QZ
-window itself has focus. During a ride MyWhoosh has focus, so mapping the pad to
-those shortcuts with AutoHotkey does not work. That is the reason Route B goes
-through the WebSocket instead of synthesizing keys for QZ.
+window itself has focus. During a ride the training app has focus, so mapping the
+pad to those shortcuts with AutoHotkey does not work. That is why Route B goes
+through the WebSocket instead of synthesizing keys for QZ, and why Route C polls
+the pad from inside QZ rather than adding more shortcuts.
 
 ## Upstream research
 

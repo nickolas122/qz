@@ -142,6 +142,7 @@ androidadblog.cpp \
 handleurl.cpp \
 localipaddress.cpp \
 windowsblebond.cpp \
+gamepadcontroller.cpp \
 rtssosd.cpp \
 devices/wahookickrheadwind/wahookickrheadwind.cpp \
 windows_zwift_workout_paddleocr_thread.cpp \
@@ -346,6 +347,7 @@ devices/discoveryoptions.h \
 handleurl.h \
 localipaddress.h \
 windowsblebond.h \
+gamepadcontroller.h \
 rtssosd.h \
 devices/wahookickrheadwind/wahookickrheadwind.h \
 PathController.h \

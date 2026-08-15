@@ -14,6 +14,9 @@
 #include "logwriter.h"
 #include "bluetooth.h"
 #include "devices/dircon/dirconmanager.h"
+#ifdef Q_OS_WIN
+#include "gamepadcontroller.h"
+#endif
 #include "homeform.h"
 #include "mainwindow.h"
 #include "qfit.h"
@@ -996,6 +999,21 @@ int main(int argc, char *argv[]) {
         // that caches discovery results and does not retry a failed connect will
         // otherwise hold a record for a port nobody is listening on.
         DirconManager::startIdleEndpoint();
+
+#ifdef Q_OS_WIN
+        // A gamepad is the only shifter that still works once the training app owns the screen:
+        // QZ's keyboard shortcuts are declared Qt.WindowShortcut, so they need QZ in front. These
+        // are the same three entry points the shortcuts and the on-screen tiles go through, so the
+        // pad shifts exactly what the gear tile shifts.
+        gamepadcontroller *pad = new gamepadcontroller(h);
+        QObject::connect(pad, &gamepadcontroller::gearUp, h,
+                         [h]() { h->keyboardPlus(QStringLiteral("gears")); });
+        QObject::connect(pad, &gamepadcontroller::gearDown, h,
+                         [h]() { h->keyboardMinus(QStringLiteral("gears")); });
+        QObject::connect(pad, &gamepadcontroller::ergToggle, h,
+                         [h]() { h->keyboardLargeButton(QStringLiteral("erg_mode")); });
+#endif
+
         QObject::connect(app.data(), &QCoreApplication::aboutToQuit, h,
                          &homeform::aboutToQuit); // NOTE: clazy-unneeded-cast
 

@@ -1739,6 +1739,12 @@ import AndroidStatusBar 1.0
             property string freebeat_serialport: ""
             property real resistance_slew_up: 0.0
             property real resistance_slew_down: 0.0
+            property bool gamepad_enabled: false
+            property string gamepad_gear_up: "rt,lt"
+            property string gamepad_gear_down: "rb,lb"
+            property string gamepad_erg_mode: "y"
+            property int gamepad_repeat_delay: 400
+            property int gamepad_repeat_rate: 150
         }
 
 
@@ -5945,6 +5951,178 @@ import AndroidStatusBar 1.0
                         }
                     }
                 }                
+            }
+
+            AccordionElement {
+                id: gamepadAccordion
+                title: qsTr("Gamepad (Windows)")
+                indicatRectColor: Material.color(Material.Grey)
+                textColor: Material.color(Material.Grey)
+                color: Material.backgroundColor
+                visible: Qt.platform.os === "windows"
+                accordionContent: ColumnLayout {
+                    spacing: 0
+
+                    IndicatorOnlySwitch {
+                        text: qsTr("Enable Gamepad Control")
+                        checked: settings.gamepad_enabled
+                        Layout.fillWidth: true
+                        onClicked: settings.gamepad_enabled = checked
+                    }
+
+                    Label {
+                        text: qsTr("Shift gears and toggle ERG from an Xbox controller, wired or Bluetooth. Any pad in its X-input mode works the same way. Unlike the keyboard shortcuts, this keeps working while the training app is in front, because QZ reads the pad itself instead of listening for keys. Takes effect within a couple of seconds, without restarting QZ. Default is off.")
+                        font.bold: true
+                        font.italic: true
+                        font.pixelSize: Qt.application.font.pixelSize - 2
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
+                        color: Material.color(Material.Lime)
+                    }
+
+                    RowLayout {
+                        spacing: 10
+                        Label {
+                            text: qsTr("Gear Up Buttons:")
+                            Layout.fillWidth: true
+                        }
+                        TextField {
+                            id: gamepadGearUpTextField
+                            text: settings.gamepad_gear_up
+                            horizontalAlignment: Text.AlignRight
+                            Layout.fillHeight: false
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                            onAccepted: settings.gamepad_gear_up = text
+                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
+                        }
+                        Button {
+                            text: qsTr("OK")
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                            onClicked: { settings.gamepad_gear_up = gamepadGearUpTextField.text; toast.show(qsTr("Setting saved!")); }
+                        }
+                    }
+
+                    RowLayout {
+                        spacing: 10
+                        Label {
+                            text: qsTr("Gear Down Buttons:")
+                            Layout.fillWidth: true
+                        }
+                        TextField {
+                            id: gamepadGearDownTextField
+                            text: settings.gamepad_gear_down
+                            horizontalAlignment: Text.AlignRight
+                            Layout.fillHeight: false
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                            onAccepted: settings.gamepad_gear_down = text
+                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
+                        }
+                        Button {
+                            text: qsTr("OK")
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                            onClicked: { settings.gamepad_gear_down = gamepadGearDownTextField.text; toast.show(qsTr("Setting saved!")); }
+                        }
+                    }
+
+                    RowLayout {
+                        spacing: 10
+                        Label {
+                            text: qsTr("ERG Toggle Buttons:")
+                            Layout.fillWidth: true
+                        }
+                        TextField {
+                            id: gamepadErgTextField
+                            text: settings.gamepad_erg_mode
+                            horizontalAlignment: Text.AlignRight
+                            Layout.fillHeight: false
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                            onAccepted: settings.gamepad_erg_mode = text
+                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
+                        }
+                        Button {
+                            text: qsTr("OK")
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                            onClicked: { settings.gamepad_erg_mode = gamepadErgTextField.text; toast.show(qsTr("Setting saved!")); }
+                        }
+                    }
+
+                    Label {
+                        text: qsTr("Button names, comma separated: a, b, x, y, lb, rb, lt, rt, start, back, l3, r3, dpad_up, dpad_down, dpad_left, dpad_right. Listing two puts the same action under either hand, so it does not matter which way the pad is mounted on the bars. Empty disables that action. Defaults: rt,lt up - rb,lb down - y for ERG.")
+                        font.bold: true
+                        font.italic: true
+                        font.pixelSize: Qt.application.font.pixelSize - 2
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
+                        color: Material.color(Material.Lime)
+                    }
+
+                    RowLayout {
+                        spacing: 10
+                        Label {
+                            text: qsTr("Hold Repeat Delay (ms):")
+                            Layout.fillWidth: true
+                        }
+                        TextField {
+                            id: gamepadRepeatDelayTextField
+                            text: settings.gamepad_repeat_delay
+                            horizontalAlignment: Text.AlignRight
+                            Layout.fillHeight: false
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                            inputMethodHints: Qt.ImhDigitsOnly
+                            onAccepted: settings.gamepad_repeat_delay = text
+                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
+                        }
+                        Button {
+                            text: qsTr("OK")
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                            onClicked: { settings.gamepad_repeat_delay = gamepadRepeatDelayTextField.text; toast.show(qsTr("Setting saved!")); }
+                        }
+                    }
+
+                    RowLayout {
+                        spacing: 10
+                        Label {
+                            text: qsTr("Hold Repeat Rate (ms):")
+                            Layout.fillWidth: true
+                        }
+                        TextField {
+                            id: gamepadRepeatRateTextField
+                            text: settings.gamepad_repeat_rate
+                            horizontalAlignment: Text.AlignRight
+                            Layout.fillHeight: false
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                            inputMethodHints: Qt.ImhDigitsOnly
+                            onAccepted: settings.gamepad_repeat_rate = text
+                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
+                        }
+                        Button {
+                            text: qsTr("OK")
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                            onClicked: { settings.gamepad_repeat_rate = gamepadRepeatRateTextField.text; toast.show(qsTr("Setting saved!")); }
+                        }
+                    }
+
+                    Label {
+                        text: qsTr("A held shift button starts repeating after the delay, then repeats at the rate. Set the delay to 0 for exactly one shift per press. ERG never repeats. Defaults are 400 ms and 150 ms.")
+                        font.bold: true
+                        font.italic: true
+                        font.pixelSize: Qt.application.font.pixelSize - 2
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
+                        color: Material.color(Material.Lime)
+                    }
+
+                    Label {
+                        text: qsTr("Note: gear changes need auto resistance on, exactly as the gear tile does. ERG toggling needs a bike connected.")
+                        font.bold: true
+                        font.italic: true
+                        font.pixelSize: Qt.application.font.pixelSize - 2
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
+                        Layout.topMargin: 10
+                        color: Material.color(Material.Orange)
+                    }
+                }
             }
 
             AccordionElement {

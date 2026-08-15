@@ -2,7 +2,7 @@
   "$schema": "https://qdomyos-zwift.local/settings-catalog.schema.json",
   "schemaVersion": 1,
   "format": "qdomyos-zwift-settings-catalog",
-  "settingCount": 967,
+  "settingCount": 973,
   "pages": [
     {
       "key": "page_custom_gear_table",
@@ -13745,6 +13745,84 @@
       "visible": true,
       "defaultValue": 0.0,
       "defaultExpression": "0.0",
+      "options": null
+    },
+    {
+      "key": "gamepad_enabled",
+      "name": "Enable Gamepad Control",
+      "description": "Shift gears and toggle ERG from an Xbox controller, wired or Bluetooth. Any pad in its X-input mode works the same way. Unlike the keyboard shortcuts, this keeps working while the training app is in front, because QZ reads the pad itself instead of listening for keys. Takes effect within a couple of seconds, without restarting QZ. Default is off.",
+      "parent": "Gamepad (Windows)",
+      "type": "boolean",
+      "qmlType": "bool",
+      "control": "switch",
+      "visible": true,
+      "defaultValue": false,
+      "defaultExpression": "false",
+      "options": null
+    },
+    {
+      "key": "gamepad_gear_up",
+      "name": "Gear Up Buttons",
+      "description": "Button names, comma separated: a, b, x, y, lb, rb, lt, rt, start, back, l3, r3, dpad_up, dpad_down, dpad_left, dpad_right. Listing two puts the same action under either hand. Empty disables the action.",
+      "parent": "Gamepad (Windows)",
+      "type": "string",
+      "qmlType": "string",
+      "control": "text",
+      "visible": true,
+      "defaultValue": "rt,lt",
+      "defaultExpression": "\"rt,lt\"",
+      "options": null
+    },
+    {
+      "key": "gamepad_gear_down",
+      "name": "Gear Down Buttons",
+      "description": "Button names, comma separated, same names as Gear Up Buttons. Empty disables the action.",
+      "parent": "Gamepad (Windows)",
+      "type": "string",
+      "qmlType": "string",
+      "control": "text",
+      "visible": true,
+      "defaultValue": "rb,lb",
+      "defaultExpression": "\"rb,lb\"",
+      "options": null
+    },
+    {
+      "key": "gamepad_erg_mode",
+      "name": "ERG Toggle Buttons",
+      "description": "Button names, comma separated, that toggle ERG mode - the same action as the ERG tile. Never repeats while held. Empty disables the action.",
+      "parent": "Gamepad (Windows)",
+      "type": "string",
+      "qmlType": "string",
+      "control": "text",
+      "visible": true,
+      "defaultValue": "y",
+      "defaultExpression": "\"y\"",
+      "options": null
+    },
+    {
+      "key": "gamepad_repeat_delay",
+      "name": "Hold Repeat Delay (ms)",
+      "description": "How long a shift button must be held before it starts repeating. Set to 0 for exactly one shift per press. Default is 400.",
+      "parent": "Gamepad (Windows)",
+      "type": "number",
+      "qmlType": "int",
+      "control": "text",
+      "visible": true,
+      "defaultValue": 400,
+      "defaultExpression": "400",
+      "options": null
+    },
+    {
+      "key": "gamepad_repeat_rate",
+      "name": "Hold Repeat Rate (ms)",
+      "description": "Time between repeats once a held shift button has started repeating. Values below the 50 ms poll interval are clamped to it. Default is 150.",
+      "parent": "Gamepad (Windows)",
+      "type": "number",
+      "qmlType": "int",
+      "control": "text",
+      "visible": true,
+      "defaultValue": 150,
+      "defaultExpression": "150",
       "options": null
     }
   ]
