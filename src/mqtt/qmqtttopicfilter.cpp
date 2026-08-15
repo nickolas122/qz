@@ -243,12 +243,16 @@ bool QMqttTopicFilter::match(const QMqttTopicName &name, MatchOptions matchOptio
     }
 
     if (d->filter.contains(QLatin1Char('+'))) {
-        const QList<QStringView> filterLevels = QStringView(d->filter).split(QLatin1Char('/'));
-        const QList<QStringView> topicLevels = QStringView(topic).split(QLatin1Char('/'));
+        // QStringView::split() is Qt 6 only - Qt 5.15's QStringView has left() but
+        // not split() - and Android builds against Qt 5.15.0. QString::split() is
+        // spelled and behaves the same in both, at the cost of copying the levels,
+        // which topic matching can afford.
+        const QStringList filterLevels = d->filter.split(QLatin1Char('/'));
+        const QStringList topicLevels = topic.split(QLatin1Char('/'));
         if (filterLevels.size() != topicLevels.size())
             return false;
         for (int i = 0; i < filterLevels.size(); ++i) {
-            const QStringView &level = filterLevels.at(i);
+            const QString &level = filterLevels.at(i);
             if (level != QLatin1Char('+') && level != topicLevels.at(i))
                 return false;
         }
