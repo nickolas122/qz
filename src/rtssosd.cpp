@@ -176,12 +176,17 @@ void RtssOsd::publish(const QString &text) {
     const QByteArray payload = text.toLatin1();
     unsigned char *entry = view + osdArrOffset + slot * osdEntrySize;
 
+    // szOSD and szOSDEx are alternatives, not a pair. Filling both makes RTSS draw
+    // the text twice, and because the payload does not end in a newline the second
+    // copy starts on the same line as the first: "Resistance: 1Gear: 7". Write the
+    // extended field when the entry is big enough and leave the legacy one empty,
+    // which is what RTSS's own sample does.
     SecureZeroMemory(entry, kOsdTextLen);
-    memcpy(entry, payload.constData(), qMin<int>(payload.size(), kOsdTextLen - 1));
-
     if (hasOsdEx) {
         SecureZeroMemory(entry + kOsdExOff, kOsdExLen);
         memcpy(entry + kOsdExOff, payload.constData(), qMin<int>(payload.size(), kOsdExLen - 1));
+    } else {
+        memcpy(entry, payload.constData(), qMin<int>(payload.size(), kOsdTextLen - 1));
     }
 
     writeDword(view, kHdrOsdFrame, readDword(view, kHdrOsdFrame) + 1);
