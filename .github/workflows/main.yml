@@ -611,8 +611,10 @@ jobs:
             lrelease src/qdomyos-zwift.pri
             if ($LASTEXITCODE -ne 0) { throw "lrelease failed: $LASTEXITCODE" }
             # protobuf's headers and import libraries are handed to qmake rather than
-            # copied into src/, so the source tree stays clean.
-            qmake "INCLUDEPATH+=$vcpkg/include" "LIBS+=-L$vcpkg/lib"
+            # copied into src/, so the source tree stays clean. VCPKG rather than a
+            # raw -L: defaults.pri has to pick the debug or release half to match the
+            # CRT, and only it knows which side of debug|release this build is on.
+            qmake "VCPKG=$vcpkg"
             if ($LASTEXITCODE -ne 0) { throw "qmake failed: $LASTEXITCODE" }
             # `debug`, not the default target: qmake writes debug and release
             # makefiles for every subproject, and left alone nmake builds src in

@@ -30,8 +30,15 @@ CONFIG += qmltypes
 #win32: CONFIG += webengine
 #unix:!android: CONFIG += webengine
 
-win32:DEFINES += _ITERATOR_DEBUG_LEVEL=0
-win32:!mingw:LIBS += -llibprotobuf -llibprotoc -labseil_dll -llibprotobuf-lite -ldbghelp -L$$PWD
+# Qt 5 only, and deliberately so - see the long note in ../defaults.pri, which
+# carries the Qt 6 half. The msvc2019 job copies vcpkg's release libraries into src/
+# and builds debug, which only links because the level is forced to match; on Qt 5
+# that is safe, because QByteArray::toStdString() is inline there.
+# The define keeps its original win32 scope, mingw included, where the macro is
+# inert - matching tst/qdomyos-zwift-tests.pro, so the two halves of the test link
+# cannot end up on opposite sides. Only the version gate is new.
+win32:lessThan(QT_MAJOR_VERSION, 6): DEFINES += _ITERATOR_DEBUG_LEVEL=0
+win32:!mingw:lessThan(QT_MAJOR_VERSION, 6): LIBS += -llibprotobuf -llibprotoc -labseil_dll -llibprotobuf-lite -ldbghelp -L$$PWD
 # BluetoothRemoveDevice(), for dropping a lapsed pairing - see windowsblebond.cpp.
 win32:LIBS += -lbthprops
 

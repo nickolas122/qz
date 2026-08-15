@@ -10,12 +10,15 @@ CONFIG -= app_bundle
 CONFIG += thread
 CONFIG += androidextras
 
-# The library these tests link is built with _ITERATOR_DEBUG_LEVEL=0
-# (src/qdomyos-zwift.pri), and MSVC refuses to link objects that disagree about
-# it - a debug build defaults to 2, so gtest-all.obj and every object in
-# qdomyos-zwift.lib come out on opposite sides. Harmless under mingw, where the
-# macro means nothing.
-win32:DEFINES += _ITERATOR_DEBUG_LEVEL=0
+# The library these tests link forces _ITERATOR_DEBUG_LEVEL=0 on Qt 5
+# (src/qdomyos-zwift.pri), and MSVC refuses to link objects that disagree about it -
+# a debug build defaults to 2, so gtest-all.obj and every object in
+# qdomyos-zwift.lib would come out on opposite sides. Harmless under mingw, where
+# the macro means nothing.
+#
+# Qt 6 does not force it, for the reason spelled out in ../defaults.pri, so this
+# must not either: the two halves of the link have to keep agreeing.
+win32:lessThan(QT_MAJOR_VERSION, 6): DEFINES += _ITERATOR_DEBUG_LEVEL=0
 
 SOURCES += \
         Devices/bluetoothdevicetestdata.cpp \
@@ -64,10 +67,11 @@ else:unix: LIBS += -L$$OUT_PWD/../src/ -lqdomyos-zwift
 # the tests is linux-x86-build, where neither applies.
 qtHaveModule(httpserver): QT += httpserver
 win32:LIBS += -lbthprops
-# Under msvc the library also carries zwift_messages.pb.obj and trainprogram's
-# use of it, so the test binary needs the same protobuf set src/qdomyos-zwift.pri
-# links. The -L for it comes from the build's vcpkg path.
-win32:!mingw:LIBS += -llibprotobuf -llibprotoc -labseil_dll -llibprotobuf-lite -ldbghelp
+# Under msvc the library also carries zwift_messages.pb.obj and trainprogram's use
+# of it, so the test binary needs the same protobuf set the app links. On Qt 6 that
+# set comes from ../defaults.pri, which both projects include precisely so this list
+# cannot drift from the app's again. The -L comes from the build's vcpkg path.
+win32:!mingw:lessThan(QT_MAJOR_VERSION, 6): LIBS += -llibprotobuf -llibprotoc -labseil_dll -llibprotobuf-lite -ldbghelp
 
 INCLUDEPATH += $$PWD/../src $$PWD/../src/devices $$PWD/../src/fit-sdk
 DEPENDPATH += $$PWD/../src $$PWD/../src/devices
