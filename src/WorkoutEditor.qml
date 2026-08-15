@@ -1,7 +1,7 @@
 import QtQuick 2.12
 import QtQuick.Controls 2.5
 import Qt.labs.settings 1.0
-import QtWebView
+import QtWebView 1.1
 
 Item {
     id: root

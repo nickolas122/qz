@@ -741,8 +741,37 @@ TRANSLATIONS += \
 
 RESOURCES += \
    icons.qrc \
-	qml.qrc \
 	translations.qrc
+
+# The .qml sources are written for Qt 5, because that is what Android, iOS and
+# every other shipping target build with. Qt 5.15 rejects a library import that
+# carries no version, and Qt 6 does not offer the versions Qt 5 asks for -
+# QtMultimedia 5.15, QtCharts 2.2 and QtQuick.Dialogs 1.0 are gone, and
+# QtGraphicalEffects entirely so. QML has no preprocessor, so the Qt 6 variant is
+# generated: same resource paths, rewritten imports, Qt 5 untouched.
+greaterThan(QT_MAJOR_VERSION, 5) {
+    QML6_QRC = $$OUT_PWD/qml6.qrc
+    QML6_CMD = python $$shell_quote($$shell_path($$PWD/../tools/qt6-qml-imports.py)) \
+        --qrc $$shell_quote($$shell_path($$PWD/qml.qrc)) \
+        --out-dir $$shell_quote($$shell_path($$OUT_PWD/qml6)) \
+        --out-qrc $$shell_quote($$shell_path($$QML6_QRC))
+
+    # Once now, because qmake has to read the generated .qrc to work out what rcc
+    # depends on, and once per build, so editing a .qml is enough on its own.
+    # Failing loudly here beats letting qmake carry on and rcc complain about a
+    # .qrc that was never written - the usual cause is python not being on PATH.
+    !system($$QML6_CMD) {
+        error("Could not generate the Qt 6 QML resources. Is python on PATH? Command: $$QML6_CMD")
+    }
+    RESOURCES += $$QML6_QRC
+
+    qml6imports.target = qml6-imports
+    qml6imports.commands = $$QML6_CMD
+    QMAKE_EXTRA_TARGETS += qml6imports
+    PRE_TARGETDEPS += qml6-imports
+} else {
+    RESOURCES += qml.qrc
+}
 
 DISTFILES += \
     $$PWD/android/libs/android_antlib_4-16-0.aar \

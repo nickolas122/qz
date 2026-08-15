@@ -3,7 +3,7 @@ import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.0
 import Qt.labs.settings 1.0
-import QtWebView
+import QtWebView 1.1
 
 ColumnLayout {
     anchors.fill: parent
