@@ -215,15 +215,13 @@ virtual devices and `webserverinfosender.cpp`, not the device. **Keep qmake** �
 that upstream's qt6 branch builds every target with it, so the CMake migration is a separate,
 optional change and not part of this phase.
 
-**Phase 4 — Verify against the same bike.**
-Re-run the `WINDOWS-BLE-HARDENING.md` §1 list: exactly one `all services discovered!`, `2ad9`
-indication subscribed, control granted, `2ad2` streaming on cold launch and on relaunch untouched.
-Then the two Qt 6-specific questions:
-- **Remove the pairing entirely and confirm QZ still connects and writes.** This is the whole point
-  of the migration. Part 0 establishes the bike is willing, so a failure here indicts Windows or Qt,
-  not the console — and the Android build is the control case to compare against.
-- Do the `ATT_ATTRIBUTE_NOT_FOUND` warnings persist? Phase 0 predicted they would, because every Qt
-  enumeration call uses the `Cached` overload on both backends. Qt 6 does not change that by itself.
+**Phase 4 — Verify against the same bike. — DONE**
+The §1 list passes and the bike runs unpaired: one `all services discovered!`, `2ad9` indication and
+`2ad2`/`2ad3`/`2ada`/`2a19` notifications subscribed, control granted, 915 `characteristicChanged`,
+and **zero** `Acesso negado` where Win32 refused every write once the bond lapsed. The
+`ATT_ATTRIBUTE_NOT_FOUND` warnings did **not** persist — Phase 0's prediction was wrong, because the
+warnings came from the bond's own stale handle database and there is no longer a bond.
+`WINDOWS-QT6-PHASE4.md` has the measurements.
 
 ---
 
@@ -260,7 +258,10 @@ there is no Route A.
   passes — and then the backend behind it still does not build. Phase 1 §2-4.
 - ~~Does the `/* QZ rviola` WinRT patch have a Qt 6 equivalent, or is it obsolete?~~ **Obsolete
   where it matters** — the probe read it deletes exists only on the paired path. Phase 1 §7.
-- Is Android in scope after the strip?
+- Is Android in scope after the strip? Still a product question, but no longer urgent: the Qt 5
+  Android build is not broken by the Qt 6 work. Phase 4 §5.
 - ~~Does this console accept unauthenticated writes?~~ **Answered: yes.** See below.
-- Does the fork need a patched qtconnectivity on Qt 6 at all? Only the stale-cache force-read is a
-  candidate, and it is now an MSVC build if it is wanted. Deferred to Phase 4's logs.
+- ~~Does the fork need a patched qtconnectivity on Qt 6 at all?~~ **No.** The only candidate was the
+  stale-cache force-read, and unpaired operation removes the staleness it was for. This build runs
+  stock Qt 6.8.2. Phase 4 §3, §6.
+- ~~Do the `ATT_ATTRIBUTE_NOT_FOUND` warnings persist?~~ **No, they are gone.** Phase 4 §3.
