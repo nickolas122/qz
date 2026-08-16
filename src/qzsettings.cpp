@@ -1290,8 +1290,9 @@ const QString QZSettings::gamepad_erg_mode = QStringLiteral("gamepad_erg_mode");
 const QString QZSettings::default_gamepad_erg_mode = QStringLiteral("y");
 const QString QZSettings::gamepad_repeat_delay = QStringLiteral("gamepad_repeat_delay");
 const QString QZSettings::gamepad_repeat_rate = QStringLiteral("gamepad_repeat_rate");
+const QString QZSettings::gears_neutral_gear = QStringLiteral("gears_neutral_gear");
 
-const uint32_t allSettingsCount = 1009;
+const uint32_t allSettingsCount = 1010;
 
 QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::cryptoKeySettingsProfiles, QZSettings::default_cryptoKeySettingsProfiles},
@@ -2325,6 +2326,7 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::gamepad_erg_mode, QZSettings::default_gamepad_erg_mode},
     {QZSettings::gamepad_repeat_delay, QZSettings::default_gamepad_repeat_delay},
     {QZSettings::gamepad_repeat_rate, QZSettings::default_gamepad_repeat_rate},
+    {QZSettings::gears_neutral_gear, QZSettings::default_gears_neutral_gear},
 };
 
 void QZSettings::qDebugAllSettings(bool showDefaults) {

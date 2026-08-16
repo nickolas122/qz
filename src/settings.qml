@@ -1745,6 +1745,7 @@ import AndroidStatusBar 1.0
             property string gamepad_erg_mode: "y"
             property int gamepad_repeat_delay: 400
             property int gamepad_repeat_rate: 150
+            property int gears_neutral_gear: 0
         }
 
 

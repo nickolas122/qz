@@ -3,9 +3,42 @@
 #include "qdebugfixup.h"
 #include "homeform.h"
 #include "mywhooshlink.h"
+#include <QMap>
 #include <QSettings>
 #include <QStringList>
+#include <QVector>
 #include <cmath>
+
+namespace {
+
+// "gear|value" rows, one per line, in any order. The values come back indexed from gear 1
+// and truncated at the first gap, because a table that skips a gear cannot describe a
+// cassette and everything past the gap would be unreachable anyway.
+QVector<double> parseGearsTable(const QString &table) {
+    QMap<int, double> rows;
+    const QStringList lines = table.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+    for (const QString &line : lines) {
+        const QStringList parts = line.split(QLatin1Char('|'));
+        if (parts.length() < 2) {
+            continue;
+        }
+        bool gearOk = false;
+        bool valueOk = false;
+        const int gear = parts.at(0).trimmed().toInt(&gearOk);
+        const double value = parts.at(1).trimmed().toDouble(&valueOk);
+        if (gearOk && valueOk && gear >= 1) {
+            rows.insert(gear, qBound(-100.0, value, 100.0));
+        }
+    }
+
+    QVector<double> values;
+    for (int gear = 1; rows.contains(gear); ++gear) {
+        values.append(rows.value(gear));
+    }
+    return values;
+}
+
+} // namespace
 
 bike::bike() { elapsed.setType(metric::METRIC_ELAPSED); }
 
@@ -140,6 +173,44 @@ void bike::changePower(int32_t power) {
     }
 }
 
+int bike::gearsTableSize() {
+    QSettings settings;
+    if (!settings.value(QZSettings::gears_custom_table_enabled, QZSettings::default_gears_custom_table_enabled)
+             .toBool()) {
+        return 0;
+    }
+    return parseGearsTable(
+               settings.value(QZSettings::gears_custom_table, QZSettings::default_gears_custom_table).toString())
+        .size();
+}
+
+int bike::gearsUpperBound() {
+    // The custom table brings its own gear count - one row is one gear, so a 15-row table
+    // is a 15-speed. 24 is the historic cap for everything else.
+    const int size = gearsTableSize();
+    return size > 0 ? size : 24;
+}
+
+int bike::gearsNeutral() {
+    QSettings settings;
+    const int neutral =
+        settings.value(QZSettings::gears_neutral_gear, QZSettings::default_gears_neutral_gear).toInt();
+    return (neutral >= 1 && neutral <= gearsTableSize()) ? neutral : 0;
+}
+
+bool bike::gearsAbsoluteMode() { return gearsNeutral() != 0; }
+
+double bike::gearsNeutralResistance() {
+    const int neutral = gearsNeutral();
+    if (neutral == 0) {
+        return 0.0;
+    }
+    QSettings settings;
+    const QVector<double> values = parseGearsTable(
+        settings.value(QZSettings::gears_custom_table, QZSettings::default_gears_custom_table).toString());
+    return values.at(neutral - 1);
+}
+
 double bike::gears() {
     QSettings settings;
     bool gears_zwift_ratio = settings.value(QZSettings::gears_zwift_ratio, QZSettings::default_gears_zwift_ratio).toBool();
@@ -148,13 +219,13 @@ double bike::gears() {
     if(gears_zwift_ratio || gears_custom_table_enabled) {
         if(m_gears < 1)
             return 1.0;
-        else if(m_gears > 24)
-            return 24.0;
+        else if(m_gears > gearsUpperBound())
+            return gearsUpperBound();
     }
     return m_gears + gears_offset;
 }
 
-double bike::gearsModifier() {
+double bike::currentGearForModifier() {
     QSettings settings;
     const bool gears_custom_table_enabled =
         settings.value(QZSettings::gears_custom_table_enabled, QZSettings::default_gears_custom_table_enabled).toBool();
@@ -163,10 +234,22 @@ double bike::gearsModifier() {
     if (gears_custom_table_enabled && zwift_gear_ui_aligned && VirtualBike()) {
         const double zwiftGear = VirtualBike()->currentGear();
         if (zwiftGear > 0) {
-            return gearsModifier(zwiftGear);
+            return zwiftGear;
         }
     }
-    return gearsModifier(m_gears);
+    return m_gears;
+}
+
+double bike::gearsModifier() { return gearsModifier(currentGearForModifier()); }
+
+double bike::gearsIndexOffset() {
+    // Grade is measured in gears, not in resistance levels, so the paths that steer the
+    // slope want the distance from the neutral gear counted in shifts.
+    const int neutral = gearsNeutral();
+    if (neutral == 0) {
+        return gearsModifier();
+    }
+    return qBound(1, qRound(currentGearForModifier()), gearsUpperBound()) - neutral;
 }
 
 double bike::gearsModifier(double requestedGear) {
@@ -179,30 +262,23 @@ double bike::gearsModifier(double requestedGear) {
         return requestedGear + settings.value(QZSettings::gears_offset, QZSettings::default_gears_offset).toDouble();
     }
 
-    int gear = qRound(requestedGear);
-    if (gear < 1) {
-        gear = 1;
-    } else if (gear > 24) {
-        gear = 24;
+    const QVector<double> values = parseGearsTable(
+        settings.value(QZSettings::gears_custom_table, QZSettings::default_gears_custom_table).toString());
+    const int gear = qBound(1, qRound(requestedGear), values.isEmpty() ? 24 : values.size());
+    if (gear > values.size()) {
+        // Unusable table: fall back to the raw gear, as before.
+        return gear;
     }
 
-    const QString table = settings.value(QZSettings::gears_custom_table, QZSettings::default_gears_custom_table).toString();
-    const QStringList rows = table.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
-    for (const QString &row : rows) {
-        const QStringList parts = row.split(QLatin1Char('|'));
-        if (parts.length() < 2) {
-            continue;
-        }
-        bool gearOk = false;
-        bool valueOk = false;
-        const int rowGear = parts.at(0).trimmed().toInt(&gearOk);
-        const double value = parts.at(1).trimmed().toDouble(&valueOk);
-        if (gearOk && valueOk && rowGear == gear) {
-            return qBound(-100.0, value, 100.0);
-        }
+    const int neutral = gearsNeutral();
+    if (neutral == 0) {
+        return values.at(gear - 1);
     }
 
-    return gear;
+    // With a neutral gear the rows are resistance levels rather than offsets, so what the
+    // rest of QZ wants - an amount to add to whatever the app asked for - is the distance
+    // from the neutral gear. That also makes the neutral gear ride exactly the app's demand.
+    return values.at(gear - 1) - values.at(neutral - 1);
 }
 
 void bike::setGears(double gears) {
@@ -227,15 +303,16 @@ void bike::setGears(double gears) {
     //   goes to 0.5, should be clamped to 1 to allow the system to reach valid state)
     // This prevents the system from getting stuck below minGears due to fractional gains
     // while preserving normal boundary rejection behavior for users at valid gear positions
-    if((gears_zwift_ratio || gears_custom_table_enabled) && (gears > 24 || gears < 1)) {
-        if(gears > 24) {
-            if(m_gears >= 24) {
-                qDebug() << "new gear value ignored - already at maximum: 24";
+    const int gearsMax = gearsUpperBound();
+    if((gears_zwift_ratio || gears_custom_table_enabled) && (gears > gearsMax || gears < 1)) {
+        if(gears > gearsMax) {
+            if(m_gears >= gearsMax) {
+                qDebug() << "new gear value ignored - already at maximum:" << gearsMax;
                 emit gearFailedUp();
                 return;
             } else {
-                qDebug() << "gear value clamped to maximum: 24";
-                gears = 24;
+                qDebug() << "gear value clamped to maximum:" << gearsMax;
+                gears = gearsMax;
                 emit gearFailedUp();
             }
         } else {

@@ -735,7 +735,25 @@ void ftmsbike::update() {
             double gearMultiplier = 5;
             if(REEBOK)
                 gearMultiplier = 1;
-            resistance_t rR = requestResistance + (gearsModifier() * gearMultiplier);
+            double base = requestResistance;
+            double gearContribution = gearsModifier() * gearMultiplier;
+            if (gearsAbsoluteMode()) {
+                if (requestResistance != -1) {
+                    // bike::changeResistance() has already folded the gear into
+                    // requestResistance, and setGears() runs it again on every shift, so
+                    // adding it a second time here moved the bike twice per shift.
+                    gearContribution = 0;
+                } else {
+                    // Nothing is asking for a resistance - no app, or a workout that only
+                    // sets power - so the gears are the only thing riding the bike, and the
+                    // neutral gear is what a flat road feels like. The table already speaks
+                    // in resistance levels, so it must not be scaled on top: five levels a
+                    // shift is most of a 32 level bike gone in six gears.
+                    base = gearsNeutralResistance();
+                    gearContribution = gearsModifier();
+                }
+            }
+            resistance_t rR = base + gearContribution;
 
             if (rR != currentResistance().value() || lastGearValue != gears()) {
                 bool ergModeNotSupported = (requestPower > 0 && !ergModeSupported);
@@ -787,12 +805,12 @@ void ftmsbike::update() {
         if(!virtualBike || !virtualBike->ftmsDeviceConnected()) {
             if ((requestInclination != -100 || (lastGearValue != gears() && requestInclination != -100))) {
                 emit debug(QStringLiteral("writing inclination ") + QString::number(requestInclination));
-                forceInclination(requestInclination + gearsModifier()); // since this bike doesn't have the concept of resistance,
+                forceInclination(requestInclination + gearsIndexOffset()); // since this bike doesn't have the concept of resistance,
                                                                 // i'm using the gears in the inclination
                 requestInclination = -100;
             } else if(lastGearValue != gears() && lastRawRequestedInclinationValue != -100) {
                 // in order to send the new gear value ASAP
-                forceInclination(lastRawRequestedInclinationValue + gearsModifier());   // since this bike doesn't have the concept of resistance,
+                forceInclination(lastRawRequestedInclinationValue + gearsIndexOffset());   // since this bike doesn't have the concept of resistance,
                                                                 // i'm using the gears in the inclination
             }
         }
@@ -1862,7 +1880,7 @@ void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteris
         // Apply the same gears modification as in ftmsCharacteristicChanged
         double gears_modified_inclination = Inclination.value();
         if (gears() != 0) {
-            gears_modified_inclination += (gearsModifier() * GEARS_SLOPE_MULTIPLIER / 100.0);
+            gears_modified_inclination += (gearsIndexOffset() * GEARS_SLOPE_MULTIPLIER / 100.0);
         }
         _inclinationResistanceTable.collectData(gears_modified_inclination, Resistance.value(), m_watt.value());
     }
@@ -2224,7 +2242,9 @@ void ftmsbike::ftmsCharacteristicChanged(const QLowEnergyCharacteristic &charact
             int16_t slope = (((uint8_t)b.at(3)) + (b.at(4) << 8));
 
             if (gears() != 0) {
-                slope += (gearsModifier() * GEARS_SLOPE_MULTIPLIER);
+                // Counted from the neutral gear: the app's grade is what the neutral gear
+                // rides, and every shift away from it is worth half a percent.
+                slope += (gearsIndexOffset() * GEARS_SLOPE_MULTIPLIER);
             }
 
             if(min_inclination > (((double)slope) / 100.0)) {
@@ -2760,7 +2780,7 @@ double ftmsbike::maxGears() {
     bool gears_custom_table_enabled = settings.value(QZSettings::gears_custom_table_enabled, QZSettings::default_gears_custom_table_enabled).toBool();
 
     if(gears_custom_table_enabled) {
-        return 24;
+        return gearsUpperBound();
     } else if((zwiftPlayService != nullptr) && gears_zwift_ratio) {
         wheelCircumference::GearTable g;
         return g.maxGears;

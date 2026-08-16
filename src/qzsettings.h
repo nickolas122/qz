@@ -3373,6 +3373,16 @@ class QZSettings {
     static constexpr int default_gamepad_repeat_rate = 150;
 
     /**
+     *@brief gears_neutral_gear The gear that rides exactly what the training app asked for,
+     *neither harder nor easier - the flat-road gear. Setting it to anything but 0 also
+     *changes what gears_custom_table means: the rows stop being offsets added to the gear
+     *and become the resistance level each gear should reach on its own, with the row count
+     *deciding how many gears the bike has. 0 keeps the historic offset behaviour.
+     */
+    static const QString gears_neutral_gear;
+    static constexpr int default_gears_neutral_gear = 0;
+
+    /**
      * @brief Write the QSettings values using the constants from this namespace.
      * @param showDefaults Optionally indicates if the default should be shown with the key.
      */

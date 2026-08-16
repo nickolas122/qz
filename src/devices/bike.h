@@ -46,7 +46,21 @@ class bike : public bluetoothdevice {
     double gears();
     double gearsModifier();
     double gearsModifier(double gear);
+    // Gears counted from the neutral gear, for the paths that steer grade rather than
+    // resistance. Identical to gearsModifier() when there is no neutral gear.
+    double gearsIndexOffset();
     double gearsZwiftRatio();
+    // Number of gears the custom table defines - one row is one gear - or 0 when the table
+    // is disabled or unusable.
+    int gearsTableSize();
+    // Highest selectable gear in the modes that have a fixed number of them.
+    int gearsUpperBound();
+    // The neutral gear, or 0 when there isn't one. A neutral gear turns the custom table's
+    // rows from offsets into the resistance level each gear should reach.
+    int gearsNeutral();
+    bool gearsAbsoluteMode();
+    // Resistance the neutral gear should reach when nothing else is asking for one.
+    double gearsNeutralResistance();
     void setSpeedLimit(double speed) { m_speedLimit = speed; }
     double speedLimit() { return m_speedLimit; }
     virtual bool ifitCompatible() {return false;}
@@ -98,6 +112,10 @@ class bike : public bluetoothdevice {
     void gearFailedDown(); // Signal when gear down hits min
 
   protected:
+    // The gear the modifier should be read from: normally the one QZ holds, but the Zwift
+    // UI can be the authority instead when the user asked for the two to stay aligned.
+    double currentGearForModifier();
+
     metric RequestedResistance;
     metric RequestedPelotonResistance;
     metric RequestedCadence;
