@@ -4663,12 +4663,6 @@ void homeform::deviceConnected(QBluetoothDeviceInfo b) {
                                .toDouble());
         }
 
-    } else if (bluetoothManager->device()->deviceType() == BIKE &&
-               ((bike *)bluetoothManager->device())->gearsAbsoluteMode()) {
-        // Gear 0 is a resting position only while gears are offsets. With a neutral gear
-        // the table is absolute, so 0 lands at the bottom of the cassette and the rider
-        // would have to shift up several times before the bike felt like a flat road.
-        ((bike *)bluetoothManager->device())->setGears(((bike *)bluetoothManager->device())->gearsNeutral());
     }
 }
 
