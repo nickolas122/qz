@@ -245,7 +245,7 @@ jobs:
             # fails under mingw and Win32 is selected by accident. Asking for it
             # explicitly means a future toolchain that happens to pass the test
             # cannot silently switch backends and discard the patches applied above.
-            # See WINDOWS-WINRT-PHASE0.md.
+            # See docs/fork/WINDOWS-WINRT-PHASE0.md.
             qmake -r -- -feature-native-win32-bluetooth
             make -j8
             cd ../..
@@ -503,7 +503,7 @@ jobs:
   # Qt ships a working WinRT Bluetooth backend only for MSVC: QT_FEATURE_winrt_bt
   # is 1 in the msvc2022 package and -1 in every mingw one (6.8.2, 6.9.3, 6.10.3
   # and llvm-mingw alike), where you get qlowenergycontroller_dummy.cpp instead.
-  # WINDOWS-QT6-PHASE1.md has the measurements and why building it under mingw is
+  # docs/fork/WINDOWS-QT6-PHASE1.md has the measurements and why building it under mingw is
   # a fork of Qt rather than a build of it.
   #
   # window-build stays on mingw + Qt 5.15.2 until this one has been proven against

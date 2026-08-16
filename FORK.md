@@ -115,6 +115,11 @@ shifting.
   longer clobbers the static library, qthttpserver builds without a native perl,
   `aqtinstall` is pinned, and SmtpClient is pinned to a commit that exists.
 
+## Why, in detail
+
+The working notes behind these changes — measurements, dead ends, and the things that
+turned out not to be the cause — are in [docs/fork/](docs/fork/).
+
 ## Versioning
 
 Releases are tagged `v<upstream base>-qz.<n>` — for example `v2.21.6-qz.1`, meaning the
