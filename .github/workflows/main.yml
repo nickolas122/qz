@@ -625,6 +625,13 @@ jobs:
 
       - name: Run the tests
         run: |
+            # A debug build links vcpkg's debug protobuf and abseil, and those DLLs
+            # live in debug/bin, which nothing has put on PATH. Without this the exe
+            # dies before main() with 0xC0000135 STATUS_DLL_NOT_FOUND, surfacing as
+            # "tests failed: -1073741515" - a loader failure wearing a test failure's
+            # clothes. Qt's own bin is already on PATH from install-qt-action.
+            $vcpkg = "${{ runner.workspace }}\vcpkg\installed\x64-windows"
+            $env:PATH = "$vcpkg\debug\bin;$vcpkg\bin;" + $env:PATH
             tst\debug\qdomyos-zwift-tests.exe
             if ($LASTEXITCODE -ne 0) { throw "tests failed: $LASTEXITCODE" }
 
