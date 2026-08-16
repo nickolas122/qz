@@ -23,34 +23,8 @@
 > - **[IssueHunt](https://issuehunt.io/r/cagnulein)**
 > - Buy the app: **[Google Play](https://play.google.com/store/apps/details?id=org.cagnulen.qdomyoszwift)** · **[App Store](https://apps.apple.com/app/id1543684531)**
 
-Zwift bridge for Treadmills and Bike!
-
-## QZ is not affiliated with or endorsed by any subscription service or maker of exercise equipment.
-
-[<img src="docs/img/google_play.png">](https://play.google.com/store/apps/details?id=org.cagnulen.qdomyoszwift&fbclid=IwAR3CVoYb0scvGf7gb0Y20VFh5Na5fDWwe7VACk-2c45Tm0x5s8sXpIGhGyw)
-[<img src="docs/img/app_store.png">](https://apps.apple.com/app/id1543684531?fbclid=IwAR10H6y3mEgwkTlGJON3e8voYOh2wt3kLFOpFzoIXaYZ_N0y0pDvKxHMUaM)
-<a href="https://www.buymeacoffee.com/cagnulein" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
-<a href="https://hosted.weblate.org/engage/qdomyos-zwift/" target="_blank"><img src="https://hosted.weblate.org/widget/qdomyos-zwift/svg-badge.svg" alt="Translation status" /></a>
-
-<table>
-<tr>
-  <td>
-<img src="icons/AppScreen/iOS%20Phones%20-%206.5_/screenshot1.jpeg" style="height: 400px !important; box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" >
-    </td>
-  <td>
-<img src="icons/AppScreen/iOS%20Phones%20-%206.5_/screenshot2.jpeg" style="height: 400px !important; box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" >
-    </td>
-  <td>
-<img src="icons/AppScreen/iOS%20Phones%20-%206.5_/screenshot3.jpeg" style="height: 400px !important; box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" >
-    </td>
-  <td>
-<img src="icons/AppScreen/iOS%20Phones%20-%206.5_/screenshot4.jpeg" style="height: 400px !important; box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" >
-    </td>
-  <td>
-<img src="icons/AppScreen/iOS%20Phones%20-%206.5_/screenshot5.jpeg" style="height: 400px !important; box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" >
-    </td>
-  </tr>
-</table>
+QZ is a bridge between an exercise machine and the training app you ride with. It is not
+affiliated with or endorsed by any subscription service or maker of exercise equipment.
 
 ### Features
 
