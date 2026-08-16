@@ -6047,7 +6047,17 @@ void homeform::updateGearsValue() {
         gear = ((bike *)bluetoothManager->device())->VirtualBike()->currentGear();
     if (gears_custom_table_enabled) {
         this->gears->setValue(QString::number(gear));
-        this->gears->setSecondLine(QStringLiteral("offset ") + QString::number(((bike *)bluetoothManager->device())->gearsModifier(), 'f', 1));
+        if (((bike *)bluetoothManager->device())->gearsAbsoluteMode()) {
+            // The table holds resistance levels here, so the useful second line is the
+            // level this gear is asking for, not its distance from neutral.
+            this->gears->setSecondLine(
+                QStringLiteral("res ") +
+                QString::number(((bike *)bluetoothManager->device())->gearsNeutralResistance() +
+                                    ((bike *)bluetoothManager->device())->gearsModifier(),
+                                'f', 0));
+        } else {
+            this->gears->setSecondLine(QStringLiteral("offset ") + QString::number(((bike *)bluetoothManager->device())->gearsModifier(), 'f', 1));
+        }
     } else if (settings.value(QZSettings::gears_gain, QZSettings::default_gears_gain).toDouble() == 1.0 || gears_zwift_ratio || maxGear < maxGearDefault) {
         this->gears->setValue(QString::number(gear));
         this->gears->setSecondLine(wheelCircumference::gearsInfo(gear));
