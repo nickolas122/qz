@@ -876,7 +876,17 @@ void ftmsbike::update() {
             writeCharacteristicZwiftPlay(gearApply, sizeof(gearApply), "gearApply", false, true);
         }
 
-        lastGearValue = gears();
+        // A gear only counts as delivered once there was somewhere to deliver it to. The
+        // FTMS service is still being discovered for a second or two after connecting, so a
+        // write issued in that window is dropped - and committing lastGearValue anyway meant
+        // nothing ever retried: with the slew limiter off there is no second attempt, and the
+        // block above only re-enters when the gear changes or an app asks for a resistance.
+        // The bike sat at its startup resistance until the rider shifted away and back.
+        const bool resistanceChannelReady =
+            MOK_FITNESS ? (gattMokFitnessService != nullptr) : (gattFTMSService != nullptr);
+        if (resistanceChannelReady) {
+            lastGearValue = gears();
+        }
 
         // Power request routing logic:
         // 1. No virtualBike: route directly to bike
