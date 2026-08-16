@@ -8,6 +8,11 @@
 #ifdef Q_OS_LINUX
 #ifndef Q_OS_ANDROID
 #include <linux/input.h>
+// ::open and its flags, and ::close. These used to arrive transitively through
+// bluetooth.h; nothing guarantees that, and once it stopped, linux-x86-build failed
+// with "'::open' has not been declared". Include what this file actually uses.
+#include <fcntl.h>
+#include <unistd.h>
 #include "bluetooth.h"
 
 class EventHandler : public QObject
