@@ -4,6 +4,15 @@ This is a fork of [cagnulein/qdomyos-zwift](https://github.com/cagnulein/qdomyos
 (QZ), kept for one rider, one trainer and one PC. Everything below exists because it was
 needed for that setup, not because it is generally better.
 
+QZ itself is the work of **[Roberto Viola (cagnulein)](https://github.com/cagnulein)** and
+its contributors — the protocol work, the device support, the training-app integrations,
+all of it. This page lists only the delta. If QZ is worth something to you, support him:
+[Patreon](https://www.patreon.com/cagnulein) ·
+[Buy Me a Coffee](https://www.buymeacoffee.com/cagnulein) ·
+[Google Play](https://play.google.com/store/apps/details?id=org.cagnulen.qdomyoszwift) ·
+[App Store](https://apps.apple.com/app/id1543684531). This fork takes no money and asks
+for none.
+
 Upstream is the project. If you are looking for QZ, go there first.
 
 ## Read this before downloading

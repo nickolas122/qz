@@ -3157,15 +3157,24 @@ jobs:
         run: |
           cd dist
           ls -l
-          mv windows-qt6-binary.zip "qz-${GITHUB_REF_NAME}-windows-qt6.zip"
-          mv android-debug.apk "qz-${GITHUB_REF_NAME}-android.apk"
+          # Without the leading v, so the names match the ones the release notes quote.
+          ver="${GITHUB_REF_NAME#v}"
+          mv windows-qt6-binary.zip "qz-${ver}-windows-qt6.zip"
+          mv android-debug.apk "qz-${ver}-android.apk"
           ls -l
 
       - name: Write the release notes
         run: |
+          # Quoted heredoc on purpose: the body contains backticks, which an unquoted
+          # one would run as commands. Placeholders are substituted below instead.
           cat > release-notes.md <<'NOTES'
-          A build of this fork of [qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift).
-          What it changes relative to upstream is listed in [FORK.md](../blob/main/FORK.md).
+          A build of a fork of [qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift),
+          which is the work of [Roberto Viola (cagnulein)](https://github.com/cagnulein) and
+          its contributors. Support him: [Patreon](https://www.patreon.com/cagnulein) -
+          [Buy Me a Coffee](https://www.buymeacoffee.com/cagnulein). This fork asks for nothing.
+
+          What it changes relative to upstream - including the device support it drops -
+          is listed in [FORK.md](FORKMDURL).
 
           ## Downloads
 
@@ -3187,6 +3196,7 @@ jobs:
           ```
           NOTES
           sed -i "s/VERSION/${GITHUB_REF_NAME#v}/g" release-notes.md
+          sed -i "s#FORKMDURL#${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/main/FORK.md#" release-notes.md
           cat release-notes.md
 
       - name: Publish the release

@@ -1,11 +1,27 @@
 # qdomyos-zwift
 
-> **This is a fork.** It is a personal build of
-> [cagnulein/qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift), narrowed to one
-> trainer and one PC: **18 of upstream's 132 device drivers remain**, and only Windows and
-> Android are built. If your machine is not one of the few still supported, use upstream.
+> ### This is a fork. The real project is [cagnulein/qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift).
+>
+> QZ is written and maintained by **[Roberto Viola (cagnulein)](https://github.com/cagnulein)**
+> and its contributors. Every feature this repository is useful for is his work; what is
+> here is a handful of changes on top, made for one rider with one trainer.
+>
+> This build is **narrowed on purpose**: 18 of upstream's 132 device drivers remain, and
+> only Windows and Android are built. If your machine is not one of the few still
+> supported — or you just want QZ — **[go to upstream](https://github.com/cagnulein/qdomyos-zwift)**
+> or [qzfitness.com](https://www.qzfitness.com/).
 >
 > **[What this fork changes, and why →](FORK.md)** · [Releases](../../releases)
+>
+> #### Support the author, not this fork
+>
+> This fork takes no money and asks for none. If QZ is worth something to you, it is his
+> work to support:
+>
+> - **[Patreon](https://www.patreon.com/cagnulein)**
+> - **[Buy Me a Coffee](https://www.buymeacoffee.com/cagnulein)**
+> - **[IssueHunt](https://issuehunt.io/r/cagnulein)**
+> - Buy the app: **[Google Play](https://play.google.com/store/apps/details?id=org.cagnulen.qdomyoszwift)** · **[App Store](https://apps.apple.com/app/id1543684531)**
 
 Zwift bridge for Treadmills and Bike!
 
