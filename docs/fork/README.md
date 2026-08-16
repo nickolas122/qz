@@ -7,6 +7,12 @@ wrong — not user documentation. Upstream's docs are in the folder above.
 They are kept because the expensive part of this work was the evidence, and a note that
 says "this was tested and it is not the cause" is worth more later than the fix itself.
 
+## Current work
+
+| | |
+| --- | --- |
+| [STRIP-SPEC.md](STRIP-SPEC.md) | **Draft.** Reducing QZ to a trainer bridge for Rouvy, Zwift, Kinomap and MyWhoosh: what is deleted, in what order, and the platform constraints that decide the shape. |
+
 ## Windows Bluetooth: the move to WinRT
 
 | | |
