@@ -12,6 +12,7 @@
 #include <QTranslator>
 #include <QLocale>
 #include "logwriter.h"
+#include "qzforkversion.h"
 #include "bluetooth.h"
 #include "devices/dircon/dirconmanager.h"
 #ifdef Q_OS_WIN
@@ -721,6 +722,7 @@ int main(int argc, char *argv[]) {
     // goes nowhere, so this has to sit here. The Qt runtime version earns its place
     // next to it because the exe-only CI artifact drops into an existing install: if
     // these DLLs ever drift from the build, the log is the only way to see it.
+    qDebug() << QStringLiteral("QZ fork release") << QStringLiteral(QZ_FORK_VERSION);
     qDebug() << QStringLiteral("QZ build") << QStringLiteral(QZ_GIT_SHA) << QStringLiteral("Qt")
              << qVersion() << QStringLiteral("on") << QSysInfo::prettyProductName();
     foreach (QString s, settings.allKeys()) {

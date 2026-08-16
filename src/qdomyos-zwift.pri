@@ -648,6 +648,7 @@ qdebugfixup.h \
 qfit.h \
 qmdnsengine_export.h \
 qzsettings.h \
+qzforkversion.h \
 devices/rower.h \
 screencapture.h \
 sessionline.h \

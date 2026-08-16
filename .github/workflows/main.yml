@@ -20,10 +20,16 @@ env:
 # feature branch with an open PR produces one run, not two. A manual
 # workflow_dispatch on a branch that also has a PR open is still two runs - that
 # is the dispatch, not the push, and the fix is not to dispatch by hand.
+#
+# Releases: pushing a `v*` tag builds and publishes to GitHub Releases via the
+# `release` job at the bottom. The tag must match QZ_FORK_VERSION in
+# src/qzforkversion.h - the job checks and fails the release rather than shipping
+# assets whose version string disagrees with their name.
 on:
   workflow_dispatch:
   push:
-    branches: [ master,  github-workflow-playground ]
+    branches: [ main,  github-workflow-playground ]
+    tags: [ 'v*' ]
   pull_request:
 
 # Leave this as is - but note that a superseded run reports `cancelled`, not
@@ -3107,3 +3113,89 @@ jobs:
             peloton-bike-android-trial/android-debug-peloton-bike.apk
             raspberry-pi-binary-armv6hf/qdomyos-zwift-armv6hf
             raspberry-pi-binary-aarch64/qdomyos-zwift-aarch64
+
+  # Publishes a versioned release when a `v*` tag is pushed.
+  #
+  # Deliberately separate from upstream's upload_to_release above: that one needs
+  # eleven jobs, most of them dormant on this fork, so it could never complete here.
+  # This one depends only on the two builds this fork actually ships.
+  release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [window-qt6-build, android-build]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # A release whose assets are named after a version the binaries do not report
+      # is worse than no release, so disagreement fails here rather than shipping.
+      - name: Check the tag against QZ_FORK_VERSION
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          src=$(sed -n 's/^#define QZ_FORK_VERSION "\(.*\)"$/\1/p' src/qzforkversion.h)
+          echo "tag=$tag qzforkversion.h=$src"
+          if [ "$tag" != "$src" ]; then
+            echo "::error::tag $GITHUB_REF_NAME disagrees with QZ_FORK_VERSION '$src' - bump src/qzforkversion.h in the commit you tag"
+            exit 1
+          fi
+
+      - name: Download the Windows Qt 6 build
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-qt6-binary
+          path: dist
+
+      - name: Download the Android APK
+        uses: actions/download-artifact@v4
+        with:
+          name: fdroid-android-trial
+          path: dist
+
+      - name: Name the assets after the release
+        run: |
+          cd dist
+          ls -l
+          mv windows-qt6-binary.zip "qz-${GITHUB_REF_NAME}-windows-qt6.zip"
+          mv android-debug.apk "qz-${GITHUB_REF_NAME}-android.apk"
+          ls -l
+
+      - name: Write the release notes
+        run: |
+          cat > release-notes.md <<'NOTES'
+          A build of this fork of [qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift).
+          What it changes relative to upstream is listed in [FORK.md](../blob/main/FORK.md).
+
+          ## Downloads
+
+          | Asset | For |
+          | --- | --- |
+          | `qz-VERSION-windows-qt6.zip` | Windows 10/11. Qt 6 with the WinRT Bluetooth backend. Unzip anywhere and run `qdomyos-zwift.exe`. |
+          | `qz-VERSION-android.apk` | Android. Debug-signed, so allow installation from unknown sources. |
+
+          The Windows zip is self-contained - it carries its own Qt DLLs and needs no
+          separate Qt install.
+
+          ## Verifying what you are running
+
+          QZ writes its identity to the top of every log:
+
+          ```
+          QZ fork release VERSION
+          QZ build <sha> Qt <version> on <os>
+          ```
+          NOTES
+          sed -i "s/VERSION/${GITHUB_REF_NAME#v}/g" release-notes.md
+          cat release-notes.md
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "QZ $GITHUB_REF_NAME" \
+            --notes-file release-notes.md \
+            dist/qz-*-windows-qt6.zip \
+            dist/qz-*-android.apk

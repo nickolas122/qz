@@ -1,4 +1,12 @@
 # qdomyos-zwift
+
+> **This is a fork.** It is a personal build of
+> [cagnulein/qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift), narrowed to one
+> trainer and one PC: **18 of upstream's 132 device drivers remain**, and only Windows and
+> Android are built. If your machine is not one of the few still supported, use upstream.
+>
+> **[What this fork changes, and why →](FORK.md)** · [Releases](../../releases)
+
 Zwift bridge for Treadmills and Bike!
 
 ## QZ is not affiliated with or endorsed by any subscription service or maker of exercise equipment.
