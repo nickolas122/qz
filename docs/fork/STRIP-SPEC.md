@@ -81,14 +81,14 @@ natively and Qt simply does not wrap. That is new construction of roughly the sc
 WinRT central-role work, not preservation of something existing, and it does not belong in
 a deletion project.
 
-Recorded as a candidate follow-on, gated on the transport tests in §11. If Rouvy, Zwift
+Recorded as a candidate follow-on, gated on the transport tests in §12. If Rouvy, Zwift
 and Kinomap all reach QZ over DIRCON from Windows, it is a failsafe for a path that never
 fails and should never be built.
 
 ### 3.2.2 Kinomap is Android-only, and best-effort
 
 Established 2026-08-16: Kinomap has no Windows client at all, so it places **no
-requirement on the Windows build** and does not affect §11's Windows question.
+requirement on the Windows build** and does not affect §12's Windows question.
 
 The intended topology is Kinomap and QZ on the same Android device. That is unlikely to
 work: Android's Bluetooth adapter does not receive its own advertisements, so a BLE
@@ -316,30 +316,141 @@ The surviving settings should be reorganised around the four things a rider chan
 
 ## 9. UI specification
 
-*Sketch only; this section is the least settled and should be the focus of the next
-session.*
+Decisions taken 2026-08-16: **gear-centric ride screen**, **the same UI on every
+platform**, **one settings page in four groups**, **built as a parallel QML tree behind a
+flag**.
 
-The mid-ride requirement drives it: while riding, the training app owns the screen. QZ's
-UI is therefore consulted **before** a ride and glanced at **during** one, and those are
-different needs.
+### 9.1 What the old UI was, measured
 
-**Screen 1 — Ride.** Connection state (trainer / training app), current gear, resistance,
-power, cadence, HR, ERG on/off. Large enough to read from the bars. This is roughly what
-the tile system delivered, minus 85 tiles nobody uses.
+Two numbers set the scope. The navigation drawer has 15 entries:
 
-**Screen 2 — Setup.** Trainer pairing, virtual-device mode (BLE or DIRCON), discovery
-status, the gear table.
+`Settings · Workouts History · Swag Bag · Charts · Open GPX · Open Train Program ·
+Workout Editor · What's On Zwift · Save GPX · Save FIT · Wizard · Help · Community ·
+Credits · Quit`
 
-One requirement falls out of §3.2.1: on Windows the setup screen **must not present the
-BLE virtual device as a working option**. The code is compiled in but cannot advertise,
-and an enabled-looking toggle that silently does nothing is exactly the kind of UX this
-project is trying to remove. Show it as unavailable on this platform, with the reason.
+Everything from *Workouts History* through *Save FIT* — 9 of 15 — is deleted by §7. What
+remains is **Settings, Help/Credits, Quit**, which does not justify a drawer.
 
-**Screen 3 — Settings.** One page, grouped as §8.
+`homeform.h` exposes 91 `Q_PROPERTY` and 55 `Q_INVOKABLE`. Only about a dozen are bridge
+data (`device`, `bluetoothDevices`, `currentSpeed`, `metrics`, `autoResistance`, `signal`,
+`info`, `lap`, `start`/`stopRequested`). The rest are tile-rendering plumbing on
+`DataObject`, integration login state, and workout/chart point arrays — all deleted.
 
-Open: whether the ride screen is worth building at all on Windows, given the RTSS overlay
-already puts gear/ERG/resistance on top of the fullscreen training app, and QZ is behind
-it. On Android — where the tablet may be visible next to the bars — it clearly is.
+A third win is free: with one driver kept, the **"Select Your Gym Device" picker becomes
+pointless**. QZ connects to the only trainer it supports. The screen and its 10-second
+refresh loop go away.
+
+### 9.2 The QML/C++ contract
+
+QML must not talk to `homeform`. A single new object carries the ride:
+
+`src/ui/ridestate.{h,cpp}` — roughly 12 properties and 4 invokables, wrapping the bridge
+core and nothing else:
+
+| Kind | Members |
+| --- | --- |
+| Connection | `trainerConnected`, `trainerName`, `appConnected`, `appName`, `transport` (BLE/DIRCON) |
+| Ride | `gear`, `resistance`, `power`, `cadence`, `speed`, `heartRate`, `ergMode` |
+| Actions | `gearUp()`, `gearDown()`, `setGear(int)`, `toggleErg()` |
+
+Keeping this surface small is the point of the exercise. **If it grows past ~20 members,
+something UI-shaped has leaked back into the bridge**, and that is the signal to stop and
+reconsider.
+
+### 9.3 Navigation
+
+No drawer. Three destinations in a `TabBar`, **Ride first and default**:
+`Ride · Setup · Settings`.
+
+### 9.4 Screen 1 — Ride (gear-centric)
+
+The gear dominates, because shifting is the only thing the rider does *through QZ*
+mid-ride. Everything else is confirmation.
+
+```
+┌────────────────────────────────────────┐
+│ ● Trainer      ● Zwift (DIRCON)        │
+├────────────────────────────────────────┤
+│                                        │
+│              ┌─────────┐               │
+│    [  −  ]   │    7    │   [  +  ]     │
+│              └─────────┘               │
+│                 res 14                 │
+│                                        │
+│   184 W · 87 rpm · 31.2 km/h · 142 ♥   │
+│                                        │
+│              ERG  [ OFF ]              │
+└────────────────────────────────────────┘
+```
+
+- Gear numeral is the largest element on screen, readable from the bars at arm's length.
+- `res 14` beneath it is the **absolute** resistance the gear resolves to, matching the
+  neutral-gear table semantics already built into `bike.cpp`.
+- `−`/`+` are sized for a thumb on a tablet, not a mouse pointer.
+- Metrics are one secondary line. They are confirmation, not a dashboard.
+- **ERG must not be reachable by accident.** It changes how the bike behaves mid-effort;
+  require a deliberate press, and consider a hold.
+- Status pills name the *transport*, because "connected" over BLE and over DIRCON fail in
+  different ways and the distinction is the first thing worth knowing when debugging.
+
+### 9.5 Screen 2 — Setup
+
+Trainer connection state, virtual-device mode, discovery status, and the gear table.
+
+From §3.2.1: on Windows the setup screen **must not present the BLE virtual device as a
+working option**. The code is compiled in but cannot advertise. Show it as unavailable on
+this platform, with the reason stated — an enabled-looking toggle that silently does
+nothing is exactly the UX failure this project exists to remove.
+
+### 9.6 Screen 3 — Settings
+
+One scrollable page, four groups, organised around what a rider changes rather than
+around vendors:
+
+**Bike** · **Gears** · **Training-app connection** · **Display**
+
+No nesting and no accordions. If a group cannot fit legibly on one page, that is evidence
+§8 did not delete enough, not a reason to add hierarchy.
+
+### 9.7 Platform behaviour
+
+One QML tree, identical on both platforms — no per-platform layouts. Windows is a
+resizable window; Android is touch. Sizing must therefore be relative, with touch targets
+dimensioned for the tablet case, which is the stricter of the two.
+
+The Windows ride screen is accepted as rarely-viewed: RTSS already overlays gear, ERG and
+resistance on the fullscreen training app. It is built anyway because a second layout
+costs more to maintain than an unused screen costs to render.
+
+### 9.8 Build mechanics
+
+Verified against `qdomyos-zwift.pri` and `tools/qt6-qml-imports.py`:
+
+- New QML lives in `src/ui/` and **must be listed in `src/qml.qrc`**. The Qt 6 variants
+  are then generated at build time into `$$OUT_PWD/qml6` with no further action.
+- The generator rewrites **imports only** — it drops versions for modules with no Qt 6
+  equivalent and maps `QtGraphicalEffects` → `Qt5Compat.GraphicalEffects`. `QtQuick`,
+  `QtQuick.Controls`, `QtQuick.Layouts` and `QtQuick.Window` are untouched because Qt 6
+  still accepts their 2.x imports.
+- It does **not** translate APIs. A Qt 6-only type or property will build on Windows and
+  fail on Android. This is the single easiest way to break the Android build, and it will
+  not be caught by the Windows compile (§3.5).
+- The resource alias must stay verbatim; the rewritten copy lives elsewhere on disk but
+  must still resolve as `qrc:/…`.
+
+### 9.9 Migration
+
+Parallel tree, flag-switched:
+
+1. Add a `ui_next` boolean setting, default **false** (§3.6 bookkeeping applies: last in
+   `settings.qml`, `allSettingsCount`, `settings-catalog.json`).
+2. `main.cpp` chooses the entry QML on that flag. Both trees ship for one release.
+3. Flip the default once the new UI has ridden with Rouvy and Zwift.
+4. Delete the old tree and the flag together, as Group F.
+
+The old UI stays working throughout, so a bad ride costs a settings toggle rather than a
+rebuild. This is why the ride screen is not built last: it needs real rides to validate,
+and those take calendar time rather than effort.
 
 ## 10. Phasing
 
@@ -356,13 +467,246 @@ net here.
 | 4 | Group D — telemetry | medium (verify RTSS first) |
 | 5 | Group E — drivers | low, once cscbike is resolved |
 | 6 | Settings consolidation | medium (§3.6 runtime failures) |
-| 7 | New UI, then delete Group F | high |
+| 7a | `RideState` object + `ui_next` flag + new tree under `src/ui/` | medium |
+| 7b | Ride on the new UI with Rouvy and Zwift; flip the default | low, but needs calendar time |
+| 7c | Delete Group F — old tree, tile system, `homeform.cpp`, the flag | high |
 | 8 | Group G, Pi build revival | medium |
 
 Phase 0 matters more than it looks: once phase 1 lands, there is no going back to
 upstream. A tagged release beforehand is the only rollback.
 
-## 11. Open questions
+## 11. Verification
+
+Constraint set 2026-08-16: **most work happens in a remote browser session** with no local
+build and no trainer. Hardware tests are therefore a scarce resource and everything that
+can run in GitHub Actions must.
+
+### 11.1 The harness that already exists
+
+An earlier draft of this spec claimed there was "no unit-test safety net". That was wrong.
+
+`tst/qdomyos-zwift-tests.pro` is a **gtest + gmock suite** built by the top-level
+`qdomyos-zwift.pro` on every non-iOS, non-Android target, linked against
+`src/qdomyos-zwift-lib.pro`. Because it links the library rather than the app, **it can
+exercise the entire bridge core without a UI and without hardware.**
+
+It runs in CI today. `linux-x86-build` was re-enabled as a tests-only job — it publishes no
+binary, sits outside every `needs:` chain, and runs
+`GTEST_OUTPUT=xml:test-results/ ./qdomyos-zwift-tests` at
+[main.yml:776](../../.github/workflows/main.yml#L776), uploading result XML on failure.
+
+Existing suites, and their fate:
+
+| Suite | Covers | Fate |
+| --- | --- | --- |
+| `TestFtmsControlPointHandshake` | FTMS 0x2AD9 control point | **Keep** — core |
+| `TestResistanceSlewLimiter` | resistance rate limiting | **Keep** — core |
+| `TestServiceSubscriptionPlan` | GATT service subscription | **Keep** — core |
+| `bluetoothdevicetestsuite` + `devicetestdataindex` | data-driven device discovery | **Prune** to kept drivers (Phase 5) |
+| `ergtabletestsuite`, `TestErgTableSelection`, `TestErgAutoMode` | ERG tables | Keep unless `ergtable` is cut |
+| `TestZwiftRideController` | Zwift Play/Click | Follows open question 6 |
+| `garminconnecttestsuite` | Garmin | **Delete** with Phase 1 |
+| `qfittestsuite`, `testtrainingloadtestsuite` | FIT writing, training load | **Delete** with Phase 2 |
+| `trainprogramtestsuite`, `zwiftworkouttestsuite` | training programs, ZWO | **Delete** with Phase 3 |
+| `testsettingstestsuite` | settings plumbing | **Keep and extend** (§11.5) |
+
+**Deleting a feature without deleting its suite breaks the build, not the tests.** Each
+phase below therefore names the suites that go with it.
+
+### 11.2 The browser-session workflow
+
+`on:` carries `pull_request:` with **no branch filter**, while `push:` is restricted to
+`main`. So:
+
+- Pushing a `strip/phase-N` branch alone triggers **nothing**.
+- Opening a **PR** from it runs the full matrix: `window-build`, `window-qt6-build`,
+  `android-build`, and `linux-x86-build` (the tests).
+
+The working pattern for every phase is therefore **branch → PR → green → merge**. No phase
+is merged on a red or un-run PR. This is the only practical review mechanism when the
+author cannot build locally.
+
+Note `window-msvc2022-build` and the two peloton-bike jobs are gated on
+`github.event_name == 'schedule'` and the cron is dropped, so they are dormant rather than
+enabled — do not wait on them.
+
+### 11.3 What CI can and cannot prove
+
+| CI can prove | Only hardware can prove |
+| --- | --- |
+| It compiles on Windows (Qt6/MSVC) and Android (Qt5) | The trainer actually connects |
+| The gtest suite passes | Resistance *feels* right |
+| Gear maths, resistance mapping, FTMS framing | The training app discovers QZ on a real LAN |
+| Settings integrity and QML lint | Shifting is responsive under load |
+| DIRCON serves a loopback client (§11.5) | Nothing regressed subjectively |
+
+The design goal of §11.5 is to move as much as possible from the right column to the left.
+
+### 11.4 Universal gates — every phase, no exceptions
+
+A phase passes only when **all** hold:
+
+1. **PR is green** on all four active jobs.
+2. **gtest suite passes** with no test deleted except those the phase explicitly names.
+3. **No new compiler warnings** introduced by the phase's own files.
+4. **`git grep` finds no dangling references** to any deleted symbol, file, QML component,
+   or setting key.
+5. **Settings integrity holds**: `allSettingsCount` matches, `settings-catalog.json`'s
+   `settingCount` matches its array, and every setting name bound in QML exists in
+   `qzsettings.h` (§11.5, check 3 — this is the one that fails at *runtime* otherwise).
+6. **The app still starts headless**: `qdomyos-zwift -no-gui` exits 0 on the Linux runner.
+
+Gate 4 matters more than it looks. QML binds settings by name with no compile-time check,
+so a deleted key surfaces as a blank or broken control on the bike, days later.
+
+### 11.5 New test infrastructure to build
+
+Ordered by value. Items 1–3 should land **before Phase 1**, because they are the
+regression net every later phase leans on.
+
+**1. Gear-table tests** *(gtest, no hardware)* — lock in the work already done and
+validated on the bike: a 15-row table with neutral gear 7 maps gears 1–15 to resistances
+7,8,9,10,11,13,14,16,17,19,21,23,26,29,32; `gearsModifier()` is 0 at neutral;
+`gearsIndexOffset()` is centred so neutral adds no slope; gear changes clamp at both ends.
+This is the highest-value test in the project — it is behaviour that was expensive to get
+right and is invisible until you are on the bike.
+
+**2. Grade→resistance test** *(gtest)* — pin the formula
+`grade% × 1.5 + bike_resistance_offset + 1 + CRR + CW`, so the flat-terrain calibration
+(offset 13) cannot silently regress.
+
+**3. Settings-integrity check** *(script, runs in CI)* — three assertions: `allSettingsCount`
+equals the declared count; catalog `settingCount` equals its array length; and **every
+setting name referenced in any `.qml` resolves to a key in `qzsettings.h`**. The third is
+new and is what makes mass deletion safe.
+
+**4. QML lint on both dialects** *(CI step)* — `qmllint` over the Qt 5 sources *and* the
+generated Qt 6 variants in `$$OUT_PWD/qml6`. This is the gate for §9.8's trap, where a Qt
+6-only API compiles on Windows and breaks Android. Without it, that class of bug reaches
+the tablet.
+
+**5. DIRCON loopback test** *(gtest)* — start the DIRCON server, connect a client over
+loopback, assert the FTMS service and characteristics are served and that a resistance
+write round-trips. **This is the single biggest hardware-test saving in the plan**: it
+converts "ride with Rouvy to check the bridge still works" into a CI check.
+
+**6. mDNS advert test** *(gtest)* — assert the advertised service type is fully qualified,
+the SRV target is a legal hostname with no `\032` escaping, announcements go to all
+interfaces, and a goodbye is sent on quit. Every one of these is a bug this fork already
+fixed once; none is currently protected against regression.
+
+**7. Headless smoke test** *(CI step)* — `-no-gui` startup on the Linux runner: clean
+start, DIRCON listening, clean exit. Cheap, and catches whole classes of deletion damage.
+
+**8. `RideState` contract test** *(gtest, Phase 7a)* — every property and invokable in §9.2
+exists and updates. Also asserts the surface has **not grown past 20 members**, mechanising
+the §9.2 tripwire.
+
+### 11.6 Per-phase passing criteria
+
+Universal gates (§11.4) apply throughout and are not repeated.
+
+**Phase 0 — versioning correction**
+*Criteria:* `FORK.md` no longer claims upstream rebasing is supported; a pre-strip release
+tag exists. *Test:* documentation only; CI green.
+*Status:* the tag half is **already satisfied** by `v2.21.6-qz.1`, cut before any deletion.
+
+**Phase 1 — leaf integrations**
+*Criteria:* no Peloton/Strava/Garmin/Intervals.icu/HomeFitnessBuddy/PowerZonePack symbol,
+file, QML page, OAuth handler, or setting remains. `garminconnecttestsuite` deleted with
+them. ~55 setting keys removed and all three counts reconciled.
+*Tests:* gtest green minus the named suite; settings-integrity check; headless smoke.
+*Hardware:* **none.** Nothing in this group touches the bridge.
+
+**Phase 2 — recording**
+*Criteria:* FIT writing, history, charts, e-mail report and `smtpclient/` gone.
+`qfittestsuite` and `testtrainingloadtestsuite` deleted; `tst/test-artifacts/*.fit` and
+`*.sqlite` removed.
+*Tests:* as Phase 1. Confirm the app starts and rides with no session storage — the
+absence of a writer must not fault the metric pipeline.
+*Hardware:* **none.**
+
+**Phase 3 — training programs**
+*Criteria:* `trainprogram`, ZWO, GPX, KML, video and maps gone; `trainprogramtestsuite` and
+`zwiftworkouttestsuite` deleted; `homeform.h` no longer declares `trainProgram` or
+`previewTrainProgram`.
+*Tests:* as above, **plus the DIRCON loopback test (§11.5 item 5)** — this is the first
+phase large enough to plausibly disturb the control path, and that test is what makes
+skipping a hardware ride defensible.
+*Hardware:* **none, if item 5 exists.** If it does not, this phase needs a ride — which is
+the argument for building it first.
+
+**Phase 4 — telemetry and templates**
+*Criteria:* templates, MQTT, OSC, telnet, webserver info senders gone.
+*Precondition:* verified that the RTSS overlay does **not** route through the template
+system. If it does, the overlay is re-pointed before anything is deleted.
+*Tests:* as above. RTSS overlay still displays gear/ERG/resistance — observable on the
+Windows desktop without the bike, by running QZ and watching the overlay.
+*Hardware:* **none.**
+
+**Phase 5 — driver cull**
+*Criteria:* only `ftmsbike`, `heartratebelt`, `dircon` remain; the `cscbike` dependency in
+`ftmsbike.cpp` resolved (open question 5); `bluetoothdevicetestsuite` data pruned to the
+kept drivers and still green.
+*Tests:* device-discovery suite green against the reduced set; FTMS handshake and slew
+limiter suites unchanged and green.
+*Hardware:* **yes — H1.** This is the first phase that edits the device layer. One session:
+trainer connects, gears shift 1–15, resistance tracks the table.
+
+**Phase 6 — settings consolidation**
+*Criteria:* key count at or under target; the four groups of §9.6 hold; no QML binds a
+missing key.
+*Tests:* settings-integrity check is the primary gate here. Gear-table and
+grade→resistance tests (items 1–2) must still pass — they are what proves the calibration
+survived the reshuffle.
+*Hardware:* **yes — H2.** Short session confirming gear 7 on the flat still lands near
+resistance 14. Settings changes are exactly the kind that pass every automated check and
+still ride wrong.
+
+**Phase 7a — new UI behind the flag**
+*Criteria:* `ui_next` defaults false; the old UI is untouched and still default; new tree
+builds on Windows *and* Android; `RideState` contract test passes.
+*Tests:* QML lint on both dialects (item 4) is the gate. Contract test (item 8).
+*Hardware:* **none** — the flag is off.
+
+**Phase 7b — flip the default**
+*Criteria:* the new UI has ridden successfully with both Rouvy and Zwift.
+*Tests:* no automated substitute exists. This is an acceptance test by definition.
+*Hardware:* **yes — H3 and H4.** One ride per app. Gear display and shifting correct,
+connection status accurate, ERG toggle behaves, nothing unreadable from the bars.
+
+**Phase 7c — delete the old UI**
+*Criteria:* `homeform.cpp`, the tile system, `settings.qml`'s 88 sections and the
+`ui_next` flag all gone; no QML references a deleted component.
+*Tests:* full suite; QML lint; headless smoke. Gate 4 does the heavy lifting.
+*Hardware:* **none** — 7b already validated the replacement, and this phase only removes
+the thing it replaced.
+
+**Phase 8 — other machine types, Pi revival**
+*Criteria:* treadmill/rower/elliptical/stairclimber/jumprope gone with no kept driver
+referring to them; the Pi jobs re-enabled and green.
+*Tests:* full suite; the Pi smoke-test job.
+*Hardware:* Pi only, and only when that target is actually pursued.
+
+### 11.7 Hardware budget
+
+Four sessions for the whole project:
+
+| | After | Purpose |
+| --- | --- | --- |
+| **H1** | Phase 5 | Trainer connects; gears 1–15 shift; resistance tracks the table |
+| **H2** | Phase 6 | Calibration survived the settings reshuffle |
+| **H3** | Phase 7b | New UI, ride with Rouvy |
+| **H4** | Phase 7b | New UI, ride with Zwift |
+
+Phases 1, 2, 3, 4, 7a and 7c need **no hardware at all**, provided §11.5 items 1–5 exist.
+That is the return on building the test infrastructure first, and the reason items 1–3 are
+scheduled before Phase 1 rather than alongside it.
+
+Separately pending, and unrelated to the strip: the startup-gear fix and the
+`bike_resistance_offset` 18→13 calibration both still want a confirming ride.
+
+## 12. Open questions
 
 1. ~~**Kinomap's transport.**~~ **Resolved 2026-08-16:** Kinomap has no Windows client,
    so it imposes nothing on the Windows build. Reduced to a best-effort Android case —
