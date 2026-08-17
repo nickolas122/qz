@@ -611,18 +611,26 @@ HomeForm {
                 }
             }
 
-            // Qt 6 renamed the error signal to errorOccurred() and reversed how the
-            // sink is attached: the player names its videoOutput rather than the
-            // VideoOutput naming its source. Assigning to the old onError is a load
-            // error, not a warning - it takes Home.qml with it, and StackView then
-            // has no initialItem, which is why the window came up empty.
+            // Qt 6 renamed this signal from error() to errorOccurred(). The Qt 5
+            // spelling is the one that belongs here - these sources are Qt 5 and the
+            // Qt 6 variants are generated (tools/qt6-qml-imports.py, which does the
+            // rename) - because Qt 5.15 has no errorOccurred and rejects the
+            // assignment outright. That is a load error rather than a warning, so it
+            // takes Home.qml with it, StackView is left with no initialItem, and the
+            // Android window comes up empty with the app running fine underneath.
+            //
+            // The body is a function expression rather than either version's parameter
+            // syntax: Qt 5 injects signal parameters and Qt 6 removed injection, and a
+            // plain function is the one form both bind correctly.
+            //
+            // videoOutput needs no such care - it exists in Qt 5.15 too (revision 15).
             MediaPlayer {
                 id: videoPlaybackHalf
                 objectName: "videoplaybackhalf"
                 playbackRate: rootItem.videoRate
                 videoOutput: videoPlayer
 
-                onErrorOccurred: (error, errorString) => {
+                onError: function(error, errorString) {
                     if (MediaPlayer.NoError !== error) {
                         console.log("[qmlvideo] MediaPlayer error " + error + " errorString " + errorString)
                     }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rewrite the QML import lines for a Qt 6 build.
+"""Rewrite the QML imports, and the handful of renamed signal handlers, for a Qt 6 build.
 
 The .qml sources are written for Qt 5, which is what Android, iOS and every other
 shipping target build with. Qt 5.15 refuses a library import that carries no
@@ -40,6 +40,19 @@ RENAME = {"QtGraphicalEffects": "Qt5Compat.GraphicalEffects"}
 # QtQuick, QtQuick.Controls, QtQuick.Layouts and QtQuick.Window are deliberately
 # absent from both tables: Qt 6 still accepts their 2.x imports.
 
+# Signal handlers Qt 6 renamed. Same principle as the imports: the Qt 5 spelling is
+# what the sources carry, because Qt 5 is what ships, and Qt 6 is generated.
+#
+# MediaPlayer's error() became errorOccurred(). Writing the Qt 6 name in the source
+# instead does not degrade gracefully - Qt 5.15 has no such property, so assigning to
+# it is a *load* error that takes the whole file with it. When that file is Home.qml,
+# StackView has no initialItem and the Android app comes up with an empty window and
+# no clue as to why. That is not hypothetical; it shipped, and cost an evening.
+#
+# Anchored to the start of a line so a mention inside a string or a comment is left
+# alone, and matched with the colon so it is a handler and not a word.
+HANDLER_RENAME = {"onError": "onErrorOccurred"}
+
 VERSION = r"[0-9]+(?:\.[0-9]+)?"
 
 
@@ -54,6 +67,12 @@ def rewrite(text):
         text = re.sub(
             rf"(?m)^(\s*import\s+{re.escape(module)})\s+{VERSION}\b",
             r"\g<1>",
+            text,
+        )
+    for handler, replacement in HANDLER_RENAME.items():
+        text = re.sub(
+            rf"(?m)^(\s*){re.escape(handler)}(\s*:)",
+            rf"\g<1>{replacement}\g<2>",
             text,
         )
     return text

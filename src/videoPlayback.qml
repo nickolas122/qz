@@ -22,7 +22,7 @@ Rectangle {
            playbackRate: rootItem.videoRate
            videoOutput: videoPlayer
 
-           onErrorOccurred: (error, errorString) => {
+           onError: function(error, errorString) {
                if (MediaPlayer.NoError !== error) {
                    console.log("[qmlvideo] MediaPlayer error " + error + " errorString " + errorString)
                }
