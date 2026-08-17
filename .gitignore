@@ -28,6 +28,14 @@ tst/qdomyos-zwift-tests
 tst/test-artifacts/
 tst/test-results/
 
+# The suite writes these to a path relative to its working directory
+# (tst/ToolTests/qfittestsuite.cpp), so where they land depends on where the binary
+# was run from: tst/ for the CI job's `cd tst; ./qdomyos-zwift-tests`, and the repo
+# root for `./tst/qdomyos-zwift-tests`. Both spellings, or running it the other way
+# leaves an untracked directory behind.
+/test-artifacts/
+/test-results/
+
 src/*.o
 
 # What a local Windows mingw build leaves behind. Unlike the Linux layout above,
@@ -56,6 +64,12 @@ src/build/*
 src/build/*
 
 src/debug-*
+
+# The FIT backups QZ writes beside itself when the app is run from src/, which is how
+# a simulated-bike session is started locally (docs/fork/VIRTUAL-BIKE.md).
+src/*QZ-backup-*.fit
+src/ddb.sqlite
+src/training/
 
 src/secret.h
 src/secrets.h
