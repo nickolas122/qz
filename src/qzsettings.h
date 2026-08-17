@@ -3383,6 +3383,23 @@ class QZSettings {
     static constexpr int default_gears_neutral_gear = 0;
 
     /**
+     *@brief simulated_bike Run against a bike that is not there. QZ skips discovery entirely
+     *and plays a ride scenario into the app, so the tiles, gears, ERG, the DIRCON output and
+     *the FIT file can all be exercised with no trainer in the room. Proves nothing about
+     *parsing a real frame or about the bytes QZ writes back - see docs/fork/VIRTUAL-BIKE.md.
+     */
+    static const QString simulated_bike;
+    static constexpr bool default_simulated_bike = false;
+
+    /**
+     *@brief simulated_bike_ride Path to the .ride scenario the simulated bike plays. Empty, or
+     *a file that will not load, falls back to a built-in steady ride rather than leaving the
+     *app without a device.
+     */
+    static const QString simulated_bike_ride;
+    static const QString default_simulated_bike_ride;
+
+    /**
      * @brief Write the QSettings values using the constants from this namespace.
      * @param showDefaults Optionally indicates if the default should be shown with the key.
      */

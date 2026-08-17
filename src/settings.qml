@@ -1746,6 +1746,8 @@ import AndroidStatusBar 1.0
             property int gamepad_repeat_delay: 400
             property int gamepad_repeat_rate: 150
             property int gears_neutral_gear: 0
+            property bool simulated_bike: false
+            property string simulated_bike_ride: ""
         }
 
 
@@ -16317,6 +16319,50 @@ import AndroidStatusBar 1.0
                         Layout.alignment: Qt.AlignLeft | Qt.AlignTop
                         Layout.fillWidth: true
                         color: Material.color(Material.Lime)
+                    }
+
+                    IndicatorOnlySwitch {
+                        id: simulatedBikeDelegate
+                        text: qsTr("Simulated bike")
+                        spacing: 0
+                        bottomPadding: 0
+                        topPadding: 0
+                        rightPadding: 0
+                        leftPadding: 0
+                        clip: false
+                        checked: settings.simulated_bike
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
+                        Layout.fillWidth: true
+                        onClicked: { settings.simulated_bike = checked; window.settings_restart_to_apply = true; }
+                    }
+
+                    Label {
+                        text: qsTr("Run QZ against a bike that is not there. Discovery is skipped entirely and a ride scenario is played into the app, so the tiles, the gears, ERG, the output to a training app and the FIT file can all be exercised with no trainer in the room. It proves nothing about the Bluetooth link itself.")
+                        font.bold: true
+                        font.italic: true
+                        font.pixelSize: Qt.application.font.pixelSize - 2
+                        textFormat: Text.PlainText
+                        wrapMode: Text.WordWrap
+                        verticalAlignment: Text.AlignVCenter
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
+                        Layout.fillWidth: true
+                        color: Material.color(Material.Lime)
+                    }
+
+                    RowLayout {
+                        Label {
+                            text: qsTr("Ride scenario:")
+                            Layout.fillWidth: true
+                        }
+                        TextField {
+                            id: simulatedBikeRideTextField
+                            text: settings.simulated_bike_ride
+                            placeholderText: qsTr("a .ride file - empty plays the built-in ride")
+                            horizontalAlignment: Text.AlignRight
+                            Layout.fillHeight: false
+                            Layout.fillWidth: true
+                            onAccepted: { settings.simulated_bike_ride = text; window.settings_restart_to_apply = true; }
+                        }
                     }
 
                     IndicatorOnlySwitch {

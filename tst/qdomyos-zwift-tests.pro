@@ -20,6 +20,12 @@ CONFIG += androidextras
 # must not either: the two halves of the link have to keep agreeing.
 win32:lessThan(QT_MAJOR_VERSION, 6): DEFINES += _ITERATOR_DEBUG_LEVEL=0
 
+# The .ride fixtures are found by absolute path rather than relative to the working
+# directory: the CI job runs the binary from tst/, Qt Creator runs it from the build
+# directory, and a test that only passes from one of them is a trap for whoever runs it
+# from the other.
+DEFINES += QZ_RIDE_FIXTURES=\\\"$$PWD/fixtures/rides\\\"
+
 SOURCES += \
         Devices/bluetoothdevicetestdata.cpp \
         Devices/bluetoothdevicetestdatabuilder.cpp \
@@ -43,6 +49,7 @@ SOURCES += \
         Devices/TestGearTable.cpp \
         Devices/TestFtmsControlPointHandshake.cpp \
         Devices/TestServiceSubscriptionPlan.cpp \
+        Devices/TestRideScenario.cpp \
         Erg/TestErgTableSelection.cpp \
         Erg/TestErgAutoMode.cpp \
         main.cpp
@@ -96,6 +103,7 @@ HEADERS += \
     Devices/TestGearTable.h \
     Devices/TestFtmsControlPointHandshake.h \
     Devices/TestServiceSubscriptionPlan.h \
+    Devices/TestRideScenario.h \
     Erg/ergtabletestsuite.h \
     Erg/TestErgTableSelection.h \
     Erg/TestErgAutoMode.h \

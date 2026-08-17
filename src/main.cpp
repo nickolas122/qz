@@ -140,6 +140,10 @@ double bikeResistanceGain = 1.0;
 QString power_sensor_name = QStringLiteral("Disabled");
 bool power_sensor_as_treadmill = false;
 bool smokeTest = false;
+// The bike that is not there - docs/fork/VIRTUAL-BIKE.md. Flags rather than settings-only so a
+// simulated session can be started from a shortcut without touching a saved profile.
+bool simulatedBike = false;
+QString simulatedBikeRide = QLatin1String("");
 QString logfilename = QStringLiteral("debug-") +
                       QDateTime::currentDateTime()
                           .toString()
@@ -169,6 +173,8 @@ void displayHelp() {
 
     printf("\nDevice configuration:\n");
     printf("  -name <device_name>           Set device name\n");
+    printf("  -simulated-bike               Run against a simulated bike instead of a real one\n");
+    printf("  -ride <file.ride>             Ride scenario for -simulated-bike\n");
     printf("  -poll-device-time <ms>        Set device polling time in milliseconds\n");
     printf("  -no-write-resistance          Disable resistance writing\n");
     printf("  -no-heart-service             Disable heart rate service\n");
@@ -321,6 +327,12 @@ QCoreApplication *createApplication(int &argc, char *argv[]) {
             noConsole = true;
         if (!qstrcmp(argv[i], "-test-resistance"))
             testResistance = true;
+        if (!qstrcmp(argv[i], "-simulated-bike"))
+            simulatedBike = true;
+        if (!qstrcmp(argv[i], "-ride")) {
+            simulatedBikeRide = argv[++i];
+            simulatedBike = true;
+        }
         if (!qstrcmp(argv[i], "-no-virtual-device-bluetooth"))
             virtual_device_bluetooth = false;
         if (!qstrcmp(argv[i], "-no-log"))
@@ -889,6 +901,16 @@ int main(int argc, char *argv[]) {
     virtualbike* V = new virtualbike(new bike(), noWriteResistance, noHeartService);
     Q_UNUSED(V)
     return app->exec();*/
+    // Written here rather than in the non-QML settings block below, because the desktop build
+    // this fork ships *is* the QML one and that block never runs for it. Only ever written when
+    // the flag was actually given: an absent -simulated-bike must not silently turn off a
+    // simulated session the user switched on in the settings.
+    if (simulatedBike) {
+        settings.setValue(QZSettings::simulated_bike, true);
+        if (!simulatedBikeRide.isEmpty())
+            settings.setValue(QZSettings::simulated_bike_ride, simulatedBikeRide);
+    }
+
     bluetooth bl(logs, deviceName, noWriteResistance, noHeartService, pollDeviceTime, noConsole, testResistance,
                  bikeResistanceOffset,
                  bikeResistanceGain); // FIXED: clang-analyzer-cplusplus.NewDeleteLeaks - potential leak

@@ -236,6 +236,8 @@ screencapture.cpp \
 sessionline.cpp \
 signalhandler.cpp \
 simplecrypt.cpp \
+devices/simulatedbike/ridescenario.cpp \
+devices/simulatedbike/simulatedbike.cpp \
 devices/smartspin2k/smartspin2k.cpp \
 devices/stagesbike/stagesbike.cpp \
 smtpclient/src/emailaddress.cpp \
@@ -654,6 +656,8 @@ screencapture.h \
 sessionline.h \
 signalhandler.h \
 simplecrypt.h \
+devices/simulatedbike/ridescenario.h \
+devices/simulatedbike/simulatedbike.h \
 devices/smartspin2k/smartspin2k.h \
 devices/stagesbike/stagesbike.h \
 smtpclient/src/SmtpMime \

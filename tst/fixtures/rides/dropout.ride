@@ -1,0 +1,17 @@
+# dropout.ride - the bike stops reporting for ten seconds mid-ride.
+#
+# Not the same thing as coast.ride. There the bike reported zeroes; here it reports nothing at
+# all, which is what a lost notification stream looks like and what the tiles have to survive.
+# The rider carries on pedalling throughout - the samples either side say so - so a player that
+# quietly interpolates across the gap will look right and be wrong.
+#
+# What the silence must not do: leave stale numbers on screen for ever, or reset the session,
+# or make distance jump when the frames come back.
+
+mode        power
+resistance  11
+
+t=0     watts=195  cadence=89  hr=143
+t=20    watts=200  cadence=90  hr=146  silence=10
+t=30    watts=205  cadence=90  hr=149
+t=50    watts=205  cadence=91  hr=151

@@ -67,6 +67,30 @@ bluetooth::bluetooth(bool logs, const QString &deviceName, bool noWriteResistanc
 
     this->useDiscovery = startDiscovery;
 
+    // The bike that is not there (docs/fork/VIRTUAL-BIKE.md). Built here, before any of the
+    // discovery machinery exists, and discovery is then not started at all: there is nothing
+    // to find, and a scan running alongside would only be able to replace it.
+    //
+    // Deliberately not routed through a synthetic deviceDiscovered() the way upstream's fake
+    // devices were. That route is what needed the 15-second watchdog to unstick it, both were
+    // deleted together in 2c39c5d, and faking an advertisement for a device that never
+    // advertised is how it got complicated in the first place.
+    {
+        QSettings settings;
+        if (settings.value(QZSettings::simulated_bike, QZSettings::default_simulated_bike).toBool()) {
+            const QString ride =
+                settings.value(QZSettings::simulated_bike_ride, QZSettings::default_simulated_bike_ride).toString();
+            debug(QStringLiteral("simulated bike enabled, skipping discovery"));
+            simulatedBike = new simulatedbike(noWriteResistance, noHeartService, ride);
+            connect(simulatedBike, &bluetoothdevice::connectedAndDiscovered, this,
+                    &bluetooth::connectedAndDiscovered);
+            connect(simulatedBike, &simulatedbike::debug, this, &bluetooth::debug);
+            this->signalBluetoothDeviceConnected(simulatedBike);
+            this->discoveryAgent = nullptr;
+            return;
+        }
+    }
+
     if (!startDiscovery) {
         this->discoveryAgent = nullptr;
         return;
@@ -1810,7 +1834,9 @@ void bluetooth::restart() {
 }
 
 bluetoothdevice *bluetooth::device() {
-    if (cscBike) {
+    if (simulatedBike) {
+        return simulatedBike;
+    } else if (cscBike) {
         return cscBike;
     } else if (powerBike) {
         return powerBike;

@@ -1,6 +1,6 @@
 # The virtual bike
 
-**Draft — spec, not yet implemented.**
+**Phases 0 and 1 are implemented. Phases 2–4 are still spec.**
 
 A way to exercise QZ without the trainer in the room: a simulated bike the app can run
 against, and a harness that feeds the *real* `ftmsbike` byte-exact FTMS frames and reads
@@ -94,18 +94,36 @@ A scenario is a plain, readable, timestamped list of what the rider is doing:
 ```
 # ramp.ride — 60s ramp from soft-pedal to threshold, steady cadence
 mode        power            # what the file asserts on: power | resistance | speed
-resistance  12               # starting resistance level, if the bike reports one
+bike        YPBM1234         # optional: the device name to pretend to be
+resistance  12               # optional: starting resistance level
+erg_lag     2.0              # optional: seconds for simulated power to reach an ERG target
+noise       0.03             # optional: ± fraction of noise on simulated power
+
 t=0     watts=80   cadence=85  hr=110
 t=15    watts=140  cadence=88  hr=128
 t=30    watts=200  cadence=90  hr=147
-t=45    watts=260  cadence=92  hr=161
-t=60    watts=260  cadence=0   hr=158   # stop pedalling, hold the last power reading
+t=45    watts=260  cadence=92  hr=161  silence=10   # the bike goes quiet for ten seconds
 ```
 
-Values between samples are interpolated; `cadence=0` and gaps are meaningful and must
-survive both players unchanged. The format is deliberately not JSON — these files get
-read and hand-edited more often than they get parsed, and the parser is thirty lines
-either way.
+Two rules settle what a file means, and both were chosen to be the ones hardest for two
+players to disagree about.
+
+**Each field is its own timeline.** A value interpolates between the two nearest samples
+that both state it, is absent before the first that states it, and holds after the last.
+So `hr` can appear in one sample in ten without dragging its neighbours to zero, and
+`cadence=0` is an explicit value that must be reproduced exactly rather than read as "said
+nothing". Absence and zero are different things and the format keeps them different.
+
+**Interpolation is always linear.** No step mode, no easing, no per-field override. A fast
+transition is written by putting two samples close together, which is also what the
+recorded fixtures look like. Every extra mode would be one more way for the two players to
+disagree about what the file meant.
+
+`silence=<seconds>` is the exception that is not about values: the bike reports nothing at
+all for that long — not stale numbers, nothing — which is the only way to write a dropout.
+
+The format is deliberately not JSON: these files get read and hand-edited more often than
+they get parsed, and the parser is thirty lines either way.
 
 The property that makes this worth doing: **the same file, through both players, must
 produce the same metrics** (within a stated tolerance). Layer A reaching a number the
@@ -138,10 +156,13 @@ old synthetic-`deviceDiscovered()` route: that route was deleted for good reason
 faking an advertisement to reach a device that never advertised is how the fake-device
 watchdog came to exist in the first place.
 
-The dead toggles in `settings.qml` (Fake Device and its three siblings) are replaced by
-one **Simulated bike** switch. Note the trap recorded in `2c39c5d`: removing keys from
-`qzsettings` means renumbering `allsettingscount`, so the *keys* stay inert and only the
-UI changes, unless the renumbering is done deliberately as its own change.
+A **Simulated bike** switch goes into settings.qml next to the inert Fake Device one, with
+a path field for the scenario. The dead toggles are deliberately *left alone* rather than
+removed: `src/CLAUDE.md` requires new settings to be declared last and `allSettingsCount`
+to be kept in step, and pulling four keys out of the middle of that list is a renumbering
+with its own risk and no relation to this feature. They stay inert and misleading until
+someone removes them on purpose. The stale line in `docs/android-testing/README.md` is in
+the same position.
 
 ### What it must drive
 
@@ -355,16 +376,30 @@ what Layer A is for.
 
 ## Phases and acceptance
 
-**Phase 0 — the scenario format.** Parser and the first three `.ride` files, in `tst/`.
-No product code touched. *Accepted when* the parser round-trips every file and the suite
-still passes.
+**Phase 0 — the scenario format. Done.** `RideScenario` in
+`src/devices/simulatedbike/ridescenario.{h,cpp}` — Qt-free and C++11, so both players can
+link it and neither needs a QObject to read a file. Five fixtures in `tst/fixtures/rides/`
+(`steady`, `ramp`, `sprint`, `coast`, `dropout`); the remaining five in the scenario table
+arrive with the phases that assert on them. 14 tests in `tst/Devices/TestRideScenario.h`,
+including the round trip this phase was accepted on and nineteen malformed files that must
+be rejected with a reason. It went into `src/` rather than `tst/` as first sketched,
+because Layer A needs it too and one copy is the point.
 
-**Phase 1 — Layer A, the simulated bike.** `src/devices/simulatedbike/`, the setting, the
-command-line flag, the `bluetooth` constructor hook, the settings.qml switch. *Accepted
-when* QZ starts on Windows with no bike and no radio, the tiles move through
-`steady.ride`, gears and ERG respond, a training app on the network sees a bike over
-DIRCON, and a FIT file is written at the end. Low risk: it adds a device, it does not
-change `ftmsbike`.
+**Phase 1 — Layer A, the simulated bike. Done, with one part unverified here.**
+`simulatedbike` in `src/devices/simulatedbike/`, the `simulated_bike` and
+`simulated_bike_ride` settings, `-simulated-bike` and `-ride <file>` on the command line,
+the hook in the `bluetooth` constructor, and a Simulated bike switch in settings.qml. It
+computes no gears, no ERG conversion and no metric bookkeeping of its own — all of that is
+reached through `bike`/`bluetoothdevice`, which is the only thing that keeps the exercised
+code the shipped code.
+
+Verified on a Linux build: the app starts with no radio, skips discovery, loads the
+scenario, and rides it — `ramp.ride` produces the cadence and power the file states, the
+starting resistance comes from the file, and the virtual bike and DIRCON endpoint come up
+and serve. **The tiles themselves are not verified**: the QML app will not start in the
+build container used here (it exits with the same code and no device at all, so this is
+the environment and not the device), which leaves the one part of the acceptance criteria
+that needs a screen still to be checked by eye on Windows or Android.
 
 **Phase 2 — Layer B, the harness.** The two seams, `simulatedFtmsBike`, the frame encoder,
 and the parse tests. *Accepted when* the seams are provably behaviour-neutral (the
@@ -414,9 +449,8 @@ getting that format right now rather than later.
 - **The clock.** Stated above as a scoping limit. If a future bug is only reachable
   through elapsed time inside `ftmsbike`, this design will not reach it, and the answer is
   to extract the decision — not to retrofit a clock into the harness.
-- **Open: does the simulated bike advertise itself as a specific model?** Several
-  behaviours in `ftmsbike` are gated on device-name flags (`DOMYOS`, `FS_YK`, `D500V2` and
-  some fifty others). Layer B can set them by connecting through the real detection path
-  with a chosen name, which makes those branches testable — but only if the scenario file
-  can name the bike it is pretending to be. Cheap to add, and probably belongs in the
-  format from the start.
+- **Settled: the scenario can name the bike it is pretending to be.** Several behaviours in
+  `ftmsbike` are gated on device-name flags (`DOMYOS`, `FS_YK`, `D500V2` and some fifty
+  others), and Layer B will only reach those branches if it can connect through the real
+  detection path under a chosen name. The `bike` directive is in the format and parsed from
+  Phase 0; nothing reads it yet, and Layer B is what will.

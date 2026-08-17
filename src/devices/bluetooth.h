@@ -44,6 +44,7 @@
 #include "devices/moxy5sensor/moxy5sensor.h"
 #include "signalhandler.h"
 #include "devices/smartspin2k/smartspin2k.h"
+#include "devices/simulatedbike/simulatedbike.h"
 // Kept for the generic BLE power meter: a bike paired with a separate power
 // sensor gets a stagesbike as the sensor, not as the bike. See the
 // power_sensor_name branch in bluetooth::connectedAndDiscovered().
@@ -93,6 +94,9 @@ class bluetooth : public QObject, public SignalHandler {
     moxy5sensor *moxy5Sensor = nullptr;
     cscbike *cscBike = nullptr;
     ftmsbike *ftmsBike = nullptr;
+    // The bike that is not there. Built in the constructor when simulated_bike is set, in
+    // place of discovery rather than as a result of it - see the note there.
+    simulatedbike *simulatedBike = nullptr;
     heartratebelt *heartRateBelt = nullptr;
     smartspin2k *ftmsAccessory = nullptr;
     cscbike *cadenceSensor = nullptr;
