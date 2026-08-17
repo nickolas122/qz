@@ -12,6 +12,7 @@ says "this was tested and it is not the cause" is worth more later than the fix 
 | | |
 | --- | --- |
 | [STRIP-SPEC.md](STRIP-SPEC.md) | **Draft.** Reducing QZ to a trainer bridge for Rouvy, Zwift, Kinomap and MyWhoosh: what is deleted, in what order, and the platform constraints that decide the shape. |
+| [VIRTUAL-BIKE.md](VIRTUAL-BIKE.md) | **Draft.** Testing without the trainer in the room: a simulated bike the app runs against, a harness that feeds the real `ftmsbike` byte-exact FTMS frames, and the one scenario format both play. |
 
 ## Windows Bluetooth: the move to WinRT
 
