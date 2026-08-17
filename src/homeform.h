@@ -419,8 +419,15 @@ class homeform : public QObject {
             settings.value(QZSettings::fakedevice_treadmill, QZSettings::default_fakedevice_treadmill).toBool();
         bool antbike =
             settings.value(QZSettings::antbike, QZSettings::default_antbike).toBool();
+        // A simulated bike is a configured device. Without this the wizard opens over the
+        // dashboard on every start: nothing was ever discovered, so bluetooth_lastdevice_name
+        // is empty and QZ concludes it has never been set up. This is the same reason the
+        // dead applewatch_fakedevice flag is still named in this condition.
+        bool simulated_bike =
+            settings.value(QZSettings::simulated_bike, QZSettings::default_simulated_bike).toBool();
 
-        return settings.value(QZSettings::bluetooth_lastdevice_name, QZSettings::default_bluetooth_lastdevice_name).toString().isEmpty() && 
+        return settings.value(QZSettings::bluetooth_lastdevice_name, QZSettings::default_bluetooth_lastdevice_name).toString().isEmpty() &&
+                !simulated_bike &&
                 nordictrack_2950_ip.isEmpty() && tdf_10_ip.isEmpty() && !fake_bike && !fakedevice_elliptical &&
                 !fakedevice_rower && !waterrower_usb && !fakedevice_treadmill && !antbike && !android_antbike && proform_elliptical_ip.isEmpty() &&
                 proformtdf4ip.isEmpty() && proformtdf1ip.isEmpty() && proformtreadmillip.isEmpty() &&

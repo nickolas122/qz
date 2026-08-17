@@ -50,6 +50,7 @@ SOURCES += \
         Devices/TestFtmsControlPointHandshake.cpp \
         Devices/TestServiceSubscriptionPlan.cpp \
         Devices/TestRideScenario.cpp \
+        Devices/TestSimulatedBikeAnnouncement.cpp \
         Erg/TestErgTableSelection.cpp \
         Erg/TestErgAutoMode.cpp \
         main.cpp
@@ -104,6 +105,7 @@ HEADERS += \
     Devices/TestFtmsControlPointHandshake.h \
     Devices/TestServiceSubscriptionPlan.h \
     Devices/TestRideScenario.h \
+    Devices/TestSimulatedBikeAnnouncement.h \
     Erg/ergtabletestsuite.h \
     Erg/TestErgTableSelection.h \
     Erg/TestErgAutoMode.h \

@@ -85,7 +85,33 @@ bluetooth::bluetooth(bool logs, const QString &deviceName, bool noWriteResistanc
             connect(simulatedBike, &bluetoothdevice::connectedAndDiscovered, this,
                     &bluetooth::connectedAndDiscovered);
             connect(simulatedBike, &simulatedbike::debug, this, &bluetooth::debug);
-            this->signalBluetoothDeviceConnected(simulatedBike);
+
+            // The device exists from here - device() must not return null while the rest of
+            // startup runs - but announcing it here would announce it to nobody. This
+            // constructor runs from main() around a hundred lines before homeform is built,
+            // and homeform is what connects to deviceConnected and bluetoothDeviceConnected.
+            // A real device is discovered from a radio callback, which by definition happens
+            // after the event loop is running and therefore after homeform exists; a device
+            // built during construction has no such luck, and both signals went into the
+            // void. The visible result was an app with no tiles: homeform::deviceConnected()
+            // is what clears the help label and builds the session, and it never ran.
+            //
+            // A zero timer is the whole fix: it fires on the first turn of the event loop,
+            // which main() does not reach until homeform is constructed and connected.
+            QTimer::singleShot(0, this, [this]() {
+                if (!simulatedBike)
+                    return;
+                // homeform calls deviceFound() with this name, so the scenario's `bike`
+                // directive is what the user sees it identify as.
+                QString name = QString::fromStdString(simulatedBike->scenario().bike());
+                if (name.isEmpty())
+                    name = QStringLiteral("Simulated Bike");
+                QBluetoothDeviceInfo info(QBluetoothAddress(quint64(1)), name, 0);
+                info.setCoreConfigurations(QBluetoothDeviceInfo::LowEnergyCoreConfiguration);
+                emit deviceConnected(info);
+                this->signalBluetoothDeviceConnected(simulatedBike);
+            });
+
             this->discoveryAgent = nullptr;
             return;
         }
