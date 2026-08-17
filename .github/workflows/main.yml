@@ -41,6 +41,24 @@ concurrency:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+  # Settings are declared in four places that nothing keeps in agreement at build time -
+  # qzsettings.h, allSettings[] in qzsettings.cpp, settings-catalog.json, and settings.qml,
+  # which resolves them by name at runtime. A key deleted from one and left in another is
+  # a dead control on the bike rather than a compile error, which is tolerable while
+  # settings are only added and not while several hundred are being removed.
+  #
+  # Deliberately standalone: no Qt, no build, no `needs:`. It answers in seconds, which is
+  # what makes it useful as the first thing to look at on a PR.
+  settings-integrity:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Check settings declarations agree
+        run: python tools/check-settings-integrity.py
+
   window-build:
     runs-on: windows-2022
     strategy:

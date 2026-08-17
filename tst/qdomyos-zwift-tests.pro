@@ -40,6 +40,7 @@ SOURCES += \
         Tools/typeidgenerator.cpp \
         Devices/TestZwiftRideController.cpp \
         Devices/TestResistanceSlewLimiter.cpp \
+        Devices/TestGearTable.cpp \
         Devices/TestFtmsControlPointHandshake.cpp \
         Devices/TestServiceSubscriptionPlan.cpp \
         Erg/TestErgTableSelection.cpp \
@@ -92,6 +93,7 @@ HEADERS += \
     Devices/devicenamepatterngroup.h \
     Devices/devicetestdataindex.h \
     Devices/TestResistanceSlewLimiter.h \
+    Devices/TestGearTable.h \
     Devices/TestFtmsControlPointHandshake.h \
     Devices/TestServiceSubscriptionPlan.h \
     Erg/ergtabletestsuite.h \
