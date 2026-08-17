@@ -138,20 +138,18 @@ void DirconProcessor::tcpNewConnection() {
     DirconProcessorClient *client = new DirconProcessorClient(socket);
     clientsMap.insert(socket, client);
 
-    if (rouvy_compatibility) {
-        // Send initial notification for 0x2AD2 (Indoor Bike Data) - Apple TV/Windows compatibility
-        // Elite Avanti sends this immediately after connection
-        DirconPacket initPkt;
-        initPkt.isRequest = false;
-        initPkt.Identifier = DPKT_MSGID_UNSOLICITED_CHARACTERISTIC_NOTIFICATION;
-        initPkt.ResponseCode = DPKT_RESPCODE_SUCCESS_REQUEST;
-        initPkt.uuid = 0x2AD2;
-        initPkt.additional_data = QByteArray(29, 0x00); // Empty data for now
-        QByteArray initData = initPkt.encode(0);
-        socket->write(initData);
-        socket->flush();
-        qDebug() << "Sent initial notification for 0x2AD2 to" << socket->peerAddress().toString();
-    }
+    // No unsolicited 0x2AD2 frame on connect. There used to be one here for Apple TV
+    // compatibility, carrying QByteArray(29, 0x00) - "empty data for now" - and a client
+    // reading the flags word out of it is told the machine measures nothing at all.
+    // MyWhoosh does exactly that: it decides which quantities the trainer reports from
+    // the first Indoor Bike Data frame it sees and latches the answer permanently
+    // (IsIndoorBikeDataFlagRead), so a zero-flag frame arriving before any real one cost
+    // it the power source for the whole session, then it disabled 0x2AD2 as useless.
+    // Rouvy never noticed because it enables 0x2AD2 and reads the real frames.
+    //
+    // Any hand-built frame here has to restate the flags that characteristicnotifier2ad2
+    // computes, which is how this drifted into lying in the first place. Let the notifier
+    // be the only thing that describes the machine.
 }
 
 void DirconProcessor::tcpDisconnected() {
