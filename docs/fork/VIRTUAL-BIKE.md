@@ -1,10 +1,18 @@
 # The virtual bike
 
-**Phases 0 and 1 are implemented. Phases 2–4 are still spec.**
+**Phases 0 and 1 are implemented. The rest is spec.**
 
-A way to exercise QZ without the trainer in the room: a simulated bike the app can run
-against, and a harness that feeds the *real* `ftmsbike` byte-exact FTMS frames and reads
-back the bytes it writes. One scenario format serves both.
+## The endgoal
+
+**CI runs a fake bike on a fake trainer app and asserts.**
+
+One process pair on one Linux runner, no radio and no hardware: a simulated bike playing a
+ride scenario at one end, a fake training app discovering and consuming QZ at the other,
+and assertions in between. When that is green, a change to QZ's metrics, gears, ERG or
+DIRCON output is checked before anyone gets on a trainer.
+
+Everything below is a step towards that sentence, and any piece of this plan that does not
+serve it is negotiable.
 
 ## The problem
 
@@ -70,24 +78,38 @@ specified here that is meant to catch a regression has to run there.
   does not close it. Anything that only fails against real hardware still only fails
   against real hardware.
 
-## Shape: one scenario, two players
+## Shape: one scenario, both ends of QZ
 
-The spine of the design is that a **ride scenario** is one file, and two different things
-can play it:
+The spine of the design is that a **ride scenario** is one file, and everything else is
+either a way of playing it into QZ or a way of watching what comes out:
 
 ```
-      tst/fixtures/rides/*.ride
-                 │
-      ┌──────────┴───────────┐
-      │                      │
-  Layer A                Layer B
-  simulatedbike          encode to FTMS frames
-  (drives metrics        → real ftmsbike parser
-   directly, in-app)       (in tst, headless)
-      │                      │
-  tiles, gears, ERG,     metrics + the bytes
-  DIRCON, FIT            QZ writes back
+                       tst/fixtures/rides/*.ride
+                                  |
+              +-------------------+-------------------+
+              |         the bike end, either way      |
+              |                                       |
+         Layer A                                  Layer B
+      simulatedbike                     FTMS frames -> real ftmsbike
+   drives metrics directly           the shipped parser, fed from the
+                                     same file or from a recorded ride
+              |                                       |
+              +-------------------+-------------------+
+                                  |
+                   bike / bluetoothdevice: metrics, gears, ERG
+                                  |
+                    virtualbike + DIRCON + mDNS  (QZ's output)
+                                  |
+                               Layer C
+                    fake training app: discover, connect,
+                    read the stream, write control commands
+                                  |
+                               ASSERT
 ```
+
+Two bike ends, one output side, one fake consumer. The bike ends are interchangeable
+because they are fed by the same file, which is what lets the same assertions run against
+the simulated bike *and* against the real `ftmsbike`.
 
 A scenario is a plain, readable, timestamped list of what the rider is doing:
 
@@ -312,6 +334,78 @@ the control point in response to a power, resistance or gear request; the routin
 decisions in `ftmsCharacteristicChanged` that pass a training app's FTMS frames through
 to the bike or refuse them.
 
+## Layer C — the fake training app
+
+The half of QZ that this fork actually rewrote is the half pointing at Zwift. Read the
+DIRCON and mDNS section of FORK.md: the endpoint had no process lifetime, announcements
+went out on one interface, loopback queries went unanswered, the service type was not
+fully qualified, QZ renamed its own service every five seconds by mistaking its own
+announcement for a competing claim, the SRV target carried a smuggled space, and no
+goodbye was sent on quit. Every one of those was found by a real training app refusing to
+connect, and not one of them is testable today without launching Rouvy or MyWhoosh on a
+second machine — MyWhoosh cannot even share a host with QZ.
+
+A fake training app is what closes that gap, and it is cheap because DIRCON is small and
+entirely described in this tree: a six-byte header, seven message ids and eight response
+codes in a 70-line `dirconpacket.h`, a 255-line parser, and the server in
+`dirconprocessor.cpp`. The client is: browse mDNS, open a TCP socket, `DISCOVER_SERVICES`,
+`DISCOVER_CHARACTERISTICS`, `ENABLE_CHARACTERISTIC_NOTIFICATIONS` on 0x2AD2, read the
+stream — and, when it wants to steer, `WRITE_CHARACTERISTIC` to 0x2AD9 with a target power
+or a set of simulation parameters.
+
+### In-process, not two processes
+
+The fake app is a gtest in the existing suite, talking over a real TCP socket to a real
+`DirconManager` built on a real `simulatedbike`, all inside the test binary. Everything is
+already linkable: the tests link the whole static library, `DirconManager` takes a
+`bluetoothdevice *`, and `simulatedbike` is in the library as of Phase 1.
+
+Two things make this practical rather than theoretical, both observed today rather than
+assumed. QZ runs headless — `-no-gui` rode a scenario end to end with no display and no
+radio. And the BLE half of the virtual device fails politely on a machine with no adapter:
+it logs "virtual bike bluetooth not connected" and the DIRCON endpoint comes up anyway,
+serving the full FTMS, cycling-power and cadence service set. `virtual_device_bluetooth`
+turns the BLE half off explicitly, which is what the test should do rather than relying on
+the failure being graceful.
+
+A second, coarser check runs the shipped binary — `qdomyos-zwift -no-gui -simulated-bike
+-ride steady.ride` — with the fake app against it as a separate process. That one proves
+the real executable serves what the in-process test says it serves. It is a smoke test,
+not the primary assertion, because process orchestration in CI is where flakiness comes
+from.
+
+### What it asserts
+
+- **Discovery.** A service record is answerable, including over loopback; the advertised
+  name is unchanged thirty seconds later; the SRV target is a legal hostname; a goodbye
+  goes out on quit.
+- **Lifetime.** The endpoint answers before any bike exists and outlives one — the change
+  that gave DIRCON process lifetime, currently protected by nothing.
+- **Enumeration.** The service and characteristic set is the expected one.
+- **The stream.** Notifications on 0x2AD2 decode to the numbers the `.ride` file states.
+  This is the end-to-end assertion the whole plan is for: scenario → bike → metrics →
+  virtual device → wire.
+- **Control.** A written target power reaches the bike and changes what comes back.
+
+### Decode with literals, not with our own encoder
+
+The client must not parse QZ's output by handing it to `DirconPacket`. That would be the
+"encoder and parser agreeing on the same mistake" risk one level up: a framing error in
+`DirconPacket` would be invisible because both sides share it. For the handful of packets
+that matter, the expected bytes are written out as literals in the test, checked once
+against the DIRCON description and the FTMS spec in `docs/specs/`. The same argument
+applies to discovery, where an independent mDNS implementation — python's `zeroconf` in
+the two-process check — is worth more than reusing the in-tree `qmdnsengine` that QZ
+announces with.
+
+### What it still cannot tell you
+
+It tests QZ's conformance to DIRCON *as this codebase understands it*. It cannot discover
+that MyWhoosh refuses a device advertising the same IP as the host it runs on, because
+nothing here knows that rule — it was learned from MyWhoosh. Layer C catches regressions
+and protocol errors. The real apps' idiosyncrasies are still learned the hard way, and
+still belong in FORK.md when they are.
+
 ## Scenarios
 
 The first set, all as `.ride` files, all playable by both layers:
@@ -356,8 +450,11 @@ btsnoop stays a fallback for the case where a capture predates QZ's own log, and
 
 ## CI
 
-Layer B lands in `tst/qdomyos-zwift-tests.pro` and runs in `linux-x86-build` with
-everything else. No new job, no new dependency.
+Everything that asserts lands in `tst/qdomyos-zwift-tests.pro` and runs in
+`linux-x86-build` with everything else. No new job and no new dependency: the loop is a
+gtest talking to a TCP socket on localhost, which the runner already provides. The
+two-process smoke test is the only piece that needs orchestration, and it is deliberately
+the least load-bearing one.
 
 Layer A gets a headless smoke run in the same job: build with the simulated bike enabled,
 play `steady.ride` for a fixed number of seconds, and assert the final metrics against the
@@ -401,23 +498,56 @@ build container used here (it exits with the same code and no device at all, so 
 the environment and not the device), which leaves the one part of the acceptance criteria
 that needs a screen still to be checked by eye on Windows or Android.
 
-**Phase 2 — Layer B, the harness.** The two seams, `simulatedFtmsBike`, the frame encoder,
-and the parse tests. *Accepted when* the seams are provably behaviour-neutral (the
-existing suite passes unchanged, and a real ride against the bike behaves identically),
-the encoder matches the spec's worked examples, and every scenario in the table has a
-test asserting metrics and — where applicable — written bytes.
+**Phase 2 — Layer C, connect and enumerate.** A DIRCON client in the test project,
+in-process against a `simulatedbike`, with the BLE half of the virtual device switched off.
+*Accepted when* it connects, enumerates the service and characteristic set, and asserts it
+against literals rather than against our own encoder. This is the first phase of the
+endgoal proper and the one that proves the shape works.
 
-**Phase 3 — recording.** `tools/qzlog2ride.py`, one captured ride from the real bike
-committed as a fixture, replayed in CI. *Accepted when* a log from a ride replays to the
-same metrics the ride produced.
+**Phase 3 — the asserting loop. This is the endgoal.** Notifications on 0x2AD2 decoded and
+asserted against the `.ride` file the bike is playing, then a written target power asserted
+to change what comes back. *Accepted when* `steady.ride` produces the power and cadence it
+states, `coast.ride` drives them to zero, `dropout.ride` produces a real gap rather than
+stale numbers, and an ERG request moves the stream — all in `linux-x86-build`, with no
+hardware and no training app. When this is green the sentence at the top of this document
+is true.
 
-**Phase 4 — CI smoke for Layer A.** The `-ride`/`-ride-report` flags and the job step.
-*Accepted when* it fails if a metric drifts.
+**Phase 4 — discovery.** The mDNS half, with an independent implementation, covering the
+fixes FORK.md lists: every interface, loopback, fully-qualified type, a name that stays
+put, a legal SRV target, a goodbye on quit. Plus the two-process smoke test against the
+shipped binary. *Accepted when* each fix in that list has a test that fails if the fix is
+reverted.
 
-Phases 1 and 2 are independent after Phase 0 and can be done in either order. Phase 1
-first is recommended: it is a day's work, it touches nothing dangerous, and it makes every
-subsequent change to the UI verifiable at a desk — which is the thing that is impossible
-today.
+**Phase 5 — recording.** `tools/qzlog2ride.py`, turning a debug log into both halves: the
+`<<` frames become a bike, and the `>>` frames become an oracle for what QZ wrote in
+response. *Accepted when* a log from a real ride replays to the metrics that ride produced,
+and the oracle flags a deliberate change to what QZ sends.
+
+**Phase 6 — Layer B, the frame harness.** The two seams in `ftmsbike`, the harness, the
+frame encoder, and the parse tests — now with a clearer purpose than when this document
+was first written: it is the *second bike end* of the same loop, so that everything Phases
+2–4 assert can be re-run with the real driver in place of the simulated one, fed from a
+scenario or from a recorded ride. *Accepted when* the seams are provably behaviour-neutral
+(the suite passes unchanged and a real ride behaves identically), and the Phase 3
+assertions pass with `ftmsbike` as the bike end.
+
+### Why Layer B moved
+
+The original plan put the frame harness second, on the reasoning that it catches the most
+protocol bugs. The endgoal reorders it, and the reasoning is worth writing down rather
+than quietly acting on:
+
+- Layer B tests **parsing inherited from upstream**, which largely works and changes
+  rarely. Layer C tests **the output side this fork rewrote**, which has had at least
+  seven distinct bugs, every one found by a real app refusing to connect.
+- Layer B needs two seams in `ftmsbike`'s hot path. Layer C needs no product change at
+  all — every piece it touches is already constructible from a test.
+- Layer C is what makes the endgoal sentence true. Layer B, on its own, never can be:
+  it has no consumer at the other end.
+
+Layer B does not shrink in importance, it changes role. As a component of the loop it is
+worth more than it was as a parallel track, because its assertions become the same
+assertions rather than a second set.
 
 ## Deferred: a real peripheral
 
@@ -433,8 +563,30 @@ holds an Arduino sketch for an ESP32 FTMS peripheral. A `.ride` file playing thr
 ESP32 would make it the third player of the same scenario format, which is an argument for
 getting that format right now rather than later.
 
+## What the endgoal still does not cover
+
+Worth being exact, because "CI runs the loop and asserts" is easy to hear as "CI tests QZ".
+
+- **The radio.** Discovery over BLE, the WinRT backend, bonding, unpaired connection and
+  reconnect backoff are untouched by any of this. Deferred below.
+- **The real training apps.** See the end of Layer C: their undocumented rules are not
+  knowable from here.
+- **The tiles.** `homeform` cannot be constructed without a loaded QML engine
+  (`homeform.cpp:974`), so the loop asserts on the metrics and the wire, not on what is
+  drawn. The cheapest route to that is running the QML under `QT_QPA_PLATFORM=offscreen`
+  and querying homeform's properties; the runner already has Xvfb. Worth doing once the
+  loop is green, and not before.
+- **`ftmsbike`, until Phase 6.** With `simulatedbike` as the bike end, the real device
+  driver is not in the loop at all. This is the sharpest limit of the endgoal as stated:
+  a green loop says nothing about the code that talks to your trainer until the second
+  bike end exists.
+
 ## Risks and open questions
 
+- **A fake client can agree with a broken server.** Mitigated by decoding with literals
+  and by using an independent mDNS implementation — see Layer C. It is the same structural
+  risk as the encoder/parser one below, and it is the reason neither is allowed to be
+  checked only against itself.
 - **The seams are in the hot path.** `characteristicChanged` and `processWriteQueue()` are
   what every ride runs through. The split is mechanical and behaviour-neutral by
   construction, but "by construction" is a claim, not evidence: Phase 2 is not done until
