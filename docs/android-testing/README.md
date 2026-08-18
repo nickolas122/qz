@@ -31,7 +31,7 @@ Fixtures live in `tst/fixtures/rides/`. Every procedure below that writes
 | Piece | State | Notes |
 |---|---|---|
 | Build | VM `qz-android-build`, branch `lite-version` | `C:\VMs\qz-build\README.md`; `bash /c/VMs/qz-build/rebuild-and-test.sh` builds, copies and installs |
-| Emulator | `qz_test`, Android 14 / API 34, x86_64 | Windows host, WHPX. No Bluetooth passthrough — the simulated bike is the only bike it can have |
+| Emulator | `qz_test`, Android 14 / API 34, x86_64, `google_apis` | Windows host, WHPX. No Bluetooth passthrough — the simulated bike is the only bike it can have. Rebuilding it from scratch (SDK packages, `avdmanager` invocation, the device rename) is documented in `C:\VMs\qz-build\README.md` §2 |
 | QZ | `lite-version`, installed and **verified riding a scenario** 2026-08-17 | verify the build with the settings dump at the head of `Documents/QZ/debug-*.log` |
 | Zwift | Not installed | Zwift Companion is installed, but it is not valid for this test |
 
