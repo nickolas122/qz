@@ -54,4 +54,12 @@
         android:textSize="16sp"
         android:typeface="monospace" />
 
+    <TextView
+        android:id="@+id/commandLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="12dp"
+        android:textSize="14sp"
+        android:typeface="monospace" />
+
 </LinearLayout>

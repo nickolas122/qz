@@ -31,6 +31,7 @@ public class MainActivity extends Activity implements FtmsPeripheral.Listener {
     private Button playButton;
     private TextView stateLabel;
     private TextView frameLabel;
+    private TextView commandLabel;
 
     private FtmsPeripheral peripheral;
     private final List<String> rideFiles = new ArrayList<>();
@@ -48,6 +49,7 @@ public class MainActivity extends Activity implements FtmsPeripheral.Listener {
         playButton = findViewById(R.id.playButton);
         stateLabel = findViewById(R.id.stateLabel);
         frameLabel = findViewById(R.id.frameLabel);
+        commandLabel = findViewById(R.id.commandLabel);
 
         peripheral = new FtmsPeripheral(this, this);
 
@@ -142,6 +144,11 @@ public class MainActivity extends Activity implements FtmsPeripheral.Listener {
     @Override
     public void onState(String message) {
         runOnUiThread(() -> stateLabel.setText(message));
+    }
+
+    @Override
+    public void onCommand(String summary) {
+        runOnUiThread(() -> commandLabel.setText("last request from the app: " + summary));
     }
 
     @Override

@@ -21,6 +21,7 @@ import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 import java.util.UUID;
 
@@ -95,6 +96,8 @@ public class FtmsPeripheral {
         void onState(String message);
         void onFrame(double rideSeconds, int watts, double cadence, double speedKmh,
                      int resistance, int heart, boolean silent);
+        /** The last thing a client asked for over the control point. */
+        void onCommand(String summary);
     }
 
     private final Context context;
@@ -123,6 +126,10 @@ public class FtmsPeripheral {
     /** -1 when no client has asked for a target power. */
     private double requestedPower = -1;
     private double inclination;
+    /** Set once a client writes a resistance, after which the scenario stops setting it. */
+    private boolean clientOwnsResistance;
+    /** The last control point command, for the status line. */
+    private String lastCommand = "";
 
     public FtmsPeripheral(Context context, Listener listener) {
         this.context = context;
@@ -178,6 +185,8 @@ public class FtmsPeripheral {
         lastSpeed = 0;
         requestedPower = -1;
         inclination = 0;
+        clientOwnsResistance = false;
+        lastCommand = "";
         resistance = scenario.getStartResistance() >= 0 ? scenario.getStartResistance() : 0;
         lastTickMs = System.currentTimeMillis();
         running = true;
@@ -273,6 +282,30 @@ public class FtmsPeripheral {
 
         server.addService(service);
         return true;
+    }
+
+    /**
+     * What a client last wrote to a CCCD, per client and per characteristic.
+     *
+     * A descriptor read has to give back what that client wrote, not a global last-write:
+     * `BluetoothGattDescriptor.setValue()` would be one value shared by every connection.
+     */
+    private final java.util.Map<String, byte[]> cccdValues = new java.util.HashMap<>();
+
+    private static String cccdKey(BluetoothDevice device, BluetoothGattDescriptor descriptor) {
+        return device.getAddress() + "/" + descriptor.getCharacteristic().getUuid();
+    }
+
+    private byte[] cccdValue(BluetoothDevice device, BluetoothGattDescriptor descriptor) {
+        byte[] value = cccdValues.get(cccdKey(device, descriptor));
+        return value != null ? value : new byte[] {0x00, 0x00};
+    }
+
+    private void rememberCccd(BluetoothDevice device, BluetoothGattDescriptor descriptor,
+                              byte[] value) {
+        if (value != null && value.length >= 2) {
+            cccdValues.put(cccdKey(device, descriptor), new byte[] {value[0], value[1]});
+        }
     }
 
     private BluetoothGattDescriptor newCccd() {
@@ -396,12 +429,46 @@ public class FtmsPeripheral {
             server.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, slice);
         }
 
+        /**
+         * Answer descriptor reads. Not optional, and leaving it out cost a whole session.
+         *
+         * `BluetoothGattServerCallback`'s default implementation does nothing at all - it does
+         * not even send an error response - so an unanswered ATT read sits there until the
+         * central's 30-second transaction timeout, which then tears the link down. Windows
+         * reads the CCCDs while discovering service details, so QZ connected, waited exactly
+         * thirty seconds, and reported every service on the device as InvalidService without
+         * ever seeing a characteristic. Every request this server can receive has to be
+         * answered, including the ones with nothing interesting to say.
+         */
+        @SuppressLint("MissingPermission")
+        @Override
+        public void onDescriptorReadRequest(BluetoothDevice device, int requestId, int offset,
+                                            BluetoothGattDescriptor descriptor) {
+            byte[] value = cccdValue(device, descriptor);
+            if (offset > value.length) {
+                server.sendResponse(device, requestId,
+                        BluetoothGatt.GATT_INVALID_OFFSET, offset, null);
+                return;
+            }
+            byte[] slice = new byte[value.length - offset];
+            System.arraycopy(value, offset, slice, 0, slice.length);
+            server.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, slice);
+        }
+
+        /** Prepared writes need an answer too, for the same reason. */
+        @SuppressLint("MissingPermission")
+        @Override
+        public void onExecuteWrite(BluetoothDevice device, int requestId, boolean execute) {
+            server.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null);
+        }
+
         @SuppressLint("MissingPermission")
         @Override
         public void onDescriptorWriteRequest(BluetoothDevice device, int requestId,
                                              BluetoothGattDescriptor descriptor,
                                              boolean preparedWrite, boolean responseNeeded,
                                              int offset, byte[] value) {
+            rememberCccd(device, descriptor, value);
             boolean on = value != null && value.length > 0 && value[0] != 0x00;
             List<BluetoothDevice> list =
                     INDOOR_BIKE_DATA.equals(descriptor.getCharacteristic().getUuid())
@@ -456,18 +523,26 @@ public class FtmsPeripheral {
                 break;
             case OP_SET_TARGET_RESISTANCE:
                 if (value.length >= 3) {
+                    // The YPBM spelling: the level times ten, as a 16-bit little-endian value.
                     resistance = ((value[1] & 0xFF) | ((value[2] & 0xFF) << 8)) / 10.0;
                 } else if (value.length >= 2) {
+                    // The ordinary FTMS spelling: one byte, the level itself.
                     resistance = value[1] & 0xFF;
                 } else {
                     result = RESULT_NOT_SUPPORTED;
                 }
-                // A resistance request ends any ERG hold, the way a trainer does.
-                if (result == RESULT_SUCCESS) requestedPower = -1;
+                if (result == RESULT_SUCCESS) {
+                    // A resistance request ends any ERG hold, the way a trainer does, and takes
+                    // the number away from the scenario for the rest of the ride.
+                    requestedPower = -1;
+                    clientOwnsResistance = true;
+                    lastCommand = "resistance -> " + Math.round(resistance);
+                }
                 break;
             case OP_SET_TARGET_POWER:
                 if (value.length >= 3) {
                     requestedPower = (value[1] & 0xFF) | ((value[2] & 0xFF) << 8);
+                    lastCommand = "erg -> " + Math.round(requestedPower) + " W";
                 } else {
                     result = RESULT_NOT_SUPPORTED;
                 }
@@ -476,6 +551,7 @@ public class FtmsPeripheral {
                 if (value.length >= 7) {
                     short grade = (short) ((value[3] & 0xFF) | ((value[4] & 0xFF) << 8));
                     inclination = grade / 100.0;
+                    lastCommand = String.format(Locale.US, "grade -> %.1f%%", inclination);
                 } else {
                     result = RESULT_NOT_SUPPORTED;
                 }
@@ -526,7 +602,10 @@ public class FtmsPeripheral {
             return;
         }
 
-        if (p.resistance.present && requestedPower < 0) {
+        // The scenario sets resistance only until a client asks for something. After that the
+        // client owns it, the way a trainer under a training app does - otherwise the file and
+        // QZ fight over the same number every tick and neither is testable.
+        if (p.resistance.present && requestedPower < 0 && !clientOwnsResistance) {
             resistance = p.resistance.value;
         }
 
@@ -558,6 +637,7 @@ public class FtmsPeripheral {
         notifyIndoorBikeData(speed, cadence, resistance, watts, heart);
         listener.onFrame(rideSeconds, watts, cadence, speed, (int) Math.round(resistance),
                 heart, false);
+        if (!lastCommand.isEmpty()) listener.onCommand(lastCommand);
     }
 
     /** Power converging on an ERG request, the way a trainer's flywheel does. */
