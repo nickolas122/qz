@@ -86,14 +86,46 @@ cannot cross it — a client on the host has to be given the address):
 "$ADB" forward tcp:37866 tcp:36866    # then connect to 127.0.0.1:37866
 ```
 
-### What the emulator cannot test
+### Rename the device first, or the BLE virtual bike will not advertise
 
-**The BLE virtual bike does not advertise here.** The peripheral role starts and both GATT
-services register, then `QtBluetoothGattServer: Advertising failure: 1` and QZ reports
-*virtual bike bluetooth not connected*. The emulator's Bluetooth is a simulated
-controller, so this is not evidence either way about a real device — it needs the tablet.
-Everything else on this page is unaffected, because DIRCON is a TCP server and the
-emulator's networking is real.
+A BLE advertisement is 31 bytes and Qt's Android backend puts the **adapter's** name in it,
+not the `QZ` that QZ asks for. The emulator ships as `sdk_gphone64_x86_64`, which does not
+fit alongside the flags, TX power and service UUID, so advertising fails with
+`QtBluetoothGattServer: Advertising failure: 1` (`ADVERTISE_FAILED_DATA_TOO_LARGE`) and QZ
+reports *virtual bike bluetooth not connected*. QZ toasts a warning about it at startup —
+`homeform.cpp:1086`, triggered by a name over nine characters or outside `[A-Za-z0-9 ]`.
+
+**`settings put secure bluetooth_name` does not work.** The Bluetooth stack rewrites it
+from the product model every time the adapter is enabled. Use the UI:
+
+```bash
+"$ADB" shell am start -a android.settings.DEVICE_INFO_SETTINGS
+# tap "Device name", clear the field, type a short name, OK - then OK again on the
+# "Your device name is visible to apps on your phone" confirmation, which is the tap that
+# actually commits it.
+"$ADB" shell settings get secure bluetooth_name      # should now be the short name
+```
+
+Do **not** cycle the adapter with `svc bluetooth` or `cmd bluetooth_manager` to make it take
+effect. It is not needed, and it killed this emulator twice.
+
+With a short name, a relaunch gives `onAdvertisingSetStarted() … status=0` and
+`virtualbike::bikeProvider "virtual bike connected"`, writing Indoor Bike Data once a
+second. The same applies to the tablet.
+
+### What the emulator still cannot test
+
+
+**A real central connecting over BLE.** With a short device name the virtual bike does
+advertise and QZ writes to it, but nothing here scans for it — the emulator's Bluetooth is
+a simulated controller with no second radio to be found by. Kinomap on the same device, or
+a phone with a BLE scanner, is what would close that.
+
+**The radio itself:** discovery, bonding, unpaired connection and reconnect backoff, on the
+central side. That is the deferred layer in `docs/fork/VIRTUAL-BIKE.md` and needs hardware.
+
+DIRCON is unaffected by all of this — it is a TCP server and the emulator's networking is
+real.
 
 ## Initial Setup
 

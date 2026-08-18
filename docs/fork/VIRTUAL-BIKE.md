@@ -531,9 +531,9 @@ in the log. The DIRCON endpoint came up on 36866 and the HRM one on 36867. Set
 `log_debug=true` in the INI first — without it QZ writes no log on Android and there is
 nothing to read.
 
-**The emulator cannot advertise the BLE virtual bike, and that is the one thing Android
-was supposed to add.** The peripheral role starts, both GATT services are registered
-(0x1826 and 0x180D), and then advertising fails:
+**The BLE virtual bike advertises here too — after the device is renamed.** The first
+attempt failed, and the failure is worth keeping because it looks like a QZ bug and is not
+one:
 
 ```
 QtBluetoothGattServer: Starting to advertise.
@@ -542,12 +542,38 @@ virtualbike::controller:ERROR AdvertisingError
 virtual bike bluetooth not connected
 ```
 
-Android's `AdvertiseCallback` code 1 is `ADVERTISE_FAILED_DATA_TOO_LARGE`, which would be a
-real payload problem rather than an emulator limit — but the emulator's Bluetooth is a
-simulated controller, so **this does not distinguish between an emulator artefact and a QZ
-bug.** Settling it needs the tablet, and notably *not* the trainer: a phone running a BLE
-scanner is enough to see whether the advert appears. Until then, treat the emulator as
-covering everything except the BLE half, which is the half Windows cannot cover either.
+Android's `AdvertiseCallback` code 1 is `ADVERTISE_FAILED_DATA_TOO_LARGE`. The cause is the
+**adapter's own name**: a BLE advertisement is 31 bytes, and Qt's Android backend includes
+the device name rather than the `setLocalName("QZ")` that `virtualbike.cpp:89` asks for.
+The emulator ships as `sdk_gphone64_x86_64` — 19 characters, 21 bytes with its header —
+and with flags, TX power and the service UUID there is no room left. QZ already knows this:
+`homeform.cpp:1086` toasts *"Bluetooth name too long, change it to a 4 letters one in the
+android settings"* whenever the name exceeds nine characters or leaves `[A-Za-z0-9 ]`.
+
+Renaming the device to `QZ1` produced, on the next launch:
+
+```
+QtBluetoothGattServer: Services successfully added: true
+BtGatt.AdvertiseManager: onAdvertisingSetStarted() - regId=-2, advertiserId=0, status=0
+virtualbike::bikeProvider "virtual bike connected"
+virtualbike::writeCharacteristic Unknown Service  64 02 4c 06 ab 00 0a 00 60 00 00 00
+```
+
+— Indoor Bike Data with flags `0x0264`, once a second, carrying the scenario's numbers,
+plus the Heart Rate writes behind it. **So the emulator covers the BLE peripheral half as
+well**, which is the half Windows can never cover, and the Android leg of the test stage is
+therefore complete rather than partial.
+
+Two things about the rename, because both cost time. `adb shell settings put secure
+bluetooth_name` **does not stick** — the Bluetooth stack rewrites it from the product model
+every time the adapter is enabled. It has to go through Settings → About → Device name,
+*including* the second confirmation dialog, which is what actually commits it. And cycling
+the adapter with `svc bluetooth` or `cmd bluetooth_manager` killed the emulator outright
+twice; renaming needs no adapter cycle, so do not add one.
+
+This also lands on the tablet: any Android host meant to serve Kinomap over BLE needs a
+short device name, or the virtual bike will never advertise and nothing will say why except
+a toast that is easy to dismiss.
 
 **DIRCON on the emulator is reachable from Windows**, which matters more than it sounds:
 
