@@ -670,7 +670,14 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "windeployqt failed: $LASTEXITCODE" }
             cp ../../../icons/iOS/iTunesArtwork@2x.png .
             cp ../../AppxManifest.xml .
+            # Both halves, debug last so it wins the names they share. This is
+            # `nmake debug`, so the exe imports libprotobufd.dll and the debug
+            # abseil_dll.dll - and those live in debug\bin, which this step was not
+            # copying. The result was a published zip whose exe cannot start at all:
+            # STATUS_DLL_NOT_FOUND before main(), no window and no log to say why.
+            # The test step above has known about debug\bin since it was written.
             Copy-Item -Path "$vcpkg\bin\*.dll" -Destination . -Verbose
+            Copy-Item -Path "$vcpkg\debug\bin\*.dll" -Destination . -Force -Verbose
             mkdir adb
             cp ../../adb/* adb/
 
