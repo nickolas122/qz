@@ -79,11 +79,34 @@ class FtmsFrameHarness : public ::testing::Test {
         testSettings.qsettings.setValue(QZSettings::dircon_yes, false);
 
         bike.reset(new simulatedFtmsBike());
+        burnTheFirstUpdate();
     }
 
     void TearDown() override {
         bike.reset();
         QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+    }
+
+    /**
+     * Run one `update()` before any test touches the bike, and drop what it wrote.
+     *
+     * `bluetoothdevice::update_metrics()` guards its body with `_firstUpdate`, which starts
+     * true and is cleared at the end of that first call - so the first call falls through to
+     * the tail branch, and that branch zeroes `m_watt` without consulting `watt_calc`. Power
+     * received before the first update is therefore discarded; nothing else is.
+     *
+     * Production never notices: the refresh timer has been running for seconds by the time
+     * service discovery finishes and the first notification arrives. A fixture that creates
+     * the bike and notifies it milliseconds later is racing that timer, and `poll_device_time`
+     * defaults to 200 ms - the same figure the DIRCON fixture below was turning the loop for.
+     * It won that race on Windows and lost it on a loaded CI runner, where a frame carrying
+     * 200 W reached the wire carrying nought.
+     *
+     * So the first update happens here, deterministically, where there is nothing to lose.
+     */
+    void burnTheFirstUpdate() {
+        bike->tick();
+        bike->clearWrites();
     }
 
     static void turnEventLoop(int ms) {
@@ -314,6 +337,11 @@ TEST_F(FtmsFrameHarness, ARideCommandReachesTheControlPointAsAWellFormedFtmsFram
 }
 
 TEST_F(FtmsFrameHarness, TheInitHandshakeAsksForControlBeforeAnythingElse) {
+    // The one test here that wants a bike nothing has touched: the assertion is about the
+    // *first* thing QZ says to a trainer, and SetUp's first update has already said it. So
+    // this starts again rather than asserting on the second-best write.
+    bike.reset(new simulatedFtmsBike());
+
     bike->tick();
     settleWrites(2);
 
@@ -367,6 +395,13 @@ class FtmsBikeAsTheBikeEnd : public ::testing::Test {
 
         DirconManager::releaseShared();
         bike.reset(new simulatedFtmsBike());
+
+        // Before anything else, and for the reason written out in FtmsFrameHarness above:
+        // the first update_metrics() throws away any power the bike already has, so it
+        // happens now rather than racing the notification a test is about to send.
+        bike->tick();
+        bike->clearWrites();
+
         DirconManager::shared(bike.get(), 4, 1.0);
         turn(200);
     }
