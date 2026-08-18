@@ -795,6 +795,7 @@ DISTFILES += \
     $$PWD/android/src/MediaButtonReceiver.java \
     $$PWD/android/src/MediaProjection.java \
     $$PWD/android/src/MulticastLockHelper.java \
+    $$PWD/android/src/NetworkAddressHelper.java \
     $$PWD/android/src/NotificationUtils.java \
     $$PWD/android/src/QLog.java \
     $$PWD/android/src/ScreenCaptureService.java \
