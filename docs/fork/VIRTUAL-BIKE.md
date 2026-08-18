@@ -1,7 +1,7 @@
 # The virtual bike
 
-**Phases 0 to 4 are implemented — the endgoal at the top of this document is met. Phases 5
-and 6 are spec.**
+**Phases 0 to 5 are implemented — the endgoal at the top of this document is met. Phase 6,
+Layer B, is spec.**
 
 ## The endgoal
 
@@ -759,10 +759,50 @@ flakiness comes from, and this is the least load-bearing piece. Its goodbye chec
 nor `SIGTERM` unwinds the Qt event loop, so `aboutToQuit` never fires. The goodbye is covered
 properly, and revert-checked, by the gtest above.
 
-**Phase 5 — recording.** `tools/qzlog2ride.py`, turning a debug log into both halves: the
-`<<` frames become a bike, and the `>>` frames become an oracle for what QZ wrote in
-response. *Accepted when* a log from a real ride replays to the metrics that ride produced,
-and the oracle flags a deliberate change to what QZ sends.
+**Phase 5 — recording. Done.** `tools/qzlog2ride.py` turns a debug log into a fixture:
+`t=<seconds> << <uuid> <hex>` for every frame the bike sent, `t=<seconds> >> <hex> # <what QZ
+called it>` for every write, and — the part that makes it an oracle — the metrics QZ derived
+from each frame, captured from the `Current …:` lines it logs immediately afterwards. Four
+modes: extract, `--verify`, `--oracle`, `--stats`.
+
+`tst/fixtures/recorded/ypbm-32min-ride.frames` is the first recording: a real 32-minute ride
+on YPBM001264, 4610 frames and 387 writes.
+
+*Accepted on* `--verify`, which replays the recorded frames through an FTMS decoder written
+from the spec and compares them against what QZ logged at the time. Per field, because not
+every metric QZ logs is one it read:
+
+```
+cadence     matches 1919/1919
+heart       matches 1919/1919
+resistance  matches 1919/1919
+watts       matches 1919/1919
+speed       differs 1895/1919 (frame 24.33, QZ 45.87) - QZ derives this rather than reading it
+```
+
+Every pass-through field replays exactly. Speed does not, and that is QZ working as
+configured rather than a recording error: `speed_power_based` was on, so QZ ignored the
+speed the bike reported and computed one from power. **The oracle is only valid alongside the
+settings that produced it** — worth remembering before treating a recorded metric as ground
+truth.
+
+Three things the first recording found that a hand-written fixture could not have contained:
+
+- **The bike splits Indoor Bike Data across two notifications a second, by field.** `0x01f5`
+  in 18 bytes carries cadence, distance, resistance, instantaneous and average power and the
+  energy triplet; `0x2a00` in 10 bytes carries speed, heart rate and elapsed time. Neither is
+  a valid frame on its own and QZ parses both, which is why the fake bike's single `0x0264`
+  frame is a deliberate simplification rather than a copy.
+- **It sends three bytes more than it flags.** Every `0x2a00` frame is 10 bytes where its
+  flags account for 7. It sets bit 13, which Indoor Bike Data does not define — the field it
+  presumably means is bit 12, Remaining Time. QZ reads what it was told and ignores the rest,
+  which is the right thing to do and now has a test case.
+- **0x2AD9 arrives as a notification 387 times.** Those are the control point's indications
+  answering QZ's writes, and they are in the recording alongside the writes that caused them.
+
+One limitation, recorded rather than worked around: a `>>` line does not say which
+characteristic was written, because `ftmsbike.cpp:174` does not log it. Writes are stored with
+the UUID as `?`. See TODO.md.
 
 **Phase 6 — Layer B, the frame harness.** The two seams in `ftmsbike`, the harness, the
 frame encoder, and the parse tests — now with a clearer purpose than when this document

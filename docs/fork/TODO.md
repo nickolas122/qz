@@ -9,6 +9,22 @@ behind.
 
 ---
 
+## The write log does not say which characteristic was written
+
+**Found 2026-08-18, building the recorder.** `processWriteQueue()` logs
+`" >> " + bytes + " // " + info` (`ftmsbike.cpp:174`). The `WriteRequest` it is logging carries
+a `characteristic`, and the line does not print it.
+
+Every `<<` line records its UUID, so a recorded fixture knows exactly which characteristic each
+notification arrived on — and then has to store `?` for every write. In practice they are all
+the control point, but "in practice" is not something a fixture should encode, and the moment
+a write goes somewhere else the recording is quietly wrong rather than visibly incomplete.
+
+One line. `qzlog2ride.py` will pick it up with no change, and recordings made afterwards will be
+complete; older ones keep their `?`.
+
+---
+
 ## QZ does not tell the rider when the bike goes away
 
 **Reported 2026-08-18, from the fake bike.** Stop the peripheral mid-ride and QZ freezes on the
