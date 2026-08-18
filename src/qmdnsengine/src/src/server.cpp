@@ -159,15 +159,37 @@ void ServerPrivate::onTimeout()
     bool ipv6Bound = bindSocket(ipv6Socket, QHostAddress::AnyIPv6);
 
     if (ipv4Bound || ipv6Bound) {
+        bool joinedAny = false;
         const auto interfaces = QNetworkInterface::allInterfaces();
         for (const QNetworkInterface &networkInterface : interfaces) {
             if (networkInterface.flags() & QNetworkInterface::CanMulticast) {
-                if (ipv4Bound) {
-                    ipv4Socket.joinMulticastGroup(MdnsIpv4Address, networkInterface);
+                if (ipv4Bound && ipv4Socket.joinMulticastGroup(MdnsIpv4Address, networkInterface)) {
+                    joinedAny = true;
                 }
-                if (ipv6Bound) {
-                    ipv6Socket.joinMulticastGroup(MdnsIpv6Address, networkInterface);
+                if (ipv6Bound && ipv6Socket.joinMulticastGroup(MdnsIpv6Address, networkInterface)) {
+                    joinedAny = true;
                 }
+            }
+        }
+
+        // Joining per interface is the right thing when the interfaces can be enumerated. On
+        // Android 16 they cannot: Qt reads them through netlink and logs "found unknown
+        // interface with index N" for every one, so the loop above runs zero times and the
+        // socket never joins the group at all. A responder that has not joined receives no
+        // queries, which looks exactly like a responder nobody is asking - and no multicast
+        // lock can help, because the packets are dropped before the app ever sees them.
+        //
+        // Joining with no interface leaves the choice to the kernel and its routing table,
+        // which needs none of Qt's parsing. It is the difference between hearing nothing and
+        // hearing whatever the default route can carry - including another app on this same
+        // device, which is how QZ and a training app on one phone find each other.
+        if (!joinedAny) {
+            qDebug() << "mDNS: no interface could be joined - falling back to the default route";
+            if (ipv4Bound) {
+                ipv4Socket.joinMulticastGroup(MdnsIpv4Address);
+            }
+            if (ipv6Bound) {
+                ipv6Socket.joinMulticastGroup(MdnsIpv6Address);
             }
         }
     }

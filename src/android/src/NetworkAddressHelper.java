@@ -45,12 +45,16 @@ public class NetworkAddressHelper {
         }
 
         if (address == null) {
-            // Worth being loud about: on mobile data with no Wi-Fi and no hotspot there is no
-            // address any training app could reach, so DIRCON cannot be discovered at all. That
-            // is the network's shape rather than a fault, and the log should say which it is.
-            QLog.e(TAG, "no locally reachable IPv4 address - is this device on mobile data only? " +
-                        "DIRCON needs the training app on the same Wi-Fi, or this phone's hotspot");
-            return "";
+            // No Wi-Fi, no hotspot, no Ethernet: nothing on another machine can reach this phone,
+            // and mobile data was refused above because advertising a carrier-NAT address is worse
+            // than advertising none. But a training app *on this phone* can still reach it, over
+            // loopback, and that is a supported way to ride - both apps on the one device, no
+            // network at all. So loopback is the last resort rather than giving up: it is right
+            // for the only client that could possibly connect in this situation, and no client
+            // that could be misled by it exists.
+            QLog.d(TAG, "no locally reachable address - falling back to loopback, which serves a " +
+                        "training app running on this same device");
+            return "127.0.0.1";
         }
 
         QLog.d(TAG, "local IPv4 address: " + address);
