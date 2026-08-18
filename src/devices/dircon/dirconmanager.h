@@ -49,6 +49,14 @@ class DirconManager : public QObject {
                            QObject *parent = nullptr);
 
     /**
+     * @brief Drops the Android multicast lock the constructor took.
+     *
+     * Everything else here is a QObject child and cleans itself up. On any other
+     * platform this is empty.
+     */
+    ~DirconManager() override;
+
+    /**
      * @brief Rebind every consumer of the bound device in one pass.
      *
      * The device pointer is copied into three places when the manager is built:

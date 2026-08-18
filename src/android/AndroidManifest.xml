@@ -165,6 +165,11 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <!-- The mDNS responder behind DIRCON discovery. Android filters incoming multicast
+         at the Wi-Fi driver by default, so without a MulticastLock - which needs this -
+         a training app's query never reaches QZ and QZ never answers it. Normal
+         permission: granted at install, nothing to prompt for. -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
 	 <uses-permission android:name="com.android.vending.BILLING"/>
 	 <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 	 <uses-permission android:name="com.google.android.things.permission.USE_PERIPHERAL_IO" />
