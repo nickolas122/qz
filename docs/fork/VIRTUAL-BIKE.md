@@ -1,6 +1,7 @@
 # The virtual bike
 
-**Phases 0 and 1 are implemented. The rest is spec.**
+**Phases 0 to 4 are implemented — the endgoal at the top of this document is met. Phases 5
+and 6 are spec.**
 
 ## The endgoal
 
@@ -476,8 +477,8 @@ what Layer A is for.
 **Phase 0 — the scenario format. Done.** `RideScenario` in
 `src/devices/simulatedbike/ridescenario.{h,cpp}` — Qt-free and C++11, so both players can
 link it and neither needs a QObject to read a file. Five fixtures in `tst/fixtures/rides/`
-(`steady`, `ramp`, `sprint`, `coast`, `dropout`); the remaining five in the scenario table
-arrive with the phases that assert on them. 14 tests in `tst/Devices/TestRideScenario.h`,
+(`steady`, `ramp`, `sprint`, `coast`, `dropout`), joined by `erg-hold` in phase 3; the
+remaining four in the scenario table arrive with the phases that assert on them. 14 tests in `tst/Devices/TestRideScenario.h`,
 including the round trip this phase was accepted on and nineteen malformed files that must
 be rejected with a reason. It went into `src/` rather than `tst/` as first sketched,
 because Layer A needs it too and one copy is the point.
@@ -589,25 +590,174 @@ emulator's NAT: a test client there must be given the address rather than find i
 Built on the VM, run on the emulator — `C:\VMs\qz-build\README.md`, and prefer
 `rebuild-and-test-emu.sh`, which builds x86_64 alone in roughly a quarter of the time.
 
-**Phase 2 — Layer C, connect and enumerate.** A DIRCON client in the test project,
-in-process against a `simulatedbike`, with the BLE half of the virtual device switched off.
-*Accepted when* it connects, enumerates the service and characteristic set, and asserts it
-against literals rather than against our own encoder. This is the first phase of the
-endgoal proper and the one that proves the shape works.
+**Phase 2 — Layer C, connect and enumerate. Done.** `DirconFakeApp` in
+`tst/Devices/TestDirconFakeApp.h` — fifteen tests, a real TCP client against a real
+`DirconManager` on a real `simulatedbike`, all inside the test binary and all in
+`linux-x86-build` with everything else. The endpoint is built by calling
+`DirconManager::shared()` directly rather than through `virtualbike`, so the BLE half is
+not switched off, it is never constructed: nothing here can fail on a machine with no
+adapter because nothing here asks for one.
 
-**Phase 3 — the asserting loop. This is the endgoal.** Notifications on 0x2AD2 decoded and
-asserted against the `.ride` file the bike is playing, then a written target power asserted
-to change what comes back. *Accepted when* `steady.ride` produces the power and cadence it
-states, `coast.ride` drives them to zero, `dropout.ride` produces a real gap rather than
-stale numbers, and an ERG request moves the stream — all in `linux-x86-build`, with no
-hardware and no training app. When this is green the sentence at the top of this document
-is true.
+What it covers: the service set on both endpoints (0x1826 / 0x1818 / 0x1816 on
+`base + DM_MACHINE_WAHOO_KICKR`, 0x180D on `base + DM_MACHINE_WAHOO_BLUEHR`), the
+characteristic set and property flags of each, the readable values — 0x2ACC, 0x2AD6,
+0x2AD3, 0x2A65, 0x2A5D, 0x2A5C — the four refusals (service not found, characteristic not
+found, reading a notify-only characteristic, and the undocumented message 0x07 that has to
+be answered anyway), the notification subscription acknowledgement, and the Rouvy profile's
+single folded endpoint.
 
-**Phase 4 — discovery.** The mDNS half, with an independent implementation, covering the
-fixes FORK.md lists: every interface, loopback, fully-qualified type, a name that stays
-put, a legal SRV target, a goodbye on quit. Plus the two-process smoke test against the
-shipped binary. *Accepted when* each fix in that list has a test that fails if the fix is
-reverted.
+Two of those are worth naming because nothing else protects them. **0x2ACC** is asserted
+byte for byte, which is the FTMS feature word MyWhoosh reads to decide what the trainer can
+report — `f8af0cb21` in FORK.md. And the **process lifetime** of the endpoint gets two
+tests: it answers with no device attached at all, and a client already connected keeps
+working across a bind, a rebind and the bike going away again. That is the change the whole
+DIRCON refactor rests on and it had no test until now.
+
+*Accepted on*: the expected bytes are not our encoder's output. Every literal was captured
+from the shipped `qdomyos-zwift -no-gui -simulated-bike -ride steady.ride` binary with an
+independent python client that shares nothing with `DirconPacket`, in both the default and
+the `rouvy_compatibility` profiles, and the request sequence the tests send is the one
+Rouvy actually sends — read off a real Rouvy session in a `debug-*.log`, discover services,
+discover 0x1826 and 0x1816, read 0x2ACC / 0x2AD6 / 0x2A5C, subscribe to 0x2AD2 and 0x2A5B,
+then write 0x2AD9.
+
+One thing the capture settled that the spec had not: **notifications arrive whether or not
+anyone subscribed** unless `wahoo_rgt_dircon` is on, so the client has to split frames off a
+stream and set unsolicited ones aside rather than assume the next frame answers the last
+request. Phase 3 inherits that machinery — the same run showed `steady.ride` arriving on
+0x2AD2 as `6402730cb4000c00c8008400`: flags 0x0264, 31.87 km/h, 90 rpm, resistance 12,
+200 W, which is the file, on the wire, with no trainer in the room.
+
+**Phase 3 — the asserting loop. Done. This was the endgoal.** `DirconRideLoop` in
+`tst/Devices/TestDirconRideLoop.h` — six tests, the same in-process client as phase 2
+(extracted to `tst/Devices/DirconTestClient.h`), now subscribed to 0x2AD2 and asserting on
+what arrives. **The sentence at the top of this document is true**: a `.ride` file plays
+into `simulatedbike`, through `bike`/`bluetoothdevice`'s metrics, through
+`CharacteristicNotifier2AD2`, out over DIRCON, into a fake training app that checks the
+numbers — in `linux-x86-build`, with no radio, no trainer and no training app.
+
+Each acceptance criterion, and what it turned into:
+
+- **`steady.ride` produces the power and cadence it states.** Every frame: flags 0x0264,
+  200 W, 90 rpm, resistance 12 from the file's directive, speed non-zero. Exact, not a
+  range — the file is flat and `noise` defaults to zero.
+- **`coast.ride` drives them to zero.** Cadence, power and speed all exactly zero through
+  the standstill, *while heart rate keeps falling*. That second half is the assertion that
+  matters: it proves the bike is still talking and reporting zeroes, which is the whole
+  distinction between a coast and a dropout.
+- **`dropout.ride` produces a real gap rather than stale numbers.** **This one was wrong,
+  and the fix is the wording rather than the code.** QZ cannot produce a gap:
+  `DirconManager::bikeProvider()` notifies on its own timer and sends whatever the metrics
+  currently hold, so a silent bike is a frame that repeats. Measured against the shipped
+  binary before the test was written — eleven seconds of one byte-identical frame, then a
+  step to the far side of the gap. So the test asserts *that*: byte-identical frames
+  throughout, heart rate included, then a jump to the post-gap sample with no value from
+  the middle ever appearing. Stale numbers are what a dropout looks like on this wire; what
+  had to be proved is that nothing is *invented* while the bike says nothing.
+- **An ERG request moves the stream.** `REQUEST_CONTROL` and `SET_TARGET_POWER` are
+  acknowledged with their exact FTMS replies (`80 00 01` and `80 05 01`, carried inside the
+  WRITE_CHARACTERISTIC response), and a 300 W target against `erg-hold.ride`'s flat 160 W
+  pulls the stream to within 20 W of the target and moves the resistance with it. The new
+  `erg-hold.ride` fixture is the scenario table's, with `erg_lag 1.0` so a test does not
+  wait on a flywheel.
+
+Plus one the plan did not ask for: a write with **no bike attached** is refused rather than
+dereferencing a freed device. That is the guard the process-lifetime endpoint needs, and
+the refusal is silence — `processPacket` sets `DPKT_MSGID_ERROR` and nothing is sent — so
+the test asserts that nothing comes back.
+
+**These tests take about seventy-five seconds**, and that is the honest cost of the design
+rather than something to optimise away. `simulatedbike` advances its ride by measured
+wall-clock time on purpose, so a test that needs `t=21` waits twenty-one seconds. `coast`
+and `dropout` are therefore one test each, paying the wait once. A clock seam would remove
+the wait and remove the thing being tested with it; if this ever becomes intolerable the
+answer is a shorter fixture, not a fake clock.
+
+**It found a real bug, which is the point.** The longer-lived endpoints reached a path the
+250-millisecond phase 2 tests never did, and `DirconProcessor`'s destructor segfaulted:
+the mDNS server, hostname and provider are all children of the processor and are added in
+that order, so QObject freed the server first and `~ProviderPrivate()` sent its goodbye
+through it afterwards. Every mid-session teardown — `releaseShared()`, which
+`DirconManager::shared()` calls when a treadmill replaces a bike — was a use-after-free,
+and the goodbye that path exists to send was going into freed memory rather than onto the
+wire. Fixed by giving the destructor an explicit dependency order; see step 4 of
+`DIRCON-SERVER-REFACTOR.md`, whose claim that "nothing else is required here" this
+disproves.
+
+**Phase 4 — discovery. Done.** `DirconDiscovery` in `tst/Devices/TestDirconDiscovery.h` —
+eight tests over a DNS codec written from RFC 1035 and RFC 6762 in
+`tst/Devices/MdnsTestClient.h`, sharing nothing with the `qmdnsengine` QZ announces with.
+That independence matters more here than anywhere else in Layer C: a browser built on
+`qmdnsengine` would only be asking that code whether it agrees with itself.
+
+*Accepted when* each fix has a test that fails if the fix is reverted — so each fix **was**
+reverted, rebuilt and re-run:
+
+| Fix | Test | Reverted → |
+| --- | --- | --- |
+| Fully-qualified service type | `TheServiceAnswersAQueryForItsFullyQualifiedType` | fails |
+| A legal SRV target | `TheSrvTargetIsALegalHostnameAndPointsAtTheListeningPort` | fails |
+| A name that stays put | `TheServiceNameSurvivesItsOwnRecordComingBack` | fails |
+| A goodbye on quit | `AGoodbyeIsSentWhenTheEndpointGoesAway` | fails |
+| Every interface | `AnnouncementsGoOutOnEveryInterface` | fails |
+| Loopback answered | `ABrowserQueryIsAnsweredOnLoopback` | fails |
+
+Two of those needed more than a first draft, and both are worth knowing:
+
+- **Two of the fixes live in two places.** Reverting `setType("…_tcp.local.")` alone changes
+  nothing, because `Provider::update()` appends the trailing dot itself; and reverting
+  `serverName.replace(' ', '-')` alone changes nothing, because
+  `HostnamePrivate::assertHostname()` rewrites every character outside `[A-Za-z0-9-]` to a
+  hyphen. Only reverting both ends made either test fail. The tests assert the observable
+  contract rather than one of the two implementations, which is the right thing for them to
+  assert — but "one fix, one place" was an assumption, and it was wrong.
+- **The rename loop is provoked, not waited for.** Watching a name for twelve seconds proved
+  nothing: with the guard removed, the service still settled. The self-conflict needs a
+  *response* carrying the proposed record, and in the current architecture nothing produces
+  one during the probe window. So the test sends it — a hand-built SRV response that is
+  byte-for-byte the provider's own claim, repeated through the probe. RFC 6762 8.2 says an
+  identical record is not a conflict; a responder that renames on this is renaming against
+  itself, which is exactly the bug.
+
+**Two tests can skip, and on the CI runner they probably will.** `ABrowserQueryIsAnswered`
+`OnLoopback` joins the group on the loopback interface *only* — a listener joined everywhere
+would be satisfied by an answer that went out the Wi-Fi adapter, which is the failure being
+tested for — and Linux does not set `IFF_MULTICAST` on `lo`, so there is no loopback
+multicast to assert on. `AnnouncementsGoOutOnEveryInterface` needs two multicast-capable
+interfaces before "sent to one" and "sent to all" are distinguishable at all. Both skip with
+the reason printed rather than passing quietly. They are real tests on a multi-homed
+developer machine — which is where both bugs appeared — and no-ops on a single-homed VM.
+That is a genuine gap against "anything meant to catch a regression has to run in CI", and
+naming it is better than pretending the coverage is there.
+
+Three things the wiring taught, none of them guessable:
+
+- **A unicast query to 127.0.0.1:5353 does not reach QZ.** It is delivered to exactly one of
+  the sockets sharing that port, and QZ is never alone there — Bonjour's `mDNSResponder`,
+  Windows' `Dnscache` and `adb` were all holding 5353 on the machine this was written on. So
+  the browser asks on the group, which every joined socket receives, and is answered
+  *unicast* back to its ephemeral port, because `Message::reply()` only answers on the group
+  when the query came from port 5353. Ask multicast, listen unicast.
+- **The tests run in the Rouvy profile**, which builds one endpoint and one provider. The
+  default profile builds two and both answer, so every assertion would have to sort two
+  interleaved replies — test machinery with no product behind it.
+- **`dircon_id` is set to 4321 for the same reason the port is 47820.** The Rouvy profile
+  turns the default id of 0 into 1234, so a developer with QZ running announces the name the
+  tests were claiming. Two responders claiming one name is a real conflict and the loser
+  renames itself, which would fail the suite for a reason that has nothing to do with the
+  code.
+
+**The two-process smoke test is `tools/dircon_smoke.py`.** It launches the shipped
+`qdomyos-zwift -no-gui -simulated-bike -ride …`, finds it with python's `zeroconf` — a
+foreign stack, as the plan asks — resolves it, then opens TCP to the *discovered* address
+and port and consumes the stream. Run against the Windows build it passes end to end: the
+service resolves to `ELITE-AVANTI-01234-W.local.` on 36866, 0x2ACC reads back
+`835400000ce00000`, `REQUEST_CONTROL` is acknowledged with `800001`, and `steady.ride`
+arrives as 200 W at 90 rpm. It is deliberately not in CI — process orchestration is where
+flakiness comes from, and this is the least load-bearing piece. Its goodbye check is behind
+`--check-goodbye` because killing a process is not quitting one: neither `TerminateProcess`
+nor `SIGTERM` unwinds the Qt event loop, so `aboutToQuit` never fires. The goodbye is covered
+properly, and revert-checked, by the gtest above.
 
 **Phase 5 — recording.** `tools/qzlog2ride.py`, turning a debug log into both halves: the
 `<<` frames become a bike, and the `>>` frames become an oracle for what QZ wrote in

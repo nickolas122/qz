@@ -51,6 +51,9 @@ SOURCES += \
         Devices/TestServiceSubscriptionPlan.cpp \
         Devices/TestRideScenario.cpp \
         Devices/TestSimulatedBikeAnnouncement.cpp \
+        Devices/TestDirconFakeApp.cpp \
+        Devices/TestDirconRideLoop.cpp \
+        Devices/TestDirconDiscovery.cpp \
         Erg/TestErgTableSelection.cpp \
         Erg/TestErgAutoMode.cpp \
         main.cpp
@@ -106,6 +109,11 @@ HEADERS += \
     Devices/TestServiceSubscriptionPlan.h \
     Devices/TestRideScenario.h \
     Devices/TestSimulatedBikeAnnouncement.h \
+    Devices/DirconTestClient.h \
+    Devices/MdnsTestClient.h \
+    Devices/TestDirconFakeApp.h \
+    Devices/TestDirconRideLoop.h \
+    Devices/TestDirconDiscovery.h \
     Erg/ergtabletestsuite.h \
     Erg/TestErgTableSelection.h \
     Erg/TestErgAutoMode.h \

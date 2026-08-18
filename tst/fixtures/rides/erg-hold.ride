@@ -1,0 +1,17 @@
+# erg-hold.ride - a flat ride for a training app to steer.
+#
+# The closed loop: the file states a power the rider is producing unprompted, a client asks
+# for a different one over the control point, and the bike has to converge on what was asked
+# rather than on what the file says. Everything else is deliberately motionless, so anything
+# that moves in the stream moved because of the request.
+#
+# erg_lag is a second rather than the default two, because a test that waits for a flywheel
+# is a test nobody runs. It is still a convergence and not a step - a step would hide every
+# ERG oscillation bug there is, which is the whole reason the lag is in the format.
+
+mode        power
+resistance  12
+erg_lag     1.0
+
+t=0     watts=160  cadence=88  hr=126
+t=600   watts=160  cadence=88  hr=126
