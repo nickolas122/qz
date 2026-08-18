@@ -159,6 +159,17 @@ public class FtmsPeripheral {
             manager.getAdapter().setName(ADVERTISED_NAME);
         }
 
+        // setName() is asynchronous - it goes through binder to the Bluetooth process and is
+        // persisted there - and the advertising payload is built from whatever the name is at
+        // the moment startAdvertising() runs. Starting immediately is a race, and losing it
+        // means advertising under the phone's real name or under none at all. Wait for the
+        // stack to agree before going on the air.
+        if (!waitForAdapterName(ADVERTISED_NAME, 3000)) {
+            say("the adapter would not take the name " + ADVERTISED_NAME
+                    + " (it is \"" + manager.getAdapter().getName() + "\") - QZ will not "
+                    + "recognise this device");
+        }
+
         if (!openGattServer()) return false;
         startAdvertising();
 
@@ -277,15 +288,26 @@ public class FtmsPeripheral {
                 .setConnectable(true)
                 .build();
 
-        // The 31-byte budget is the trap here. The service UUID goes in the advertisement and
-        // the name in the scan response, so neither has to fit alongside the other: a name in
-        // the advertisement next to flags, TX power and a UUID is how ADVERTISE_FAILED_DATA_
-        // TOO_LARGE happens, and Android reports that as a bare error code 1.
+        // The name goes in the advertisement itself, not only in the scan response.
+        //
+        // Putting it only in the scan response looks tidier and costs a whole afternoon: a
+        // scanner receives a scan response only if it is scanning *actively*, and plenty are
+        // not. QZ on Windows saw this device as an unnamed address with a 0x1826 service on
+        // it and could not match the name it selects the driver by, so it never claimed it.
+        //
+        // The 31-byte budget is still the thing to respect - flags 3, the 16-bit service UUID
+        // 4, and a ten-character name 12, which is 19 - but that budget is only comfortable
+        // because the adapter has been renamed by now. If the rename failed, the phone's real
+        // name goes in instead and a long one overflows: that is ADVERTISE_FAILED_DATA_TOO_
+        // LARGE, reported by Android as a bare error code 1 and translated below. Failing
+        // loudly there is the point. An advertisement with no name is a device QZ will look
+        // straight past without a word.
         AdvertiseData data = new AdvertiseData.Builder()
-                .setIncludeDeviceName(false)
+                .setIncludeDeviceName(true)
                 .setIncludeTxPowerLevel(false)
                 .addServiceUuid(new ParcelUuid(FITNESS_MACHINE_SERVICE))
                 .build();
+        // ...and in the scan response as well, for anything that does ask.
         AdvertiseData scanResponse = new AdvertiseData.Builder()
                 .setIncludeDeviceName(true)
                 .build();
@@ -293,10 +315,33 @@ public class FtmsPeripheral {
         advertiser.startAdvertising(settings, data, scanResponse, advertiseCallback);
     }
 
+    /**
+     * Poll until the adapter reports @p wanted, or give up.
+     *
+     * @return whether the stack agreed within @p ms.
+     */
+    @SuppressLint("MissingPermission")
+    private boolean waitForAdapterName(String wanted, long ms) {
+        long deadline = System.currentTimeMillis() + ms;
+        while (System.currentTimeMillis() < deadline) {
+            if (wanted.equals(manager.getAdapter().getName())) return true;
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return wanted.equals(manager.getAdapter().getName());
+    }
+
     private final AdvertiseCallback advertiseCallback = new AdvertiseCallback() {
+        @SuppressLint("MissingPermission")
         @Override
         public void onStartSuccess(AdvertiseSettings settingsInEffect) {
-            say("advertising as " + ADVERTISED_NAME);
+            // The name actually on the air, not the one that was asked for - if the rename
+            // did not take, this is where it shows.
+            say("advertising as " + manager.getAdapter().getName());
         }
 
         @Override

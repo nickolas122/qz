@@ -30,6 +30,24 @@ name *is* the adapter name — an app cannot set it per-advertisement — so Pla
 adapter and Stop puts the old name back. Force-stopping the app instead leaves the phone
 called YPBM123456, and you have to fix it in Settings → About → Device name. Press Stop.
 
+Two things about that rename cost a debugging round, and both are now handled:
+
+- **`setName()` is asynchronous.** It goes through binder to the Bluetooth process, and the
+  advertising payload is built from whatever the name is when `startAdvertising()` runs.
+  Starting immediately is a race; the app now waits for the adapter to report the new name
+  before going on the air, and says so if it never does.
+- **The name has to be in the advertisement, not only in the scan response.** A scanner
+  receives a scan response only if it is scanning *actively*, and plenty are not. With the
+  name in the scan response alone, QZ on Windows saw an unnamed address advertising `0x1826`
+  and looked straight past it — a device with no name cannot match the name QZ selects its
+  driver by. The status line shows the name actually on the air, so this is visible rather
+  than silent.
+
+**If your real trainer is switched on, turn it off or tell QZ which one you want.** QZ claims
+the first `YPBM*` device it discovers and stops scanning, so a powered-up YPBM001264 wins the
+race about half the time. Setting *filter device* to `YPBM123456` in QZ's settings removes the
+ambiguity.
+
 ## Build
 
 The APK is built on the Android build VM (`C:\VMs\qz-build\README.md`), which already has a
@@ -132,8 +150,9 @@ machine.
 Two things carry over from QZ's own Android notes and cost time when forgotten:
 
 - **A long Bluetooth name breaks advertising.** An advertisement is 31 bytes and Android
-  reports overflow as bare error code 1, `ADVERTISE_FAILED_DATA_TOO_LARGE`. This app puts the
-  service UUID in the advertisement and the name in the scan response so the two never have to
-  fit together, which is why a ten-character name is comfortable here.
+  reports overflow as bare error code 1, `ADVERTISE_FAILED_DATA_TOO_LARGE`. Here it is flags
+  (3) plus the 16-bit service UUID (4) plus a ten-character name (12), which is 19 — but only
+  because the adapter has been renamed by then. If the rename fails, the phone's own name goes
+  in and a long one overflows.
 - **Do not cycle the adapter with `svc bluetooth` or `cmd bluetooth_manager`** to make a rename
   take effect. It killed the emulator outright twice. Nothing here needs a cycle.
