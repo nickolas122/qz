@@ -65,6 +65,10 @@ src/build/*
 
 src/debug-*
 
+# QZ's debug logs, wherever they are run from. Two were once uploaded to the repo
+# root through the GitHub web UI, which src/debug-* does not cover.
+/debug-*.log
+
 # The FIT backups QZ writes beside itself when the app is run from src/, which is how
 # a simulated-bike session is started locally (docs/fork/VIRTUAL-BIKE.md).
 src/*QZ-backup-*.fit
