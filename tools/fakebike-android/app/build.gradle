@@ -1,0 +1,70 @@
+plugins {
+    id 'com.android.application'
+}
+
+/**
+ * Where the .ride scenarios come from.
+ *
+ * In the repo they are the same files the simulated bike and the Layer C tests play, and a
+ * second copy would drift from the first the day someone edits one of them. When the project
+ * is synced somewhere on its own - the build VM, for instance - sync-and-build.sh drops them
+ * in ./rides and this falls back to that.
+ */
+def ridesDir = {
+    def inRepo = rootProject.file('../../tst/fixtures/rides')
+    def alongside = rootProject.file('rides')
+    return inRepo.isDirectory() ? inRepo : alongside
+}()
+
+def stagedAssets = file("$projectDir/build/rideAssets")
+
+android {
+    namespace 'org.qzfork.fakebike'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "org.qzfork.fakebike"
+        // 26 rather than 21: the peripheral APIs are older than that, but nothing this will
+        // ever run on is, and a lower floor is a compatibility claim nobody checks.
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    sourceSets {
+        main {
+            assets.srcDirs += [stagedAssets]
+        }
+    }
+}
+
+/** Stage the scenarios under assets/rides, which is what MainActivity lists. */
+tasks.register('stageRides', Copy) {
+    from ridesDir
+    include '*.ride'
+    into new File(stagedAssets, 'rides')
+    doFirst {
+        if (!ridesDir.isDirectory()) {
+            throw new GradleException(
+                    "no .ride scenarios at ${ridesDir} - the app would ship with an empty picker")
+        }
+    }
+}
+
+tasks.configureEach { task ->
+    if (task.name.startsWith('merge') && task.name.endsWith('Assets')) {
+        task.dependsOn 'stageRides'
+    }
+}

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">QZ Fake Bike</string>
+    <string name="heading">QZ Fake Bike</string>
+    <string name="subheading">An FTMS trainer that is not there. Advertises as YPBM123456 and streams a .ride scenario over BLE.</string>
+    <string name="ride_label">Ride scenario</string>
+    <string name="play">Play</string>
+    <string name="stop">Stop</string>
+</resources>
