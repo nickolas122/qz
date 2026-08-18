@@ -105,7 +105,7 @@ bool ftmsbike::writeCharacteristic(uint8_t *data, uint8_t data_len, const QStrin
     QSettings settings;
     bool gears_zwift_ratio = settings.value(QZSettings::gears_zwift_ratio, QZSettings::default_gears_zwift_ratio).toBool();
 
-    if(!gattFTMSService) {
+    if (!controlPointReady()) {
         qDebug() << QStringLiteral("gattFTMSService is null!");
         return false;
     }
@@ -124,7 +124,7 @@ bool ftmsbike::writeCharacteristic(uint8_t *data, uint8_t data_len, const QStrin
 bool ftmsbike::enqueueWrite(QLowEnergyService *service, const QLowEnergyCharacteristic &characteristic, uint8_t *data,
                             uint8_t data_len, const QString &info, bool disable_log, bool wait_for_response,
                             bool write_without_response) {
-    if (!service || !characteristic.isValid()) {
+    if (!enqueueTargetValid(service, characteristic)) {
         qDebug() << QStringLiteral("writeCharacteristic error because service/characteristic is invalid");
         return false;
     }
@@ -143,13 +143,44 @@ bool ftmsbike::enqueueWrite(QLowEnergyService *service, const QLowEnergyCharacte
     return true;
 }
 
+/**
+ * The seams Layer B needs, with defaults that are exactly the code they replaced. Production
+ * takes the same branches it always did; only a test subclass sees anything different.
+ * See docs/fork/VIRTUAL-BIKE.md, "Layer B - the frame harness".
+ */
+bool ftmsbike::linkExists() const { return m_control != nullptr; }
+
+QLowEnergyController::ControllerState ftmsbike::linkState() const {
+    return m_control ? m_control->state() : QLowEnergyController::UnconnectedState;
+}
+
+bool ftmsbike::controlPointReady() const { return gattFTMSService != nullptr; }
+
+bool ftmsbike::enqueueTargetValid(QLowEnergyService *service,
+                                  const QLowEnergyCharacteristic &characteristic) const {
+    return service && characteristic.isValid();
+}
+
+bool ftmsbike::writeTargetReady(const WriteRequest &request) const {
+    return request.service && request.service->state() == QLowEnergyService::ServiceDiscovered;
+}
+
+void ftmsbike::performWrite(const WriteRequest &request, const QByteArray &data) {
+    if (request.write_without_response) {
+        request.service->writeCharacteristic(request.characteristic, data,
+                                             QLowEnergyService::WriteWithoutResponse);
+    } else {
+        request.service->writeCharacteristic(request.characteristic, data);
+    }
+}
+
 void ftmsbike::processWriteQueue() {
     if (isWriting || writeQueue.isEmpty()) {
         return;
     }
 
     WriteRequest request = writeQueue.dequeue();
-    if (!request.service || request.service->state() != QLowEnergyService::ServiceDiscovered) {
+    if (!writeTargetReady(request)) {
         qDebug() << QStringLiteral("writeCharacteristic error because the connection is closed");
         writeQueue.clear();
         return;
@@ -164,11 +195,7 @@ void ftmsbike::processWriteQueue() {
     currentWriteWaitingForResponse = request.wait_for_response;
     currentWriteService = request.service;
 
-    if (request.write_without_response) {
-        request.service->writeCharacteristic(request.characteristic, *writeBuffer, QLowEnergyService::WriteWithoutResponse);
-    } else {
-        request.service->writeCharacteristic(request.characteristic, *writeBuffer);
-    }
+    performWrite(request, *writeBuffer);
 
     if (!request.disable_log) {
         emit debug(QStringLiteral(" >> ") + writeBuffer->toHex(' ') + QStringLiteral(" // ") + request.info);
@@ -678,11 +705,11 @@ void ftmsbike::update() {
     // dereference; on Qt 6 it is a hard crash inside QLowEnergyController::state()
     // (qlowenergycontroller.cpp:570, reading d_ptr through a null this), which is
     // what killed the first Qt 6 connection attempts a second after "YPBM found".
-    if (!m_control) {
+    if (!linkExists()) {
         return;
     }
 
-    if (m_control->state() == QLowEnergyController::UnconnectedState) {
+    if (linkState() == QLowEnergyController::UnconnectedState) {
         emit disconnected();
         return;
     }
@@ -696,7 +723,7 @@ void ftmsbike::update() {
 
         initRequest = false;
     } else if (bluetoothDevice.isValid() &&
-               m_control->state() == QLowEnergyController::DiscoveredState //&&
+               linkState() == QLowEnergyController::DiscoveredState //&&
                                                                            // gattCommunicationChannelService &&
                                                                            // gattWriteCharacteristic.isValid() &&
                                                                            // gattNotify1Characteristic.isValid() &&
@@ -969,13 +996,19 @@ bool ftmsbike::shouldUseCalculatedResistanceFallback(const QDateTime &now) {
 }
 
 void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &newValue) {
-    if (isWriting && currentWriteWaitingForResponse && sender() == currentWriteService) {
+    // The Qt slot does one thing: pull out what the handler needs and delegate. Everything
+    // below the split is unchanged, and none of it can be reached from a test through this
+    // entry point, because a test cannot build a QLowEnergyCharacteristic with a UUID in it.
+    handleNotification(characteristic.uuid(), newValue, sender());
+}
+
+void ftmsbike::handleNotification(const QBluetoothUuid &characteristicUuid, const QByteArray &newValue,
+                                  QObject *fromService) {
+    if (isWriting && currentWriteWaitingForResponse && fromService == currentWriteService) {
         completeCurrentWrite();
     }
 
     QDateTime now = QDateTime::currentDateTime();
-    // qDebug() << "characteristicChanged" << characteristic.uuid() << newValue << newValue.length();
-    Q_UNUSED(characteristic);
     QSettings settings;
     QString heartRateBeltName =
         settings.value(QZSettings::heart_rate_belt_name, QZSettings::default_heart_rate_belt_name).toString();
@@ -994,11 +1027,11 @@ void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteris
              .startsWith(QStringLiteral("Disabled"));
     bool useMachineCadence = !externalCadenceSensorEnabled && !externalPowerSensorEnabled;
 
-    qDebug() << characteristic.uuid() << newValue.length() << QStringLiteral(" << ") << newValue.toHex(' ');
+    qDebug() << characteristicUuid << newValue.length() << QStringLiteral(" << ") << newValue.toHex(' ');
 
     lastPacket = newValue;
 
-    if (DU30_bike && characteristic.uuid() == QBluetoothUuid(QStringLiteral("0000fff1-0000-1000-8000-00805f9b34fb")) && newValue.length() >= 14) {
+    if (DU30_bike && characteristicUuid == QBluetoothUuid(QStringLiteral("0000fff1-0000-1000-8000-00805f9b34fb")) && newValue.length() >= 14) {
         resistance_received = true;
         native_resistance_received = true;
         calculatedResistanceFallbackSince = QDateTime();
@@ -1008,7 +1041,7 @@ void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteris
         return;
     }
 
-    if (characteristic.uuid() == QBluetoothUuid((quint16)0x2A19) && !D2RIDE) { // Battery Service
+    if (characteristicUuid == QBluetoothUuid((quint16)0x2A19) && !D2RIDE) { // Battery Service
         if(newValue.length() > 0) {
             uint8_t b = (uint8_t)newValue.at(0);
             if(b != battery_level)
@@ -1019,7 +1052,7 @@ void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteris
         return;
     }
 
-    if (characteristic.uuid() == QBluetoothUuid((quint16)0x2AD9) && newValue.length() >= 3) {
+    if (characteristicUuid == QBluetoothUuid((quint16)0x2AD9) && newValue.length() >= 3) {
         const uint8_t responseCode = (uint8_t)newValue.at(0);
         const uint8_t requestCode = (uint8_t)newValue.at(1);
         const uint8_t resultCode = (uint8_t)newValue.at(2);
@@ -1051,7 +1084,7 @@ void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteris
         }
     }
     
-    if(characteristic.uuid() == QBluetoothUuid(QStringLiteral("00000002-19ca-4651-86e5-fa29dcdd09d1")) && newValue.at(0) == 0x03) {
+    if(characteristicUuid == QBluetoothUuid(QStringLiteral("00000002-19ca-4651-86e5-fa29dcdd09d1")) && newValue.at(0) == 0x03) {
 #ifdef Q_OS_IOS
 #ifndef IO_UNDER_QT
         m_watt =  lockscreen::zwift_hub_getPowerFromBuffer(newValue.mid(1));
@@ -1066,7 +1099,7 @@ void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteris
         return;
     }
 
-    if(T2 && characteristic.uuid() == QBluetoothUuid(QStringLiteral("6e400003-b5a3-f393-e0a9-e50e24dcca9e")) && newValue.length() == 62) {
+    if(T2 && characteristicUuid == QBluetoothUuid(QStringLiteral("6e400003-b5a3-f393-e0a9-e50e24dcca9e")) && newValue.length() == 62) {
         int16_t gears = ((int16_t)(((int16_t)((uint8_t)newValue.at(55)) << 8) |
                           (int16_t)((uint8_t)newValue.at(54))));
 
@@ -1087,7 +1120,7 @@ void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteris
     }
 
     // Wattbike Atom First Generation - Display Gears
-    if(WATTBIKE && characteristic.uuid() == QBluetoothUuid(QStringLiteral("b4cc1224-bc02-4cae-adb9-1217ad2860d1")) &&
+    if(WATTBIKE && characteristicUuid == QBluetoothUuid(QStringLiteral("b4cc1224-bc02-4cae-adb9-1217ad2860d1")) &&
         newValue.length() > 3 && newValue.at(1) == 0x03 && (uint8_t)newValue.at(2) == 0xb6) {
         uint8_t gear = newValue.at(3);
         qDebug() << "watt bike gears" << gear;
@@ -1109,7 +1142,7 @@ void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteris
             .arg(resistance_level).arg(k[resistance_level - 1]).arg(m_watt.value()));
     };
 
-    if (characteristic.uuid() == QBluetoothUuid((quint16)0x2AD2)) {
+    if (characteristicUuid == QBluetoothUuid((quint16)0x2AD2)) {
         union flags {
             struct {
                 uint16_t moreData : 1;
@@ -1149,6 +1182,44 @@ void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteris
         Flags.word_flags = (((uint16_t)((uint8_t)newValue.at(1))) << 8) |
                            ((uint16_t)((uint8_t)newValue.at(0)));
         index += 2;
+
+        // Refuse a frame that does not contain what its flags promise.
+        //
+        // The check above only guarantees the flags word itself. Every field after it is read
+        // with newValue.at(index), so a frame whose flags claim more than it carries reads off
+        // the end - a Q_ASSERT in a debug Qt, and silent garbage in a release one. The 0x2ACE
+        // path below already guards every field with ensureBytesAvailable(); 0x2AD2 did not,
+        // and the Layer B harness found it by sending a truncated frame
+        // (docs/fork/VIRTUAL-BIKE.md).
+        //
+        // One up-front check rather than thirteen inline ones, deliberately: this is the hot
+        // path, and a single arithmetic statement is easier to review and to keep in step than
+        // a guard at every read. The widths below are the ones the reads immediately following
+        // use, in the same order.
+        {
+            int needed = 2;
+            if (!Flags.moreData) needed += 2; // instantaneous speed
+            if (Flags.avgSpeed) needed += 2;
+            if (Flags.instantCadence) needed += 2;
+            if (Flags.avgCadence) needed += 2;
+            if (Flags.totDistance) needed += 3;
+            if (Flags.resistanceLvl) needed += 2;
+            if (Flags.instantPower) needed += 2;
+            if (Flags.avgPower) needed += 2;
+            if (Flags.expEnergy) needed += 5; // total, per hour, per minute
+            if (Flags.heartRate) needed += 1;
+            if (Flags.metabolic) needed += 1;
+            if (Flags.elapsedTime) needed += 2;
+            if (Flags.remainingTime) needed += 2;
+            if (newValue.length() < needed) {
+                qDebug() << QStringLiteral("FTMS 0x2AD2 packet too short for its flags") << Qt::hex
+                         << Flags.word_flags << Qt::dec << QStringLiteral("length")
+                         << newValue.length() << QStringLiteral("needed") << needed;
+                return;
+            }
+            // A frame longer than its flags describe is fine and is not refused: the YPBM
+            // trainer sends three bytes more than it accounts for on every short frame.
+        }
 
         if (!Flags.moreData) {
             if (!settings.value(QZSettings::speed_power_based, QZSettings::default_speed_power_based).toBool()) {
@@ -1420,7 +1491,7 @@ void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteris
 
         lastRefreshCharacteristicChanged2AD2 = now;
         ftmsFrameReceived = true;
-    } else if (characteristic.uuid() == QBluetoothUuid::CharacteristicType::CyclingPowerMeasurement && !ftmsFrameReceived) {
+    } else if (characteristicUuid == QBluetoothUuid::CharacteristicType::CyclingPowerMeasurement && !ftmsFrameReceived) {
         uint16_t flags = (((uint16_t)((uint8_t)newValue.at(1)) << 8) | (uint16_t)((uint8_t)newValue.at(0)));
         bool cadence_present = false;
         bool wheel_revs = false;
@@ -1595,7 +1666,7 @@ void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteris
                 lastRefreshCharacteristicChangedPower = now;
             }
         }        
-    } else if (characteristic.uuid() == QBluetoothUuid((quint16)0x2ACE)) {
+    } else if (characteristicUuid == QBluetoothUuid((quint16)0x2ACE)) {
         union flags {
             struct {
                 uint32_t moreData : 1;
@@ -1910,7 +1981,13 @@ void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteris
     emit debug(QStringLiteral("Current CrankRevs: ") + QString::number(CrankRevs));
     emit debug(QStringLiteral("Last CrankEventTime: ") + QString::number(LastCrankEventTime));
 
-    if (m_control->error() != QLowEnergyController::NoError) {
+    // Null-checked for the same reason update() is, and found the same way - by something
+    // driving this object without a controller. A notification that arrives after a teardown
+    // has cleared m_control reaches this line, and Qt 5 happens to survive the dereference
+    // where Qt 6 crashes on it (QLowEnergyController::error() reads d_ptr through a null
+    // this). It is the last statement of the handler, so the whole parse succeeds first and
+    // the crash looks like it came from nowhere near the frame.
+    if (m_control && m_control->error() != QLowEnergyController::NoError) {
         qDebug() << QStringLiteral("QLowEnergyController ERROR!!") << m_control->errorString();
     }
 }

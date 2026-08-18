@@ -9,6 +9,25 @@ behind.
 
 ---
 
+## The device-name branches in ftmsbike are unreachable from a test
+
+**Found 2026-08-18, building Layer B.** `ftmsbike` gates around fifty behaviours on flags set
+from the device name — `YPBM`, `DOMYOS`, `FS_YK`, `D500V2` and the rest — and the one that
+matters most for this trainer is the three-byte Set Target Resistance it wants
+(`ftmsbike.cpp:598`, the level times ten as a 16-bit value) where ordinary FTMS sends two bytes.
+
+Those flags are private members set by `deviceDiscovered()`, which builds a
+`QLowEnergyController` and needs a radio. So the harness cannot reach any of those branches, and
+the write test asserts that whatever QZ chose is a well-formed FTMS frame rather than that it
+chose the right one.
+
+The seam is the same shape as the six already there: lift the name matching out of
+`deviceDiscovered()` into something that takes a name and sets the flags, and let a test call it.
+`RideScenario` already has a `bike` directive for exactly this, parsed since phase 0 and read by
+nothing — this is what would read it.
+
+---
+
 ## The write log does not say which characteristic was written
 
 **Found 2026-08-18, building the recorder.** `processWriteQueue()` logs

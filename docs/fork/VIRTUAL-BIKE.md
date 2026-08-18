@@ -1,7 +1,7 @@
 # The virtual bike
 
-**Phases 0 to 5 are implemented — the endgoal at the top of this document is met. Phase 6,
-Layer B, is spec.**
+**All six phases are implemented — the endgoal at the top of this document is met, and both
+bike ends now feed the same loop.**
 
 ## The endgoal
 
@@ -804,13 +804,65 @@ One limitation, recorded rather than worked around: a `>>` line does not say whi
 characteristic was written, because `ftmsbike.cpp:174` does not log it. Writes are stored with
 the UUID as `?`. See TODO.md.
 
-**Phase 6 — Layer B, the frame harness.** The two seams in `ftmsbike`, the harness, the
-frame encoder, and the parse tests — now with a clearer purpose than when this document
-was first written: it is the *second bike end* of the same loop, so that everything Phases
-2–4 assert can be re-run with the real driver in place of the simulated one, fed from a
-scenario or from a recorded ride. *Accepted when* the seams are provably behaviour-neutral
-(the suite passes unchanged and a real ride behaves identically), and the Phase 3
-assertions pass with `ftmsbike` as the bike end.
+**Phase 6 - Layer B, the frame harness. Done, with one part left to the trainer.**
+`simulatedFtmsBike` in `tst/Devices/simulatedftmsbike.h`, the encoder in
+`tst/Devices/ftmsframes.h`, and thirteen tests in `tst/Devices/TestFtmsFrameHarness.h`. The
+shipped `ftmsbike` is now driven byte-exact, headless, with no radio - and
+`ftmsbike::characteristicChanged`, nine hundred lines that had no test at all in either
+direction, has one.
+
+**The seams turned out to be six, not two.** Inbound was exactly as specified: a
+`handleNotification(uuid, value, fromService)` the Qt slot delegates to, because a test cannot
+build a `QLowEnergyCharacteristic` with a UUID in it. Outbound needed four rather than one,
+because the write path defends itself at four levels and every one of them ultimately asks for
+that same unbuildable object: `controlPointReady()`, `enqueueTargetValid()`,
+`writeTargetReady()` and `performWrite()`. Plus `linkExists()` and `linkState()` for
+`update()`'s gates. Every default is the code it replaced, and `WriteRequest` moved from
+private to protected so a subclass can name the type it overrides on.
+
+*Accepted on* two of the three criteria, and the third is not mine to sign off:
+
+- **The suite passes unchanged.** 218 tests, 208 passed, 10 skipped before the seams; the same
+  numbers after, exit code 0. With Layer B added it is 231 / 221 / 10.
+- **The phase 3 assertions pass with `ftmsbike` as the bike end.** `FtmsBikeAsTheBikeEnd` puts a
+  frame in one side of the whole stack - the real parser, the metrics, the notifier, DIRCON -
+  and asserts the numbers on the wire at the other. Both bike ends now feed the same loop, which
+  is what this phase was reordered to the end to make true.
+- **A real ride behaving identically is untested.** It needs the trainer, and nothing here can
+  stand in for it. The seams are mechanical and the suite says so, but that is an argument
+  rather than evidence.
+
+**It found two real bugs on its first run**, which is the return on the seams:
+
+- **An unguarded `m_control->error()`** at the last line of the notification handler. The same
+  null dereference this fork already fixed in `update()` - where the comment notes Qt 5 survives
+  it and Qt 6 crashes on it - sitting in a second place, reachable by a notification arriving
+  after a teardown has cleared the controller. It is the *last* statement of the handler, so the
+  whole parse succeeds first and the crash looks like it came from nowhere near the frame.
+- **0x2AD2 read past the end of the buffer.** The only length check was that the frame has a
+  flags word; every field after it was read unguarded, so a frame whose flags promise more than
+  it carries walks off the end - an assert in a debug Qt, silent garbage in a release one. The
+  0x2ACE path in the same file already guards every field with `ensureBytesAvailable()`; 0x2AD2
+  did not. Fixed with one up-front check computed from the flags, deliberately not thirteen
+  inline ones: this is the hot path, and one arithmetic statement is easier to review and to
+  keep in step. A frame *longer* than its flags describe is still accepted, because the real
+  trainer sends one.
+
+**The encoder is checked against the trainer, not against us.** An encoder bug and a parser bug
+that agree cancel out and pass, so `ftmsframes.h` is validated by reproducing the two frames in
+`tst/fixtures/recorded/ypbm-32min-ride.frames` byte for byte - including the one that sets bit
+13, which Indoor Bike Data does not define, and carries three bytes more than it accounts for.
+It caught itself applying the inverted bit-0 rule twice on the first run.
+
+The test that earns the layer is `TheSameValuesSurviveADifferentFlagSet`: the same five readings
+sent twice, once minimal and once surrounded by every other optional field, so every value sits
+at a different offset. A reader that gets one width wrong reads cadence out of the resistance
+slot and reports numbers that are plausible, wrong and silent.
+
+Still out of reach: the branches gated on device-name flags - the three-byte Set Target
+Resistance this trainer actually wants is one - because those flags are private to `ftmsbike`
+and set by `deviceDiscovered()`, which needs a radio. That is a seventh seam, and it is in
+TODO.md rather than done on the way past.
 
 ### Why Layer B moved
 

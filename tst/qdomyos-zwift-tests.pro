@@ -54,6 +54,7 @@ SOURCES += \
         Devices/TestDirconFakeApp.cpp \
         Devices/TestDirconRideLoop.cpp \
         Devices/TestDirconDiscovery.cpp \
+        Devices/TestFtmsFrameHarness.cpp \
         Erg/TestErgTableSelection.cpp \
         Erg/TestErgAutoMode.cpp \
         main.cpp
@@ -114,6 +115,9 @@ HEADERS += \
     Devices/TestDirconFakeApp.h \
     Devices/TestDirconRideLoop.h \
     Devices/TestDirconDiscovery.h \
+    Devices/ftmsframes.h \
+    Devices/simulatedftmsbike.h \
+    Devices/TestFtmsFrameHarness.h \
     Erg/ergtabletestsuite.h \
     Erg/TestErgTableSelection.h \
     Erg/TestErgAutoMode.h \
