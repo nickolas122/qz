@@ -790,26 +790,44 @@ Layer B does not shrink in importance, it changes role. As a component of the lo
 worth more than it was as a parallel track, because its assertions become the same
 assertions rather than a second set.
 
-## Deferred: a real peripheral
+## No longer deferred: a real peripheral
 
-Nothing above touches a radio. The layer that would — a BLE peripheral advertising the
-FTMS service that QZ discovers and connects to for real — is the only way to test
-discovery, the WinRT backend, bonding, unpaired connection and reconnect backoff, which
-are precisely the areas this fork changed most. It is deferred because it needs a second
-radio or a second machine, cannot run in CI, and is nondeterministic in the way radios
-are.
+Nothing in the phases above touches a radio. The layer that does is
+`tools/fakebike-android/` — an Android app that advertises as **YPBM123456**, serves the
+FTMS profile, and streams a `.ride` scenario as Indoor Bike Data. QZ discovers it, claims it
+with the `ftmsbike` driver, and rides it. That covers discovery over BLE, the platform
+Bluetooth backend, connection, subscription and the bytes QZ writes back — the areas this
+fork changed most, and the ones that until now needed the trainer powered up to look at even
+once.
 
-When it is picked up, the cheapest starting point is already in the tree: `QZ_ESP32/`
-holds an Arduino sketch for an ESP32 FTMS peripheral. A `.ride` file playing through an
-ESP32 would make it the third player of the same scenario format, which is an argument for
-getting that format right now rather than later.
+It stays outside CI, for the reasons this section always gave: it needs two radios, and it is
+nondeterministic in the way radios are. What changed is the cost. The plan expected the
+cheapest starting point to be `QZ_ESP32/`, the Arduino sketch already in the tree; a phone
+turned out to be cheaper still, because it needs no hardware, no flashing and no second
+machine to build on — and it can put a UI in front of the scenario picker.
+
+**It is the third player of the same format**, which is what that format was designed for.
+`RideScenario.java` is a line-by-line port of the C++, both interpolation rules included, and
+the build stages `tst/fixtures/rides/` into the APK rather than copying it — so a scenario
+edited for the simulated bike is edited for the peripheral too. One scenario, three players:
+the bike inside QZ, the Layer C tests, and now a radio.
+
+One thing it reaches that nothing else can: **`dropout.ride` produces a real gap**. Phase 3
+had to settle for asserting that a silence window freezes the DIRCON stream, because
+`bikeProvider()` notifies on its own timer whatever the bike does. On the peripheral the
+radio simply goes quiet, which is what a dropout actually is.
+
+See `tools/fakebike-android/README.md` for the build, the ten-character name rule QZ enforces,
+and the one difference from the real trainer that is known and deliberate.
 
 ## What the endgoal still does not cover
 
 Worth being exact, because "CI runs the loop and asserts" is easy to hear as "CI tests QZ".
 
 - **The radio.** Discovery over BLE, the WinRT backend, bonding, unpaired connection and
-  reconnect backoff are untouched by any of this. Deferred below.
+  reconnect backoff are untouched by anything in the phases above. They are reachable now,
+  but by hand: `tools/fakebike-android/` is a real peripheral playing the same scenarios, and
+  it is a bench instrument rather than a CI job. See the section below.
 - **The real training apps.** See the end of Layer C: their undocumented rules are not
   knowable from here.
 - **The tiles.** `homeform` cannot be constructed without a loaded QML engine
