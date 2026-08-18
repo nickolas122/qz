@@ -110,6 +110,8 @@ public class FtmsPeripheral {
     private BluetoothLeAdvertiser advertiser;
     private BluetoothGattCharacteristic indoorBikeData;
     private BluetoothGattCharacteristic controlPoint;
+    /** Centrals with a live link, so stop() can hang up on them rather than just vanish. */
+    private final List<BluetoothDevice> connected = new ArrayList<>();
     private final List<BluetoothDevice> subscribers = new ArrayList<>();
     private final List<BluetoothDevice> controlSubscribers = new ArrayList<>();
 
@@ -207,12 +209,30 @@ public class FtmsPeripheral {
                 Log.w(TAG, "stopAdvertising: " + e);
             }
         }
+        // Hang up on every central before closing, and do it explicitly.
+        //
+        // close() releases this app's handle on the GATT server; it does not tear down the
+        // links. A central is then left holding a connection to a device that has stopped
+        // answering, with no indication anything changed. QZ did exactly that: it stayed in
+        // DiscoveredState showing the last values it had, and every resistance write it made
+        // afterwards sat in the queue for the full thirty-second ATT timeout. From the outside
+        // that looks like the bike is still streaming when it has been stopped.
         if (server != null) {
+            for (BluetoothDevice device : new ArrayList<>(connected)) {
+                try {
+                    server.cancelConnection(device);
+                } catch (Exception e) {
+                    Log.w(TAG, "cancelConnection: " + e);
+                }
+            }
+            server.clearServices();
             server.close();
             server = null;
         }
+        connected.clear();
         subscribers.clear();
         controlSubscribers.clear();
+        cccdValues.clear();
 
         // Give the phone its name back. Leaving it as YPBM123456 would be a lasting change
         // made by a test tool, which is not a thing a test tool should do.
@@ -398,6 +418,15 @@ public class FtmsPeripheral {
                     break;
             }
             say("advertising failed (" + errorCode + "): " + why);
+            // Advertising fails asynchronously, after start() has already armed the ride, so
+            // without this the scenario plays on with nothing listening and the button says
+            // Stop for a bike that never existed.
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    stop();
+                }
+            });
         }
     };
 
@@ -405,8 +434,10 @@ public class FtmsPeripheral {
         @Override
         public void onConnectionStateChange(BluetoothDevice device, int status, int newState) {
             if (newState == BluetoothGatt.STATE_CONNECTED) {
+                if (!connected.contains(device)) connected.add(device);
                 say("connected: " + safeName(device));
             } else {
+                connected.remove(device);
                 subscribers.remove(device);
                 controlSubscribers.remove(device);
                 say("disconnected: " + safeName(device));

@@ -143,7 +143,15 @@ public class MainActivity extends Activity implements FtmsPeripheral.Listener {
 
     @Override
     public void onState(String message) {
-        runOnUiThread(() -> stateLabel.setText(message));
+        runOnUiThread(() -> {
+            stateLabel.setText(message);
+            // The peripheral can stop itself - advertising fails asynchronously, after the
+            // button has already flipped to Stop - so the button follows the peripheral
+            // rather than assuming it did what it was told.
+            boolean running = peripheral.isRunning();
+            playButton.setText(running ? R.string.stop : R.string.play);
+            ridePicker.setEnabled(!running);
+        });
     }
 
     @Override
