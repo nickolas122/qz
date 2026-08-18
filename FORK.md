@@ -69,11 +69,23 @@ Several bugs here made training apps fail to find QZ, or find it and refuse to c
 - The SRV target is a legal hostname — spaces are no longer smuggled in from the device
   name via Bonjour's `\032` escaping.
 - A goodbye is sent on quit rather than leaving a stale record behind.
+- The SRV hostname is the instance name with spaces hyphenated, which is the form
+  MyWhoosh's resolver insists on.
+- Only an A record is advertised, because the listener binds `AnyIPv4` — an AAAA record
+  sent a client to an address nothing was listening on, where it sat in `SYN_SENT`.
+- The FTMS feature bitmask (`0x2ACC`) declares **power measurement**. Without bit 14 a
+  client can connect, decide the trainer measures nothing useful, and never read
+  `0x2AD2`.
+- No unsolicited zero-filled `0x2AD2` frame is pushed at a new client. A client that
+  latches the reported quantities from the flags of the *first* Indoor Bike Data frame
+  reads all-zero flags as "measures nothing" and drops the characteristic.
 
-Known and not fixable here: **MyWhoosh refuses a DIRCON device advertising the same IP as
-the machine it runs on**, so QZ and MyWhoosh cannot share one PC. Run QZ on Android or a
-second host. This is MyWhoosh's rule, confirmed upstream in
-[issue #3314](https://github.com/cagnulein/qdomyos-zwift/issues/3314).
+**MyWhoosh and QZ do share one PC.** The long-standing claim that MyWhoosh refuses a
+DIRCON device on its own IP — [issue #3314](https://github.com/cagnulein/qdomyos-zwift/issues/3314) —
+does not match its code. It was four stacked bugs, each hidden by the one before it: the
+last four items above. Confirmed 2026-08-17, with Rouvy connected at the same time. On
+Windows MyWhoosh also needs Apple's Bonjour service running; it ships the installer inside
+its own package.
 
 ### Gears
 

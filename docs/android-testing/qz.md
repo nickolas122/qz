@@ -89,7 +89,7 @@ $ADB shell am force-stop org.cagnulen.qdomyoszwift
 
 $ADB shell "run-as org.cagnulen.qdomyoszwift sh -c '
   mkdir -p \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola\"
-  printf \"[General]\nandroid_notification=true\napplewatch_fakedevice=true\n\" \
+  printf \"[General]\nandroid_notification=true\nsimulated_bike=true\n\" \
     > \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola/qDomyos-Zwift.conf\"
 '"
 ```
@@ -99,19 +99,21 @@ $ADB shell "run-as org.cagnulen.qdomyoszwift sh -c '
 | INI key | UI label (EN) | Default | Notes |
 |---|---|---|---|
 | `android_notification` | Android Notification | false | Required for same-device Zwift testing |
-| `applewatch_fakedevice` | Fake Device | false | Simulates a bike when no real device is connected |
+| `simulated_bike` | Simulated bike | false | **Use this one.** Skips discovery and rides a `.ride` scenario |
+| `simulated_bike_ride` | Simulated bike ride | *(empty)* | Path to the scenario; empty means the built-in 150 W / 85 rpm ride |
+| `applewatch_fakedevice` | Fake Device | false | **Dead in this fork** — the fake devices were deleted in `2c39c5d`; the switch does nothing |
 | `virtual_device_enabled` | Enable Virtual Device | true | Enables the virtual FTMS/CSCS bridge |
 | `virtual_device_bluetooth` | Virtual Device Bluetooth | true | Enables Bluetooth for the virtual device |
-| `fakedevice_treadmill` | Fake Treadmill | false | Simulates a treadmill instead of a bike |
-| `fakedevice_elliptical` | Fake Elliptical | false | Simulates an elliptical |
-| `fakedevice_rower` | Fake Rower | false | Simulates a rower |
+| `fakedevice_treadmill` | Fake Treadmill | false | Dead in this fork, as above |
+| `fakedevice_elliptical` | Fake Elliptical | false | Dead in this fork, as above |
+| `fakedevice_rower` | Fake Rower | false | Dead in this fork, as above |
 
 ### Recommended Configuration for Same-Device Zwift Testing
 
 ```ini
 [General]
 android_notification=true
-applewatch_fakedevice=true
+simulated_bike=true
 ```
 
 After writing the configuration, start QZ and verify that the foreground notification is present:

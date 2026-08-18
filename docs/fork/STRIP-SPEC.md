@@ -102,13 +102,14 @@ in §10 is gated on it and no design decision should be bent toward it.
 
 ### 3.2.3 Confirmed topology
 
-Measured, not assumed. All four apps accounted for as of 2026-08-16:
+Measured, not assumed. All four apps accounted for; MyWhoosh's row re-measured
+2026-08-17 and it no longer says what it used to:
 
 | App | Host | Reaches QZ via | Status |
 | --- | --- | --- | --- |
 | Rouvy | Windows | DIRCON | **Confirmed working** |
 | Zwift | Windows | DIRCON | **Confirmed working** — discovered as "ELITE AVANTI" |
-| MyWhoosh | Windows | DIRCON, from QZ on Android/Pi | Works; same-host impossible (§3.3) |
+| MyWhoosh | Windows | DIRCON | **Confirmed working** 2026-08-17, same host as QZ (§3.3) |
 | Kinomap | Android | BLE | Best-effort, likely needs a 2nd device (§3.2.2) |
 
 The conclusion that matters for scope: **no app that runs on Windows needs the BLE
@@ -116,11 +117,37 @@ peripheral role.** Windows is fully served by DIRCON, which this fork has alread
 hardened. Windows keeps its place, and §3.2.1 stays out of scope with no remaining
 argument against it.
 
-### 3.3 MyWhoosh will not talk to a DIRCON peer on its own IP
+### 3.3 MyWhoosh does share a machine with QZ — the earlier constraint was wrong
 
-Confirmed, and upstream ([issue #3314](https://github.com/cagnulein/qdomyos-zwift/issues/3314)).
-QZ and MyWhoosh cannot share one machine. MyWhoosh therefore requires QZ on Android or
-on the Pi — it can never be served by QZ on the same Windows box.
+**Superseded 2026-08-17.** This section used to state, as settled fact, that MyWhoosh
+refuses a DIRCON device advertising the machine's own IP, citing upstream
+[issue #3314](https://github.com/cagnulein/qdomyos-zwift/issues/3314), and concluded that
+MyWhoosh could only ever be served by QZ on Android or the Pi. That is not what the code
+does, and the conclusion was load-bearing for scope, so the correction is recorded rather
+than quietly applied.
+
+There is no IP check. There were four independent bugs on QZ's side, each completely
+hidden by the previous one, which is why it read as a single hard rule for so long:
+
+| Fix | Bug | Symptom |
+| --- | --- | --- |
+| `daa73a305` | SRV hostname must equal the instance name with spaces hyphenated | never discovered |
+| `6849b694f` | AAAA advertised while the listener binds `AnyIPv4` | discovered, stuck in `SYN_SENT` |
+| `343e42b90` | `0x2ACC` feature bitmask lacked bit 14, power measurement | connected, `0x2AD2` never read |
+| `f8af0cb21` | unsolicited zero-filled `0x2AD2` frame sent on connect | subscribed, then disabled, 0 W |
+
+The last is the one worth remembering: a client may latch which quantities the trainer
+reports from the flags of the *first* Indoor Bike Data frame it sees. All-zero flags mean
+"measures nothing". Nothing may push a hand-built frame there again.
+
+Confirmed with data flowing, on one Windows box, with Rouvy connected at the same time.
+MyWhoosh additionally needs Apple's Bonjour service running on Windows, which is an
+install-time fact about MyWhoosh and not a constraint on this fork.
+
+**Consequences for this spec.** No host is kept alive for MyWhoosh's sake. Windows serves
+all three of the apps that run on it (§3.2.3), Android is kept for Kinomap and as the
+second host (§3.2.2), and the Pi remains a *future* target justified by BLE peripheral
+support — never by MyWhoosh.
 
 ### 3.4 Linux/BlueZ code is dormant, not dead
 
@@ -713,9 +740,10 @@ Separately pending, and unrelated to the strip: the startup-gear fix and the
    see §3.2.2.
 2. ~~**Zwift's transport from Windows.**~~ **Resolved 2026-08-16:** Zwift connected to
    QZ over DIRCON from Windows, discovering it as "ELITE AVANTI". See §3.2.3.
-3. ~~**Does the Windows build survive?**~~ **Resolved 2026-08-16: yes.** Windows serves
-   both apps that run on it, over DIRCON. It stays a first-class host, the §10 phasing is
-   unaffected, and the deferred WinRT peripheral work (§3.2.1) stays buried.
+3. ~~**Does the Windows build survive?**~~ **Resolved 2026-08-16: yes**, and more
+   strongly since. Windows serves all three apps that run on it — Rouvy, Zwift and, as of
+   2026-08-17, MyWhoosh (§3.3) — over DIRCON. It stays a first-class host, the §10 phasing
+   is unaffected, and the deferred WinRT peripheral work (§3.2.1) stays buried.
 4. **Heart rate:** is the HR belt used, or does the training app read it directly?
 5. **`cscbike`** — what does `ftmsbike.cpp` actually use it for?
 6. **Zwift Play / Click** controllers (`zwift_play/`, `zwift-api/`) — kept or cut? They

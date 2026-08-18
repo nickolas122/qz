@@ -493,10 +493,75 @@ code the shipped code.
 Verified on a Linux build: the app starts with no radio, skips discovery, loads the
 scenario, and rides it — `ramp.ride` produces the cadence and power the file states, the
 starting resistance comes from the file, and the virtual bike and DIRCON endpoint come up
-and serve. **The tiles themselves are not verified**: the QML app will not start in the
-build container used here (it exits with the same code and no device at all, so this is
-the environment and not the device), which leaves the one part of the acceptance criteria
-that needs a screen still to be checked by eye on Windows or Android.
+and serve. The QML app would not start in that build container (it exits the same way with
+no device at all, so it is the environment and not the device), so the part of the
+acceptance criteria that needs a screen was left to be checked by eye elsewhere.
+
+**Verified on Windows, 2026-08-17, and it paid for itself immediately.** The app runs and
+the tiles populate against `-simulated-bike -ride <file>` with no trainer in the room, and
+the four DIRCON bugs that had kept MyWhoosh from ever working — `daa73a305`, `6849b694f`,
+`343e42b90`, `f8af0cb21`, see FORK.md — were found, fixed and confirmed across four
+build-test rounds **with the simulated bike as the bike end every time**. Rouvy and
+MyWhoosh both discovered QZ, subscribed, and received power that no trainer produced. That
+is the Layer A claim above — *a training app on the same network can be driven end to end
+from a desk* — measured rather than asserted, and the strongest single argument this
+document has for its own existence.
+
+It also draws the limit sharply. Those constants are exactly why the trainer still has to
+confirm the ride: the simulated bike proved the wire and the client's rules, and it proved
+nothing about `ftmsbike`'s parse, which is Phase 6's job.
+
+**Verified on Android, 2026-08-17**, on the API 34 x86_64 emulator, built from
+`lite-version` on the build VM. Android has no command line, so the route is the settings
+pair: `simulated_bike=true` and `simulated_bike_ride` pointing at a `.ride` file. Nothing
+ships the fixtures to the device, so the file has to be put there — the app's own private
+directory works and needs no storage permission, and `RideScenario::load` is a plain
+`std::ifstream`, so any readable path will do.
+
+The full recipe — pushing the file, editing the INI at
+`files/.config/Roberto Viola/qDomyos-Zwift.conf`, and what to check afterwards — is in
+`docs/android-testing/README.md`, kept there because that is where anyone looking for an
+Android procedure will start.
+
+What it produced, playing `ramp.ride`: **"Simulated Bike found"**, cadence 92 with an
+average of 89 (the file ramps 85 → 92, so the average is the interpolation working rather
+than a step), 260 W with an average of 204, resistance 10 from the file's `resistance`
+directive, and an odometer accumulating. `simulatedbike playing …/ramp.ride duration 90 s`
+in the log. The DIRCON endpoint came up on 36866 and the HRM one on 36867. Set
+`log_debug=true` in the INI first — without it QZ writes no log on Android and there is
+nothing to read.
+
+**The emulator cannot advertise the BLE virtual bike, and that is the one thing Android
+was supposed to add.** The peripheral role starts, both GATT services are registered
+(0x1826 and 0x180D), and then advertising fails:
+
+```
+QtBluetoothGattServer: Starting to advertise.
+QtBluetoothGattServer: Advertising failure: 1
+virtualbike::controller:ERROR AdvertisingError
+virtual bike bluetooth not connected
+```
+
+Android's `AdvertiseCallback` code 1 is `ADVERTISE_FAILED_DATA_TOO_LARGE`, which would be a
+real payload problem rather than an emulator limit — but the emulator's Bluetooth is a
+simulated controller, so **this does not distinguish between an emulator artefact and a QZ
+bug.** Settling it needs the tablet, and notably *not* the trainer: a phone running a BLE
+scanner is enough to see whether the advert appears. Until then, treat the emulator as
+covering everything except the BLE half, which is the half Windows cannot cover either.
+
+**DIRCON on the emulator is reachable from Windows**, which matters more than it sounds:
+
+```bash
+adb forward tcp:37866 tcp:36866   # then connect to 127.0.0.1:37866
+```
+
+Connecting that way immediately yields real Indoor Bike Data — `…2ad2…` with flags
+`0x0264`, power present — and a `0x2a63` frame behind it. So Layer C can be pointed at the
+emulator over a forwarded port, with the caveat that mDNS discovery cannot cross the
+emulator's NAT: a test client there must be given the address rather than find it.
+
+Built on the VM, run on the emulator — `C:\VMs\qz-build\README.md`, and prefer
+`rebuild-and-test-emu.sh`, which builds x86_64 alone in roughly a quarter of the time.
 
 **Phase 2 — Layer C, connect and enumerate.** A DIRCON client in the test project,
 in-process against a `simulatedbike`, with the BLE half of the virtual device switched off.
