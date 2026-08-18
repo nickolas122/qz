@@ -481,23 +481,34 @@ and those take calendar time rather than effort.
 
 ## 10. Phasing
 
-Each phase must end with a tree that **builds on both Windows and Android** and **rides
-with Rouvy**. That is the acceptance test for all of them; there is no unit-test safety
-net here.
+Each phase must end with a tree that **builds on both Windows and Android** and **passes
+the suite, including the Layer C ride loop** ([VIRTUAL-BIKE.md](VIRTUAL-BIKE.md)). A ride
+with Rouvy is still the final word, but it is no longer the only evidence available — see
+§11.1, and the coverage column below.
 
-| Phase | Content | Risk |
-| --- | --- | --- |
-| 0 | Rewrite `FORK.md` §Versioning (§3.1); tag a pre-strip release as the fallback | none |
-| 1 | Group A — leaf integrations | low |
-| 2 | Group B — recording | low |
-| 3 | Group C — training programs | medium (homeform surgery) |
-| 4 | Group D — telemetry | medium (verify RTSS first) |
-| 5 | Group E — drivers | low, once cscbike is resolved |
-| 6 | Settings consolidation | medium (§3.6 runtime failures) |
-| 7a | `RideState` object + `ui_next` flag + new tree under `src/ui/` | medium |
-| 7b | Ride on the new UI with Rouvy and Zwift; flip the default | low, but needs calendar time |
-| 7c | Delete Group F — old tree, tile system, `homeform.cpp`, the flag | high |
-| 8 | Group G, Pi build revival | medium |
+| Phase | Content | Risk | Harness |
+| --- | --- | --- | --- |
+| 0 | Rewrite `FORK.md` §Versioning (§3.1); tag a pre-strip release as the fallback | none | n/a |
+| 1 | Group A — leaf integrations | low | **covered** |
+| 2 | Group B — recording | low | **covered** |
+| 3 | Group C — training programs | medium (homeform surgery) | **none** |
+| 4 | Group D — telemetry | medium (verify RTSS first) | **covered** |
+| 5 | Group E — drivers | low, once cscbike is resolved | **covered** |
+| 6 | Settings consolidation | medium (§3.6 runtime failures) | **covered** |
+| 7a | `RideState` object + `ui_next` flag + new tree under `src/ui/` | medium | **none** |
+| 7b | Ride on the new UI with Rouvy and Zwift; flip the default | low, but needs calendar time | **none** |
+| 7c | Delete Group F — old tree, tile system, `homeform.cpp`, the flag | high | **none** |
+| 8 | Group G, Pi build revival | medium | partial |
+
+"Covered" means the end-to-end loop asserts on that phase's blast radius: bike frames in,
+metrics, DIRCON, a client reading numbers back out. It is deliberately **not** UI coverage
+— `homeform` cannot be constructed without a QML engine, so the loop asserts on the wire
+rather than on tiles. That is the whole of the distinction in the column.
+
+Which argues for taking the covered phases first. The numbering here is from the original
+plan and the §11.6 criteria refer to it, so it stays; but **1, 2, 5, 4, 6 before 3 and 7**
+spends the safety net where it exists and arrives at the UI work — the part that has to be
+validated by riding — against a much smaller tree.
 
 Phase 0 matters more than it looks: once phase 1 lands, there is no going back to
 upstream. A tagged release beforehand is the only rollback.
@@ -539,6 +550,22 @@ Existing suites, and their fate:
 
 **Deleting a feature without deleting its suite breaks the build, not the tests.** Each
 phase below therefore names the suites that go with it.
+
+Since this section was written the virtual-bike work ([VIRTUAL-BIKE.md](VIRTUAL-BIKE.md))
+added the end-to-end half it was missing. These are the suites the "covered" column in §10
+refers to, and none of them is a candidate for deletion:
+
+| Suite | Covers | Layer |
+| --- | --- | --- |
+| `TestRideScenario`, `TestSimulatedBikeAnnouncement` | scripted rides, `.ride` fixtures, the simulated bike | A |
+| `TestFtmsFrameHarness` | the shipped `ftmsbike` parser, byte-exact against recorded frames | B |
+| `TestDirconFakeApp` | a training app connecting and enumerating over DIRCON | C |
+| `TestDirconRideLoop` | bike → metrics → DIRCON → client, asserted over a whole ride | C |
+| `TestDirconDiscovery` | mDNS advertisement, the Rouvy and MyWhoosh profiles | C |
+
+The loop runs entirely in-process over loopback TCP: no radio, no trainer, no training app.
+What it does not touch is the UI — `homeform` needs a QML engine — so it proves the bridge
+survived a deletion, and says nothing about whether the screen did.
 
 ### 11.2 The browser-session workflow
 
@@ -636,7 +663,14 @@ Universal gates (§11.4) apply throughout and are not repeated.
 **Phase 0 — versioning correction**
 *Criteria:* `FORK.md` no longer claims upstream rebasing is supported; a pre-strip release
 tag exists. *Test:* documentation only; CI green.
-*Status:* the tag half is **already satisfied** by `v2.21.6-qz.1`, cut before any deletion.
+*Status:* **done 2026-08-18.** `FORK.md` §Versioning and the header comment in
+`src/qzforkversion.h` now say the base does not move, and `v2.21.6-qz.2` is tagged at the
+tip of `lite-version` with `QZ_FORK_VERSION` bumped to match.
+
+An earlier draft called the tag half satisfied by `v2.21.6-qz.1`. That stopped being true:
+`qz.1` predates the whole virtual-bike test stage, so rolling back to it would have
+discarded the safety net along with the strip. The fallback has to be the tree as it stands
+on the eve of the first deletion, which is what `qz.2` is.
 
 **Phase 1 — leaf integrations**
 *Criteria:* no Peloton/Strava/Garmin/Intervals.icu/HomeFitnessBuddy/PowerZonePack symbol,

@@ -135,14 +135,22 @@ turned out not to be the cause — are in [docs/fork/](docs/fork/).
 ## Versioning
 
 Releases are tagged `v<upstream base>-qz.<n>` — for example `v2.21.6-qz.1`, meaning the
-first release of this fork built from upstream 2.21.6. Rebasing on a newer upstream moves
-the base and resets the counter.
+first release of this fork built from upstream 2.21.6.
+
+**The base does not move.** This fork deletes upstream code outright rather than carrying
+patches on top of it (see [docs/fork/STRIP-SPEC.md](docs/fork/STRIP-SPEC.md)), so rebasing
+stopped being possible. `2.21.6` is a record of where the tree came from, not a number that
+will be bumped; the `-qz.<n>` counter keeps climbing and never resets. Upstream fixes worth
+having arrive by reading the diff and reimplementing them here by hand.
+
+`v2.21.6-qz.2` is the last release with upstream's shape intact — the fallback if a deletion
+turns out to have taken something load-bearing with it.
 
 The same string lives in [`src/qzforkversion.h`](src/qzforkversion.h) and is written to
 the top of every log:
 
 ```
-QZ fork release 2.21.6-qz.1
+QZ fork release 2.21.6-qz.2
 QZ build <sha> Qt <version> on <os>
 ```
 

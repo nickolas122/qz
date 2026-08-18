@@ -8,13 +8,14 @@
  * file version resource, which is what QCoreApplication::applicationVersion() reports - so
  * the fork's release number lives here instead, where it can carry a suffix.
  *
- * The base is the upstream version this fork is built from, and the -qz.N counter bumps
- * once per release of this fork. Rebasing on a newer upstream moves the base and resets
- * the counter to 1.
+ * The base is the upstream version this fork was built from, and the -qz.N counter bumps
+ * once per release of this fork. The base does not move: this fork deletes upstream code
+ * rather than carrying patches on top of it, so there is no rebase to move it, and the
+ * counter never resets. See FORK.md, Versioning.
  *
  * The release workflow refuses to publish if the tag and this string disagree, so bump
  * this in the same commit that gets tagged.
  */
-#define QZ_FORK_VERSION "2.21.6-qz.1"
+#define QZ_FORK_VERSION "2.21.6-qz.2"
 
 #endif // QZFORKVERSION_H
