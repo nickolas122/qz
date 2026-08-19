@@ -106,3 +106,72 @@ battery to die. That is the whole argument for having built the peripheral.
 Open question, and a product decision rather than an engineering one: whether the tiles should
 clear, grey out, or hold the last value with a marker. Holding a number with no marker is the
 only option that is definitely wrong.
+
+---
+
+## DIRCON on Android needs Wi-Fi, and should not
+
+**Investigated 2026-08-18, on a Samsung A34 (SM-A346M, Android 16) running QZ and Rouvy
+together on the one phone.** With Wi-Fi it works. Without it, Rouvy finds nothing, and the
+last mile is still open.
+
+Four separate faults were found and fixed getting this far, all in commits from that day:
+the missing multicast lock, an mDNS A record with no address in it, a cellular address
+being advertised that nothing could reach, and a multicast group that was never joined at
+all. Each was real, each is confirmed working from the device's own logs, and none of them
+was the whole story.
+
+### What the phone establishes
+
+`ip link` on the device, which is the ground truth here:
+
+| Interface | Flags | Carries multicast |
+| --- | --- | --- |
+| `lo` | `LOOPBACK,UP,LOWER_UP` | **no** |
+| `rmnet2` (mobile data) | `NOARP,UP,LOWER_UP` | **no** |
+| `wlan0` | `BROADCAST,MULTICAST,UP,LOWER_UP` | yes |
+| `swlan0` (hotspot) | `BROADCAST,MULTICAST,UP,LOWER_UP` | yes |
+
+So a phone with Wi-Fi off and no hotspot has no link at all for mDNS, and no app on either
+side can discover anything. That part is not a bug and cannot be fixed in QZ. Turning the
+hotspot on gives the device a multicast-capable link of its own making, which is the shape
+this ought to work in: no router, no network to join, both apps on the one phone.
+
+### Where it stops
+
+With the hotspot up, everything QZ does is right:
+
+```
+mDNS: joined the group through the interface holding QHostAddress("10.30.31.196")
+local IPv4 address: 10.30.31.196
+ProviderPrivate::publish QHostAddress("10.30.31.196")
+LISTEN 0.0.0.0:36866                      (ss -tln)
+inet 224.0.0.251 users 4                  (ip maddr show swlan0)
+```
+
+Four sockets have joined the group on `swlan0` - QZ among them, and Android's `mdnsd`,
+which is what a client using NsdManager goes through. Both ends are on the same link. And
+Rouvy still finds nothing.
+
+### The next thing to try
+
+`ServerPrivate::writeToAllInterfaces()` is the suspect, on reading rather than measurement.
+It snapshots `socket.multicastInterface()`, walks the interfaces, and restores the snapshot
+at the end. On this phone Qt enumerates nothing, so the walk does nothing and the restore
+writes back an **invalid** interface - which plausibly clears the `IP_MULTICAST_IF` that
+the join fallback had just set. The datagram then falls to `socket.writeDatagram(...)`,
+which follows a routing table whose only entry is the `swlan0` link route.
+
+If that is right, QZ can hear the query and cannot be heard answering it, which is exactly
+the symptom. Two lines would settle it: skip the restore when the snapshot is invalid, and
+re-apply `IP_MULTICAST_IF` before the fallback send.
+
+Unresolved either way: whether Rouvy's discovery runs at all with no connected Wi-Fi
+network. `mdnsd` has joined the group on `swlan0`, which is a good sign, but NsdManager
+has historically refused to work off Wi-Fi and no amount of QZ-side work would show up
+through that.
+
+### Done looks like
+
+- Hotspot on, Wi-Fi off: Rouvy pairs with QZ over DIRCON on the one phone.
+- Or the log says plainly that the query never arrived, so the wall is Rouvy's and known.
