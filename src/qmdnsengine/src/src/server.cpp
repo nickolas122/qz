@@ -28,7 +28,10 @@
 #  include <cerrno>
 #  include <cstring>
 #  include <sys/socket.h>
+#  include <netinet/in.h>
 #endif
+
+#include "localipaddress.h"
 
 #include <QHostAddress>
 #include <QNetworkInterface>
@@ -147,6 +150,43 @@ void ServerPrivate::writeToAllInterfaces(QUdpSocket &socket, const QByteArray &p
     }
 }
 
+#ifdef Q_OS_UNIX
+/**
+ * @brief Join the mDNS group, and send to it, through the interface owning @p local.
+ *
+ * The last resort when Qt cannot enumerate interfaces and the routing table cannot pick one
+ * either. Both socket options identify the interface by the local address on it, which is the
+ * one thing still known for certain: localipaddress::getIP() gets it from Android rather than
+ * from Qt.
+ *
+ * This is what a phone acting as its own hotspot needs. Its swlan0 carries the group but is
+ * never the default route - the default route is mobile data, which is NOARP and has no
+ * multicast at all - so "let the kernel choose" chooses the one interface that cannot work.
+ */
+static bool joinAndSendVia(QUdpSocket &socket, const QHostAddress &group, const QHostAddress &local) {
+    const int fd = static_cast<int>(socket.socketDescriptor());
+    if (fd < 0 || local.isNull() || local.protocol() != QAbstractSocket::IPv4Protocol) {
+        return false;
+    }
+
+    ip_mreq mreq;
+    memset(&mreq, 0, sizeof(mreq));
+    mreq.imr_multiaddr.s_addr = htonl(group.toIPv4Address());
+    mreq.imr_interface.s_addr = htonl(local.toIPv4Address());
+    // Already a member is success: onTimeout() runs once a minute and joins are not undone.
+    const bool joined = setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) == 0 ||
+                        errno == EADDRINUSE;
+
+    // Outbound too, or the announcements follow the routing table to the same dead end.
+    in_addr outgoing;
+    memset(&outgoing, 0, sizeof(outgoing));
+    outgoing.s_addr = htonl(local.toIPv4Address());
+    const bool sending = setsockopt(fd, IPPROTO_IP, IP_MULTICAST_IF, &outgoing, sizeof(outgoing)) == 0;
+
+    return joined && sending;
+}
+#endif
+
 void ServerPrivate::onTimeout()
 {
     // A timer is used to run a set of operations once per minute; first, the
@@ -184,12 +224,22 @@ void ServerPrivate::onTimeout()
         // hearing whatever the default route can carry - including another app on this same
         // device, which is how QZ and a training app on one phone find each other.
         if (!joinedAny) {
-            qDebug() << "mDNS: no interface could be joined - falling back to the default route";
-            if (ipv4Bound) {
-                ipv4Socket.joinMulticastGroup(MdnsIpv4Address);
+#ifdef Q_OS_UNIX
+            // Ask the platform where we are, rather than Qt or the routing table.
+            const QHostAddress local = localipaddress::getIP(QHostAddress());
+            if (ipv4Bound && joinAndSendVia(ipv4Socket, MdnsIpv4Address, local)) {
+                qDebug() << "mDNS: joined the group through the interface holding" << local;
+                joinedAny = true;
             }
-            if (ipv6Bound) {
-                ipv6Socket.joinMulticastGroup(MdnsIpv6Address);
+#endif
+            if (!joinedAny) {
+                qDebug() << "mDNS: no interface could be joined - falling back to the default route";
+                if (ipv4Bound) {
+                    ipv4Socket.joinMulticastGroup(MdnsIpv4Address);
+                }
+                if (ipv6Bound) {
+                    ipv6Socket.joinMulticastGroup(MdnsIpv6Address);
+                }
             }
         }
     }
