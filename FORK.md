@@ -124,8 +124,10 @@ shifting.
 - The nightly `schedule:` trigger is dropped — it burnt runner minutes on release
   plumbing this fork does not publish.
 - Assorted build repairs: MSVC CRT matching (`_ITERATOR_DEBUG_LEVEL`), the app link no
-  longer clobbers the static library, qthttpserver builds without a native perl,
-  `aqtinstall` is pinned, and SmtpClient is pinned to a commit that exists.
+  longer clobbers the static library, qthttpserver builds without a native perl, and
+  `aqtinstall` is pinned. SmtpClient used to be pinned here too; the strip's recording
+  phase removed the e-mail report, so the submodule and its six CI checkout steps are
+  gone.
 
 ## Why, in detail
 

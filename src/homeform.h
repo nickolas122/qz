@@ -696,9 +696,6 @@ public:
     QQmlApplicationEngine *engine;
     trainprogram *trainProgram = nullptr;
     trainprogram *previewTrainProgram = nullptr;
-        QStringLiteral("QZ-backup-") +
-        QDateTime::currentDateTime().toString().replace(QStringLiteral(":"), QStringLiteral("_")) +
-        QStringLiteral(".fit");
 
     int m_topBarHeight = 120;
     QString m_info = QStringLiteral("Connecting...");
