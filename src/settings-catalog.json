@@ -2,7 +2,7 @@
   "$schema": "https://qdomyos-zwift.local/settings-catalog.schema.json",
   "schemaVersion": 1,
   "format": "qdomyos-zwift-settings-catalog",
-  "settingCount": 957,
+  "settingCount": 931,
   "pages": [
     {
       "key": "page_custom_gear_table",
@@ -865,52 +865,6 @@
       "options": null
     },
     {
-      "key": "peloton_username",
-      "name": "Peloton Username",
-      "description": null,
-      "parent": "Peloton",
-      "type": "string",
-      "qmlType": "string",
-      "control": "text",
-      "visible": false,
-      "defaultValue": "username",
-      "defaultExpression": "\"username\"",
-      "options": null
-    },
-    {
-      "key": "peloton_password",
-      "name": "Peloton Password",
-      "description": null,
-      "parent": "Peloton",
-      "type": "string",
-      "qmlType": "string",
-      "control": "text",
-      "visible": false,
-      "defaultValue": "password",
-      "defaultExpression": "\"password\"",
-      "options": null
-    },
-    {
-      "key": "peloton_difficulty",
-      "name": "Difficulty",
-      "description": "Typically, Peloton coaches call out a range for target incline, resistance and/or speed. Use this setting to choose the difficulty of the target QZ communicates. Difficulty level can be set to lower, upper or average. Click OK.",
-      "parent": "Peloton Options",
-      "type": "string",
-      "qmlType": "string",
-      "control": "select",
-      "visible": true,
-      "defaultValue": "lower",
-      "defaultExpression": "\"lower\"",
-      "options": {
-        "source": "inline",
-        "values": [
-          "lower",
-          "upper",
-          "average"
-        ]
-      }
-    },
-    {
       "key": "peloton_cadence_metric",
       "name": "Peloton Cadence Metric",
       "description": null,
@@ -938,65 +892,6 @@
         "source": "expression",
         "expression": "rootItem.metrics"
       }
-    },
-    {
-      "key": "peloton_date",
-      "name": "Date on Strava",
-      "description": "Allows you to choose whether you would like the Peloton class air date to display before or after the class title on Strava.",
-      "parent": "Peloton Options",
-      "type": "string",
-      "qmlType": "string",
-      "control": "select",
-      "visible": true,
-      "defaultValue": "Before Title",
-      "defaultExpression": "\"Before Title\"",
-      "options": {
-        "source": "inline",
-        "values": [
-          "Before Title",
-          "After Title",
-          "Disabled"
-        ]
-      }
-    },
-    {
-      "key": "peloton_description_link",
-      "name": "Activity Link in Strava",
-      "description": "Turn this on if you want QZ to capture a link to the Peloton class and display it in Strava.",
-      "parent": "Peloton Options",
-      "type": "boolean",
-      "qmlType": "bool",
-      "control": "switch",
-      "visible": true,
-      "defaultValue": true,
-      "defaultExpression": "true",
-      "options": null
-    },
-    {
-      "key": "pzp_username",
-      "name": "PZP Username",
-      "description": "As of 4/1/2022, this feature is broken due to a Power Zone Pack (PZP) website change. Leave (or change back to) the default of \u201cusername\u201d (without quotation marks, all lowercase and all one word) until further notice.",
-      "parent": "Peloton Options",
-      "type": "string",
-      "qmlType": "string",
-      "control": "text",
-      "visible": true,
-      "defaultValue": "username",
-      "defaultExpression": "\"username\"",
-      "options": null
-    },
-    {
-      "key": "pzp_password",
-      "name": "PZP Password",
-      "description": "As of 4/1/2022, this feature is broken due to a Power Zone Pack (PZP) website change. Leave this setting blank until further notice.",
-      "parent": "Peloton Options",
-      "type": "string",
-      "qmlType": "string",
-      "control": "text",
-      "visible": true,
-      "defaultValue": "username",
-      "defaultExpression": "\"username\"",
-      "options": null
     },
     {
       "key": "tile_speed_enabled",
@@ -3244,19 +3139,6 @@
         "source": "expression",
         "expression": "rootItem.bluetoothDevices"
       }
-    },
-    {
-      "key": "strava_suffix",
-      "name": "Suffix activity",
-      "description": "Default is \u201cQZ.\u201d Please leave this set to default so that other Strava users will see the QZ; a tiny bit of advertising that helps promote the app and support its development. If you choose to remove it, please consider contributing to the developer\u2019s Patreon or Buy Me a Coffee accounts or just subscribe to the Swag bag in the left side bar to allow me to continue developing and supporting the app.",
-      "parent": "Advanced Settings",
-      "type": "string",
-      "qmlType": "string",
-      "control": "text",
-      "visible": true,
-      "defaultValue": "#QZ",
-      "defaultExpression": "\"#QZ\"",
-      "options": null
     },
     {
       "key": "cadence_sensor_name",
@@ -7284,19 +7166,6 @@
       "virtualParent": "nordictrack_treadmill_model"
     },
     {
-      "key": "strava_auth_external_webbrowser",
-      "name": "Strava External Browser Auth",
-      "description": "QZ can open an external browser to authorize Strava. Default: disabled.",
-      "parent": "Advanced Settings",
-      "type": "boolean",
-      "qmlType": "bool",
-      "control": "switch",
-      "visible": true,
-      "defaultValue": false,
-      "defaultExpression": "false",
-      "options": null
-    },
-    {
       "key": "gears_from_bike",
       "name": "Change gears using knob (Experimental)",
       "description": null,
@@ -7307,19 +7176,6 @@
       "visible": true,
       "defaultValue": false,
       "defaultExpression": "false",
-      "options": null
-    },
-    {
-      "key": "peloton_spinups_autoresistance",
-      "name": "Spinups Autoresistance",
-      "description": "By default, QZ treats Spin-UPS in Power Zone rides as an increasing ramp to warm you up. You can disable this, to leave the resistance up to you.",
-      "parent": "Peloton Options",
-      "type": "boolean",
-      "qmlType": "bool",
-      "control": "switch",
-      "visible": true,
-      "defaultValue": true,
-      "defaultExpression": "true",
       "options": null
     },
     {
@@ -7623,33 +7479,6 @@
       "options": null
     },
     {
-      "key": "peloton_rower_level",
-      "name": "Rower Level",
-      "description": "Difficulty level for Peloton rower classes. 1 is easy 10 is hard.",
-      "parent": "Peloton Options",
-      "type": "integer",
-      "qmlType": "int",
-      "control": "select",
-      "visible": true,
-      "defaultValue": 1,
-      "defaultExpression": "1",
-      "options": {
-        "source": "inline",
-        "values": [
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7",
-          "8",
-          "9",
-          "10"
-        ]
-      }
-    },
-    {
       "key": "tile_target_pace_enabled",
       "name": "Target Pace",
       "description": null,
@@ -7916,19 +7745,6 @@
       "name": "Proform Sport RL",
       "description": null,
       "parent": "Proform/Nordictrack Rower Options",
-      "type": "boolean",
-      "qmlType": "bool",
-      "control": "switch",
-      "visible": true,
-      "defaultValue": false,
-      "defaultExpression": "false",
-      "options": null
-    },
-    {
-      "key": "strava_date_prefix",
-      "name": "Date Prefix on Strava Workout",
-      "description": "Append the Date to the Strava Activity as a prefix only for non-Peloton workout",
-      "parent": "Advanced Settings",
       "type": "boolean",
       "qmlType": "bool",
       "control": "switch",
@@ -8738,26 +8554,6 @@
       "virtualParent": "nordictrack_bike_model"
     },
     {
-      "key": "strava_upload_mode",
-      "name": "Strava Upload",
-      "description": null,
-      "parent": "Advanced Settings",
-      "type": "string",
-      "qmlType": "string",
-      "control": "select",
-      "visible": true,
-      "defaultValue": "Always",
-      "defaultExpression": "\"Always\"",
-      "options": {
-        "source": "inline",
-        "values": [
-          "Always",
-          "Request",
-          "Disabled"
-        ]
-      }
-    },
-    {
       "key": "proform_treadmill_705_cst_V78_239",
       "name": "Proform Treadmill 705 Cst V78 239",
       "description": null,
@@ -8809,33 +8605,6 @@
       "defaultValue": false,
       "defaultExpression": "false",
       "options": null
-    },
-    {
-      "key": "peloton_treadmill_level",
-      "name": "Treadmill Level",
-      "description": "Difficulty level for Peloton treadmill classes. 1 is easy 10 is hard.",
-      "parent": "Peloton Options",
-      "type": "integer",
-      "qmlType": "int",
-      "control": "select",
-      "visible": true,
-      "defaultValue": 1,
-      "defaultExpression": "1",
-      "options": {
-        "source": "inline",
-        "values": [
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7",
-          "8",
-          "9",
-          "10"
-        ]
-      }
     },
     {
       "key": "nordictrackadbbike_resistance",
@@ -9064,25 +8833,6 @@
       "defaultExpression": "false",
       "options": null,
       "virtualParent": "nordictrack_treadmill_model"
-    },
-    {
-      "key": "peloton_date_format",
-      "name": "Date Format",
-      "description": "Turn this on if you want QZ to capture a link to the Peloton class and display it in Strava.",
-      "parent": "Peloton Options",
-      "type": "string",
-      "qmlType": "string",
-      "control": "select",
-      "visible": true,
-      "defaultValue": "MM/dd/yy",
-      "defaultExpression": "\"MM/dd/yy\"",
-      "options": {
-        "source": "inline",
-        "values": [
-          "MM/dd/yy",
-          "yy/MM/dd"
-        ]
-      }
     },
     {
       "key": "force_resistance_instead_inclination",
@@ -9388,32 +9138,6 @@
       "options": null
     },
     {
-      "key": "peloton_auto_start_with_intro",
-      "name": "Auto Start (with intro)",
-      "description": "Turn this on to start a workout automatically when you start a workout on Peloton (waiting the intro). Default is off.",
-      "parent": "Peloton Options",
-      "type": "boolean",
-      "qmlType": "bool",
-      "control": "switch",
-      "visible": true,
-      "defaultValue": false,
-      "defaultExpression": "false",
-      "options": null
-    },
-    {
-      "key": "peloton_auto_start_without_intro",
-      "name": "Auto Start (without intro)",
-      "description": "Turn this on to start a workout automatically when you start a workout on Peloton (skipping the intro). Default is off.",
-      "parent": "Peloton Options",
-      "type": "boolean",
-      "qmlType": "bool",
-      "control": "switch",
-      "visible": true,
-      "defaultValue": false,
-      "defaultExpression": "false",
-      "options": null
-    },
-    {
       "key": "nordictrack_tseries5_treadmill",
       "name": "Nordictrack Tseries5 Treadmill",
       "description": null,
@@ -9614,71 +9338,6 @@
       "defaultExpression": "false",
       "options": null,
       "virtualParent": "nordictrack_treadmill_model"
-    },
-    {
-      "key": "peloton_accesstoken",
-      "name": "Peloton Accesstoken",
-      "description": null,
-      "parent": "Peloton",
-      "type": "string",
-      "qmlType": "string",
-      "control": "text",
-      "visible": false,
-      "defaultValue": "",
-      "defaultExpression": "\"\"",
-      "options": null
-    },
-    {
-      "key": "peloton_refreshtoken",
-      "name": "Peloton Refreshtoken",
-      "description": null,
-      "parent": "Peloton",
-      "type": "string",
-      "qmlType": "string",
-      "control": "text",
-      "visible": false,
-      "defaultValue": "",
-      "defaultExpression": "\"\"",
-      "options": null
-    },
-    {
-      "key": "peloton_lastrefresh",
-      "name": "Peloton Lastrefresh",
-      "description": null,
-      "parent": "Peloton",
-      "type": "string",
-      "qmlType": "string",
-      "control": "text",
-      "visible": false,
-      "defaultValue": "",
-      "defaultExpression": "\"\"",
-      "options": null
-    },
-    {
-      "key": "peloton_expires",
-      "name": "Peloton Expires",
-      "description": null,
-      "parent": "Peloton",
-      "type": "string",
-      "qmlType": "string",
-      "control": "text",
-      "visible": false,
-      "defaultValue": "",
-      "defaultExpression": "\"\"",
-      "options": null
-    },
-    {
-      "key": "peloton_code",
-      "name": "Peloton Code",
-      "description": null,
-      "parent": "Peloton",
-      "type": "string",
-      "qmlType": "string",
-      "control": "text",
-      "visible": false,
-      "defaultValue": "",
-      "defaultExpression": "\"\"",
-      "options": null
     },
     {
       "key": "nordictrack_treadmill_1750_adb",
@@ -10250,19 +9909,6 @@
       "defaultExpression": "false",
       "options": null,
       "virtualParent": "nordictrack_bike_model"
-    },
-    {
-      "key": "peloton_current_user_id",
-      "name": "Peloton Current User Id",
-      "description": null,
-      "parent": "Peloton",
-      "type": "string",
-      "qmlType": "string",
-      "control": "text",
-      "visible": false,
-      "defaultValue": "",
-      "defaultExpression": "\"\"",
-      "options": null
     },
     {
       "key": "trainprogram_pid_ignore_inclination",
@@ -10968,33 +10614,6 @@
       "defaultValue": 0,
       "defaultExpression": "0",
       "options": null
-    },
-    {
-      "key": "peloton_treadmill_walk_level",
-      "name": "Treadmill Walk Level",
-      "description": "Difficulty level for Peloton treadmill walking classes. 1 is easy 10 is hard.",
-      "parent": "Peloton Options",
-      "type": "integer",
-      "qmlType": "int",
-      "control": "select",
-      "visible": true,
-      "defaultValue": 1,
-      "defaultExpression": "1",
-      "options": {
-        "source": "inline",
-        "values": [
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7",
-          "8",
-          "9",
-          "10"
-        ]
-      }
     },
     {
       "key": "pid_heart_zone_erg_mode_watt_step",
@@ -11780,32 +11399,6 @@
       "visible": true,
       "defaultValue": 0.0,
       "defaultExpression": "0",
-      "options": null
-    },
-    {
-      "key": "peloton_treadmill_walking_min_speed",
-      "name": "Walking Min Speed",
-      "description": "Minimum speed for Peloton walking sessions. Set to 0 to disable. Applied to all speed targets in walking workouts.",
-      "parent": "Peloton Options",
-      "type": "number",
-      "qmlType": "real",
-      "control": "text",
-      "visible": true,
-      "defaultValue": 0.0,
-      "defaultExpression": "0.0",
-      "options": null
-    },
-    {
-      "key": "peloton_treadmill_running_min_speed",
-      "name": "Running Min Speed",
-      "description": "Minimum speed for Peloton running sessions. Set to 0 to disable. Applied to all speed targets in running workouts.",
-      "parent": "Peloton Options",
-      "type": "number",
-      "qmlType": "real",
-      "control": "text",
-      "visible": true,
-      "defaultValue": 0.0,
-      "defaultExpression": "0.0",
       "options": null
     },
     {

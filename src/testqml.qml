@@ -21,8 +21,6 @@ ApplicationWindow {
     signal start_clicked;
     signal stop_clicked;
     signal lap_clicked;
-    signal peloton_start_workout;
-    signal peloton_abort_workout;
     signal plus_clicked(string name)
     signal minus_clicked(string name)
     signal largeButton_clicked(string name)
@@ -38,7 +36,6 @@ ApplicationWindow {
     signal gpx_save_clicked()
     signal fit_save_clicked()
     signal refresh_bluetooth_devices_clicked()
-    signal strava_connect_clicked()
     signal loadSettings(url name)
     signal saveSettings(url name)
     signal deleteSettings(url name)
@@ -51,7 +48,6 @@ ApplicationWindow {
     signal keyMediaNext()
     signal floatingOpen()
     signal openFloatingWindowBrowser();
-    signal strava_upload_file_prepare();
 
     property bool lockTiles: false
     property bool settings_restart_to_apply: false

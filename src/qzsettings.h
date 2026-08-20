@@ -70,23 +70,8 @@ class QZSettings {
     static const QString elite_sterzo_smart_address;
     static const QString default_elite_sterzo_smart_address;
 
-    static const QString strava_accesstoken;
-    static const QString default_strava_accesstoken;
-
-    static const QString strava_refreshtoken;
-    static const QString default_strava_refreshtoken;
-
-    static const QString strava_lastrefresh;
-    static const QString default_strava_lastrefresh;
-
-    static const QString strava_expires;
-    static const QString default_strava_expires;
-
     static const QString rpe_feel_popup_enabled;
     static constexpr bool default_rpe_feel_popup_enabled = false;
-
-
-
 
     static const QString code;
     static const QString default_code;
@@ -307,38 +292,12 @@ class QZSettings {
 
     static const QString top_bar_enabled;
     static constexpr bool default_top_bar_enabled = true;
-    /**
-     *@brief The username for logging in to Peloton.
-     */
-    static const QString peloton_username;
-    static const QString default_peloton_username;
-
-    /**
-     *@brief The password for logging in to Peloton.
-     */
-    static const QString peloton_password;
-    static const QString default_peloton_password;
-
-    static const QString peloton_difficulty;
-    static const QString default_peloton_difficulty;
 
     static const QString peloton_cadence_metric;
     static const QString default_peloton_cadence_metric;
 
     static const QString peloton_heartrate_metric;
     static const QString default_peloton_heartrate_metric;
-
-    static const QString peloton_date;
-    static const QString default_peloton_date;
-
-    static const QString peloton_description_link;
-    static constexpr bool default_peloton_description_link = true;
-
-    static const QString pzp_username;
-    static const QString default_pzp_username;
-
-    static const QString pzp_password;
-    static const QString default_pzp_password;
 
     static const QString tile_speed_enabled;
     static constexpr bool default_tile_speed_enabled = true;
@@ -920,12 +879,6 @@ class QZSettings {
 
     static const QString filter_device;
     static const QString default_filter_device;
-
-    static const QString strava_suffix;
-    static const QString default_strava_suffix;
-
-
-
 
     static const QString cadence_sensor_name;
     static const QString default_cadence_sensor_name;
@@ -1935,14 +1888,8 @@ class QZSettings {
     static const QString nordictrack_incline_trainer_x7i;
     static constexpr bool default_nordictrack_incline_trainer_x7i = false;
 
-    static const QString strava_auth_external_webbrowser;
-    static constexpr bool default_strava_auth_external_webbrowser = false;
-
     static const QString gears_from_bike;
     static constexpr bool default_gears_from_bike = false;
-
-    static const QString peloton_spinups_autoresistance;
-    static constexpr bool default_peloton_spinups_autoresistance = true;
 
     static const QString eslinker_costaway;
     static constexpr bool default_eslinker_costaway = false;
@@ -2003,9 +1950,6 @@ class QZSettings {
 
     static const QString kingsmith_encrypt_v5;
     static constexpr bool default_kingsmith_encrypt_v5 = false;
-
-    static const QString peloton_rower_level;
-    static constexpr int default_peloton_rower_level = 1;
 
     static const QString tile_target_pace_enabled;
     static constexpr bool default_tile_target_pace_enabled = false;
@@ -2068,9 +2012,6 @@ class QZSettings {
     static constexpr bool default_proform_rower_sport_rl = false;
     static const QString proform_rower_750r;
     static constexpr bool default_proform_rower_750r = false;
-
-    static const QString strava_date_prefix;
-    static constexpr bool default_strava_date_prefix = false;
 
     /**
      * @brief Adjusts value in a metric object that's configured specifically for measuring SPEED on ANT+.
@@ -2286,9 +2227,6 @@ class QZSettings {
     static const QString proform_bike_325_csx;
     static constexpr bool default_proform_bike_325_csx = false;
 
-    static const QString strava_upload_mode;
-    static const QString default_strava_upload_mode;
-
     static const QString proform_treadmill_705_cst_V78_239;
     static constexpr bool default_proform_treadmill_705_cst_V78_239 = false;
 
@@ -2303,18 +2241,6 @@ class QZSettings {
 
     static const QString atletica_lightspeed_treadmill;
     static constexpr bool default_atletica_lightspeed_treadmill = false;
-
-    static const QString peloton_treadmill_level;
-    static constexpr int default_peloton_treadmill_level = 1;
-
-    static const QString peloton_treadmill_walk_level;
-    static constexpr int default_peloton_treadmill_walk_level = 1;
-
-    static const QString peloton_treadmill_walking_min_speed;
-    static constexpr double default_peloton_treadmill_walking_min_speed = 0.0;
-
-    static const QString peloton_treadmill_running_min_speed;
-    static constexpr double default_peloton_treadmill_running_min_speed = 0.0;
 
     static const QString nordictrackadbbike_resistance;
     static constexpr bool default_nordictrackadbbike_resistance = false;
@@ -2367,29 +2293,12 @@ class QZSettings {
     static const QString gears_offset;
     static constexpr double default_gears_offset = 0.0;
 
-    static const QString peloton_accesstoken;
-    static const QString default_peloton_accesstoken;
-
-    static const QString peloton_refreshtoken;
-    static const QString default_peloton_refreshtoken;
-
-    static const QString peloton_lastrefresh;
-    static const QString default_peloton_lastrefresh;
-
-    static const QString peloton_expires;
-    static const QString default_peloton_expires;
-
-    static const QString peloton_code;
-    static const QString default_peloton_code;
     
     static const QString proform_carbon_tl_PFTL59720;
     static constexpr bool default_proform_carbon_tl_PFTL59720 = false;    
 
     static const QString proform_treadmill_sport_70;
     static constexpr bool default_proform_treadmill_sport_70 = false;
-
-    static const QString peloton_date_format;
-    static const QString default_peloton_date_format;
 
     static const QString force_resistance_instead_inclination;
     static constexpr bool default_force_resistance_instead_inclination = false;
@@ -2465,12 +2374,6 @@ class QZSettings {
 
     static const QString mqtt_deviceid;
     static const QString default_mqtt_deviceid;
-
-    static const QString peloton_auto_start_with_intro;
-    static constexpr bool default_peloton_auto_start_with_intro = false;
-
-    static const QString peloton_auto_start_without_intro;
-    static constexpr bool default_peloton_auto_start_without_intro = false;
 
     static const QString nordictrack_tseries5_treadmill;
     static constexpr bool default_nordictrack_tseries5_treadmill = false;
@@ -2651,8 +2554,6 @@ class QZSettings {
     static const QString proform_xbike;
     static constexpr bool default_proform_xbike = false;
 
-    static const QString peloton_current_user_id;
-    static const QString default_peloton_current_user_id;
     static const QString proform_225_csx_PFEX32925_INT_0;
     static constexpr bool default_proform_225_csx_PFEX32925_INT_0 = false;
     static const QString trainprogram_pid_ignore_inclination;

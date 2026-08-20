@@ -111,8 +111,6 @@ ApplicationWindow {
     signal gpx_save_clicked()
     signal fit_save_clicked()
     signal refresh_bluetooth_devices_clicked()
-    signal strava_connect_clicked()
-    signal peloton_connect_clicked()
     signal loadSettings(url name)
     signal saveSettings(url name)
     signal deleteSettings(url name)
@@ -125,7 +123,6 @@ ApplicationWindow {
     signal keyMediaNext()
     signal floatingOpen()
     signal openFloatingWindowBrowser();
-    signal strava_upload_file_prepare();
 
     property bool lockTiles: false
     property bool settings_restart_to_apply: false
@@ -136,8 +133,6 @@ ApplicationWindow {
         property string profile_name: "default"        
         property string theme_status_bar_background_color: "#800080"
         property bool volume_change_gears: false
-        property string peloton_username: "username"
-        property string peloton_password: "password"
 
         property bool gym_mode: false
 
@@ -414,33 +409,6 @@ ApplicationWindow {
 		 }
 	}
 
-    MessageDialog {
-           id: popupPelotonAuth
-           text: qsTr("Peloton Authentication Change")
-           informativeText: qsTr("Peloton has moved to a new authentication system. Username and password are no longer required.\n\nWould you like to switch to the new authentication method now?")
-           buttons: (MessageDialog.Yes | MessageDialog.No)
-           onYesClicked: {
-               settings.peloton_username = "username"
-               settings.peloton_password = "password"
-               stackView.push("WebPelotonAuth.qml")
-               peloton_connect_clicked()
-           }
-           onNoClicked: this.visible = false
-           visible: false
-       }
-
-    Timer {
-       id: pelotonAuthCheck
-       interval: 1000  // 1 second delay after startup
-       running: true
-       repeat: false
-       onTriggered: {
-           if (settings.peloton_password !== "password") {
-               popupPelotonAuth.visible = true
-           }
-       }
-    }
-
     Popup {
         id: popupClassificaHelper
          parent: Overlay.overlay
@@ -645,74 +613,6 @@ ApplicationWindow {
          }
     }
 
-    Popup {
-        id: popupStravaConnected
-         parent: Overlay.overlay
-         enabled: rootItem.generalPopupVisible
-         onEnabledChanged: { if(rootItem.generalPopupVisible) popupStravaConnected.open() }
-         onClosed: { rootItem.generalPopupVisible = false; }
-
-         x: Math.round((parent.width - width) / 2)
-         y: Math.round((parent.height - height) / 2)
-         width: 380
-         height: 120
-         modal: true
-         focus: true
-         palette.text: "white"
-         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-         enter: Transition
-         {
-             NumberAnimation { property: "opacity"; from: 0.0; to: 1.0 }
-         }
-         exit: Transition
-         {
-             NumberAnimation { property: "opacity"; from: 1.0; to: 0.0 }
-         }
-         Column {
-             anchors.horizontalCenter: parent.horizontalCenter
-         Label {
-             anchors.horizontalCenter: parent.horizontalCenter
-             width: 370
-             height: 120
-             text: qsTr("Your Strava account is now connected!<br><br>When you will save a FIT file it will<br>automatically uploaded to Strava!")
-            }
-         }
-    }
-
-    Popup {
-        id: popupPelotonConnected
-         parent: Overlay.overlay
-         enabled: rootItem.pelotonPopupVisible
-         onEnabledChanged: { if(rootItem.pelotonPopupVisible) popupPelotonConnected.open() }
-         onClosed: { rootItem.pelotonPopupVisible = false; }
-
-         x: Math.round((parent.width - width) / 2)
-         y: Math.round((parent.height - height) / 2)
-         width: 380
-         height: 120
-         modal: true
-         focus: true
-         palette.text: "white"
-         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-         enter: Transition
-         {
-             NumberAnimation { property: "opacity"; from: 0.0; to: 1.0 }
-         }
-         exit: Transition
-         {
-             NumberAnimation { property: "opacity"; from: 1.0; to: 0.0 }
-         }
-         Column {
-             anchors.horizontalCenter: parent.horizontalCenter
-         Label {
-             anchors.horizontalCenter: parent.horizontalCenter
-             width: 370
-             height: 120
-             text: qsTr("Your Peloton account is now connected!<br><br>Restart the app to apply this change!")
-            }
-         }
-    }
-
     Timer {
         id: popupLicenseAutoClose
         interval: 120000; running: rootItem.licensePopupVisible; repeat: false
@@ -764,15 +664,6 @@ ApplicationWindow {
     }
 
     MessageDialog {
-        text: qsTr("Strava")
-        informativeText: qsTr("Do you want to upload the workout to Strava?")
-        buttons: (MessageDialog.Yes | MessageDialog.No)
-        onYesClicked: {strava_upload_file_prepare(); rootItem.stravaUploadRequested = false;}
-        onNoClicked: {rootItem.stravaUploadRequested = false;}
-        visible: rootItem.stravaUploadRequested
-    }
-
-    MessageDialog {
         text: "Clipboard Workout"
         informativeText: "Workout found in clipboard:\n" + rootItem.clipboardWorkoutPromptName +
                          "\n\nDo you want to open the workout preview?"
@@ -804,26 +695,6 @@ ApplicationWindow {
         onYesClicked: rootItem.clipboard_delete_finished_workout()
         onNoClicked: rootItem.clipboard_keep_finished_workout()
         visible: rootItem.clipboardWorkoutDeletePromptRequested
-    }
-
-    MessageDialog {
-        id: stravaLogoutConfirm
-        text: qsTr("Strava")
-        informativeText: qsTr("You are already connected to Strava. Do you want to log out?")
-        buttons: (MessageDialog.Yes | MessageDialog.No)
-        onYesClicked: { rootItem.strava_logout(); }
-        onNoClicked: this.visible = false
-        visible: false
-    }
-
-    MessageDialog {
-        id: pelotonLogoutConfirm
-        text: qsTr("Peloton")
-        informativeText: qsTr("You are already connected to Peloton. Do you want to log out?")
-        buttons: (MessageDialog.Yes | MessageDialog.No)
-        onYesClicked: { rootItem.peloton_logout(); }
-        onNoClicked: this.visible = false
-        visible: false
     }
 
     header: ToolBar {
@@ -1093,9 +964,6 @@ ApplicationWindow {
                         toolButtonLoadSettings.visible = true;
                         toolButtonSaveSettings.visible = true;                        
                         stackView.push("settings.qml")
-                        stackView.currentItem.peloton_connect_clicked.connect(function() {
-                            peloton_connect_clicked()
-                         });
                          drawer.close()
                     }
                 }
@@ -1260,54 +1128,6 @@ ApplicationWindow {
                 ItemDelegate {
                     text: "version 2.21.6"
                     width: parent.width
-                }
-
-                ItemDelegate {
-                    id: strava_connect
-                    Image {
-                        anchors.left: parent.left;
-                        anchors.verticalCenter: parent.verticalCenter
-                        source: "icons/icons/btn_strava_connectwith_orange.png"
-                        fillMode: Image.PreserveAspectFit
-                        visible: true
-                        width: parent.width
-                    }
-                    width: parent.width
-                    onClicked: {
-                        if (rootItem.isStravaLoggedIn()) {
-                            stravaLogoutConfirm.visible = true
-                            drawer.close()
-                        } else {
-                            stackView.push("WebStravaAuth.qml")
-                            strava_connect_clicked()
-                            drawer.close()
-                        }
-                    }
-                }
-
-                ItemDelegate {
-                    Image {
-                        anchors.left: parent.left;
-                        anchors.verticalCenter: parent.verticalCenter
-                        source: "icons/icons/Button_Connect_Rect_DarkMode.png"
-                        fillMode: Image.PreserveAspectFit
-                        visible: true
-                        width: parent.width
-                    }
-                    width: parent.width
-                    onClicked: {
-                        if (rootItem.isPelotonLoggedIn()) {
-                            pelotonLogoutConfirm.visible = true
-                            drawer.close()
-                        } else {
-                            stackView.push("WebPelotonAuth.qml")
-                            stackView.currentItem.goBack.connect(function() {
-                                stackView.pop();
-                            })
-                            peloton_connect_clicked()
-                            drawer.close()
-                        }
-                    }
                 }
 
                     FileDialog {

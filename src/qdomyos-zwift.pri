@@ -1,5 +1,5 @@
 include(../defaults.pri)
-QT += bluetooth widgets xml positioning quick networkauth websockets texttospeech location multimedia
+QT += bluetooth widgets xml positioning quick websockets texttospeech location multimedia
 QTPLUGIN += qavfmediaplayer
 QT+= charts core-private sql concurrent
 
@@ -220,14 +220,11 @@ fit-sdk/fit_unicode.cpp \
 devices/ftmsbike/ftmsbike.cpp \
 gpx.cpp \
 devices/heartratebelt/heartratebelt.cpp \
-homefitnessbuddy.cpp \
 homeform.cpp \
 mywhooshlink.cpp \
 keepawakehelper.cpp \
 main.cpp \
 metric.cpp \
-peloton.cpp \
-powerzonepack.cpp \
 qfit.cpp \
 qzsettings.cpp \
 devices/rower.cpp \
@@ -291,7 +288,6 @@ HEADERS += \
     $$PWD/characteristics/characteristicnotifier0002.h \
     $$PWD/characteristics/characteristicnotifier0004.h \
     $$PWD/characteristics/characteristicwriteprocessor0003.h \
-    $$PWD/OAuth2.h \
     $$PWD/devices/coresensor/coresensor.h \
     $$PWD/devices/elitesquarecontroller/elitesquarecontroller.h \
     $$PWD/devices/jumprope.h \
@@ -411,7 +407,6 @@ devices/elitesterzosmart/elitesterzosmart.h \
 devices/elliptical.h \
 filedownloader.h \
 devices/fitmetria_fanfit/fitmetria_fanfit.h \
-homefitnessbuddy.h \
 fit-sdk/FitDecode.h \
 fit-sdk/FitDeveloperField.h \
 fit-sdk/FitEncode.h \
@@ -642,8 +637,6 @@ macos/lockscreen.h \
 ios/M3iIOS-Interface.h \
 material.h \
 metric.h \
-peloton.h \
-powerzonepack.h \
 qdebugfixup.h \
 qfit.h \
 qmdnsengine_export.h \

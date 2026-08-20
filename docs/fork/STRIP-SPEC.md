@@ -543,7 +543,7 @@ Existing suites, and their fate:
 | `bluetoothdevicetestsuite` + `devicetestdataindex` | data-driven device discovery | **Prune** to kept drivers (Phase 5) |
 | `ergtabletestsuite`, `TestErgTableSelection`, `TestErgAutoMode` | ERG tables | Keep unless `ergtable` is cut |
 | `TestZwiftRideController` | Zwift Play/Click | Follows open question 6 |
-| `garminconnecttestsuite` | Garmin | **Delete** with Phase 1 |
+| ~~`garminconnecttestsuite`~~ | Garmin | **Deleted**, Phase 1 |
 | `qfittestsuite`, `testtrainingloadtestsuite` | FIT writing, training load | **Delete** with Phase 2 |
 | `trainprogramtestsuite`, `zwiftworkouttestsuite` | training programs, ZWO | **Delete** with Phase 3 |
 | `testsettingstestsuite` | settings plumbing | **Keep and extend** (§11.5) |
@@ -689,6 +689,42 @@ file, QML page, OAuth handler, or setting remains. `garminconnecttestsuite` dele
 them. ~55 setting keys removed and all three counts reconciled.
 *Tests:* gtest green minus the named suite; settings-integrity check; headless smoke.
 *Hardware:* **none.** Nothing in this group touches the bridge.
+*Status:* **done 2026-08-20**, in three commits — Garmin Connect, Intervals.icu, then
+Strava with Peloton, PowerZonePack and HomeFitnessBuddy together, which had to go as one
+because they shared the OAuth plumbing and the workout-name fields. `allSettingsCount`
+1012 → 961 and the catalog 976 → 931, so **51 keys**, close to the ~55 estimated.
+
+The estimate that mattered more was the coupling one, and it held: nothing under
+`devices/` or `virtualdevices/` was touched, and no file in the bridge appears in the
+diff. The one edit that reached the FIT path was passing empty strings where Peloton
+used to supply a workout id and URL.
+
+Three groups of names carry a deleted vendor and are **not** this feature; each was
+checked before it was kept:
+
+| Kept | What it actually is |
+| --- | --- |
+| `peloton_gain`, `peloton_offset`, `peloton_heartrate_metric`, the `Peloton R(%)` tiles, `ss2k_peloton`, `ios_peloton_workaround`, `tacx_neo2_peloton`, the `*_peloton_formula` settings | the Peloton **resistance scale** — a unit conversion the bridge does, plus the virtual device's metric override |
+| `peloton_workout_ocr`, `peloton_bike_ocr`, `peloton_companion_workout_ocr`, `trainprogram`'s `pelotonOCR*` | screen-reading sync, an unrelated feature not named in Group A |
+| `garmin_companion`, `android/src/Garmin.java`, `ios/GarminConnect.swift`, `garmin_bluetooth_compatibility`, `fit_file_garmin_device_*` | the ConnectIQ watch companion and FIT metadata, neither of which talks to connect.garmin.com |
+| `strava_virtual_activity`, `strava_treadmill`, `powr_sensor_running_cadence_half_on_strava` | how `qfit` writes the file; they go with Phase 2 |
+
+Two pieces of residue are deliberate and named here so the next phase does not have to
+rediscover them:
+
+- `homeform`'s `stravaPelotonActivityName`, `stravaPelotonInstructorName`,
+  `stravaWorkoutName` and `stravaPelotonWorkoutType` survive: the first, third and
+  fourth still carry the ZWO/GPX workout's name and sport into the FIT file. The
+  instructor is now always empty. Renaming them would churn a file Phase 7c deletes
+  whole, so they keep their vendor names for now.
+- `inner_templates/floating/*.htm` and `chartjs/dochart.js` still send
+  `peloton_start_workout`, `peloton_abort_workout` and `getpelotonimage` over the
+  template channel. Nothing answers them any more, which is a no-op rather than a
+  fault; the whole directory is Group D and comes out in Phase 4.
+
+Removed with them, because nothing else used either: Qt's `networkauth` module (the
+only OAuth client in the tree was this group) and `qtoauthcompat.h`, which existed to
+paper over its Qt 5/6 signature change.
 
 **Phase 2 — recording**
 *Criteria:* FIT writing, history, charts, e-mail report and `smtpclient/` gone.

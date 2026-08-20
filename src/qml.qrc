@@ -102,7 +102,6 @@
         <file>inner_templates/floating/radikalmedium.otf</file>
         <file>settings-shortcuts.qml</file>
         <file>settings-treadmill-inclination-override.qml</file>
-        <file>WebStravaAuth.qml</file>
         <file>Toast.qml</file>
         <file>ToastManager.qml</file>
         <file>sounds/training-program-segment.wav</file>
@@ -135,7 +134,6 @@
         <file>inner_templates/chartjs/dotreadmillchartlive.js</file>
         <file>inner_templates/chartjs/treadmillchartlive.htm</file>
         <file>PreviewChart.qml</file>
-        <file>WebPelotonAuth.qml</file>
         <file>inner_templates/floating/hfloating.htm</file>
     </qresource>
 </RCC>

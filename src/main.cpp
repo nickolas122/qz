@@ -24,8 +24,6 @@
 #include "virtualdevices/virtualtreadmill.h"
 #include <QDir>
 #include <QGuiApplication>
-#include <QFileOpenEvent>
-#include <QEvent>
 #include <QOperatingSystemVersion>
 #include <QQmlApplicationEngine>
 #include <QSettings>
@@ -64,33 +62,6 @@
 
 #include "handleurl.h"
 #include "mywhooshlink.h"
-#include "authutils.h"
-
-class OAuthCallbackEventFilter : public QObject {
-  public:
-    bool eventFilter(QObject *watched, QEvent *event) override {
-#ifdef Q_OS_IOS
-        Q_UNUSED(watched)
-        if (event->type() == QEvent::FileOpen) {
-            auto *fileEvent = static_cast<QFileOpenEvent *>(event);
-            const QUrl url = fileEvent->url();
-            qDebug() << "QZ iOS FileOpen event received" << sanitizedOAuthCallbackUrl(url);
-            if (url.isValid() && url.host() == QStringLiteral("www.qzfitness.com") &&
-                url.path().startsWith(QStringLiteral("/peloton/callback")) && homeform::singleton()) {
-                qDebug() << "QZ iOS FileOpen matched Peloton callback";
-                QMetaObject::invokeMethod(homeform::singleton(), "handleOAuthCallbackUrl", Qt::QueuedConnection,
-                                          Q_ARG(QString, url.toString()));
-            } else {
-                qDebug() << "QZ iOS FileOpen ignored";
-            }
-        }
-#else
-        Q_UNUSED(watched)
-        Q_UNUSED(event)
-#endif
-        return false;
-    }
-};
 
 bool logs = true;
 bool noWriteResistance = false;
@@ -98,13 +69,6 @@ bool noHeartService = true;
 bool noConsole = false;
 bool onlyVirtualBike = false;
 bool onlyVirtualTreadmill = false;
-bool testPeloton = false;
-bool testHomeFitnessBudy = false;
-bool testPowerZonePack = false;
-QString peloton_username = "";
-QString peloton_password = "";
-QString pzp_username = "";
-QString pzp_password = "";
 bool fit_file_saved_on_quit = false;
 QString mqtt_host = "";
 int mqtt_port = -1;
@@ -211,19 +175,8 @@ void displayHelp() {
     printf("  -zwift_play                   Enable Zwift Play\n");
     printf("  -zwift_click                  Enable Zwift Click\n");
     printf("  -zwift_play_emulator          Enable Zwift Play emulator\n");
-    printf("  -test-peloton                 Enable Peloton test mode\n");
-    printf("  -test-hfb                     Enable Home Fitness Buddy test mode\n");
-    printf("  -test-pzp                     Enable Power Zone Pack test mode\n");
     printf("  -smoke-test                   Run smoke test (verify Qt loads, print SMOKE_OK, exit)\n");
     printf("  -train <program>              Specify training program\n");
-
-    printf("\nPeloton options:\n");
-    printf("  -peloton-username <username>  Set Peloton username\n");
-    printf("  -peloton-password <password>  Set Peloton password\n");
-
-    printf("\nPower Zone Pack options:\n");
-    printf("  -pzp-username <username>      Set Power Zone Pack username\n");
-    printf("  -pzp-password <password>      Set Power Zone Pack password\n");
 
     printf("\nMQTT options:\n");
     printf("  -mqtt-host <hostname>         Set MQTT broker hostname\n");
@@ -379,12 +332,6 @@ QCoreApplication *createApplication(int &argc, char *argv[]) {
             zwift_click = true;
         if (!qstrcmp(argv[i], "-zwift_play_emulator"))
             zwift_play_emulator = true;
-        if (!qstrcmp(argv[i], "-test-peloton"))
-            testPeloton = true;
-        if (!qstrcmp(argv[i], "-test-hfb"))
-            testHomeFitnessBudy = true;
-        if (!qstrcmp(argv[i], "-test-pzp"))
-            testPowerZonePack = true;
         if (!qstrcmp(argv[i], "-smoke-test")) {
             smokeTest = true;
             nogui = true;
@@ -400,22 +347,6 @@ QCoreApplication *createApplication(int &argc, char *argv[]) {
         if (!qstrcmp(argv[i], "-bluetooth-event-gear-device")) {
 
             eventGearDevice = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-peloton-username")) {
-
-            peloton_username = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-peloton-password")) {
-
-            peloton_password = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-pzp-username")) {
-
-            pzp_username = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-pzp-password")) {
-
-            pzp_password = argv[++i];
         }
         if (!qstrcmp(argv[i], "-poll-device-time")) {
 
@@ -591,15 +522,13 @@ int main(int argc, char *argv[]) {
     QScopedPointer<QApplication> app(new QApplication(argc, argv));
 #endif
 
-    OAuthCallbackEventFilter oauthCallbackEventFilter;
-    app->installEventFilter(&oauthCallbackEventFilter);
 #ifdef CHARTJS
     QtWebView::initialize();
 #endif
 
 #ifdef Q_OS_LINUX
 #ifndef Q_OS_ANDROID
-    if (getuid() && !testPeloton && !testHomeFitnessBudy && !testPowerZonePack && !smokeTest) {
+    if (getuid() && !smokeTest) {
 
         printf("Runme as root!\n");
         return -1;
@@ -776,52 +705,6 @@ int main(int argc, char *argv[]) {
                                noHeartService); // FIXED: clang-analyzer-cplusplus.NewDeleteLeaks - potential leak
 
             Q_UNUSED(V)
-            return app->exec();
-        } else if (testPeloton) {
-            settings.setValue(QZSettings::peloton_username, peloton_username);
-            settings.setValue(QZSettings::peloton_password, peloton_password);
-            peloton *p = new peloton(0, 0);
-            p->setTestMode(true);
-            QObject::connect(p, &peloton::loginState, [&](bool ok) {
-                if (ok) {
-                } else {
-                    exit(1);
-                }
-            });
-            QObject::connect(p, &peloton::workoutStarted,
-                             [&](QString workout_name, QString instructor) { app->exit(0); });
-            return app->exec();
-        } else if (testHomeFitnessBudy) {
-            homefitnessbuddy *h = new homefitnessbuddy(0, 0);
-            QObject::connect(h, &homefitnessbuddy::loginState, [&](bool ok) {
-                if (ok) {
-                    h->searchWorkout(QDate(2021, 8, 21), "Matt Wilpers", 2700, "");
-                    QObject::connect(h, &homefitnessbuddy::workoutStarted, [&](QList<trainrow> *list) {
-                        if (list->length() > 0)
-                            app->exit(0);
-                        else
-                            app->exit(2);
-                    });
-                } else {
-                    exit(1);
-                }
-            });
-            return app->exec();
-        } else if (testPowerZonePack) {
-            powerzonepack *h = new powerzonepack(0, 0);
-            QObject::connect(h, &powerzonepack::loginState, [&](bool ok) {
-                if (ok) {
-                    h->searchWorkout("d6a54e1ce634437bb172f61eb1588b27");
-                    QObject::connect(h, &powerzonepack::workoutStarted, [&](QList<trainrow> *list) {
-                        if (list->length() > 0)
-                            app->exit(0);
-                        else
-                            app->exit(2);
-                    });
-                } else {
-                    exit(1);
-                }
-            });
             return app->exec();
         }
     }

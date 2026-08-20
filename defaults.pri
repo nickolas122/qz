@@ -1,4 +1,4 @@
-QT += gui bluetooth widgets xml positioning quick networkauth websockets texttospeech location multimedia sql
+QT += gui bluetooth widgets xml positioning quick websockets texttospeech location multimedia sql
 QTPLUGIN += qavfmediaplayer
 QT+= charts
 

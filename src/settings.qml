@@ -22,7 +22,6 @@ import AndroidStatusBar 1.0
         //anchors.bottomMargin: footerSettings.height + 10
         id: settingsPane
 
-        signal peloton_connect_clicked()
 
         property var settingsCatalog: ({ "settings": [], "virtualSettings": [], "pages": [] })
         property var searchableSettings: []
@@ -360,16 +359,9 @@ import AndroidStatusBar 1.0
 
             property bool top_bar_enabled: true
 
-            property string peloton_username: "username"
-            property string peloton_password: "password"
-            property string peloton_difficulty: "lower"
             property string peloton_cadence_metric: "Cadence"
             property string peloton_heartrate_metric: "Heart Rate"
-            property string peloton_date: "Before Title"
-            property bool peloton_description_link: true
 
-            property string pzp_username: "username"
-            property string pzp_password: "username"
 
             property bool tile_speed_enabled: true
             property int  tile_speed_order: 0
@@ -560,7 +552,6 @@ import AndroidStatusBar 1.0
             property real speed_gain: 1
 
             property string filter_device: "Disabled"
-            property string strava_suffix: "#QZ"
 
             property string cadence_sensor_name: "Disabled"
             property bool cadence_sensor_as_bike: false
@@ -1021,13 +1012,11 @@ import AndroidStatusBar 1.0
             property bool nordictrack_incline_trainer_x7i: false
 
             // from version 2.12.71
-            property bool strava_auth_external_webbrowser: false
 
             // from version 2.12.72
             property bool gears_from_bike: false
 
             // from version 2.13.4
-            property bool peloton_spinups_autoresistance: true
 
             // from version 2.13.10
             property bool eslinker_costaway: false
@@ -1085,7 +1074,6 @@ import AndroidStatusBar 1.0
             property bool kingsmith_encrypt_v5: false
 
             // from version 2.13.58
-            property int peloton_rower_level: 1
 
             // from version 2.13.61
             property bool tile_target_pace_enabled: false
@@ -1136,7 +1124,6 @@ import AndroidStatusBar 1.0
             property bool proform_rower_sport_rl: false
 
             // from version 2.16.13
-            property bool strava_date_prefix: false
 
             // from version 2.16.17
             property bool race_mode: false
@@ -1250,7 +1237,6 @@ import AndroidStatusBar 1.0
             property bool proform_bike_325_csx: false
 
             // from version 2.16.58
-            property string strava_upload_mode: "Always"
 
             // from version 2.16.59
             property bool proform_treadmill_705_cst_V78_239: false
@@ -1263,7 +1249,6 @@ import AndroidStatusBar 1.0
             property bool atletica_lightspeed_treadmill: false
 
             // from version 2.16.68
-            property int peloton_treadmill_level: 1
             property bool nordictrackadbbike_resistance: false
             property bool proform_treadmill_carbon_t7: false
             property bool nordictrack_treadmill_exp_5i: false
@@ -1288,7 +1273,6 @@ import AndroidStatusBar 1.0
 
             // from version 2.16.71
             property bool proform_treadmill_sport_70: false
-            property string peloton_date_format: "MM/dd/yy"
             property bool force_resistance_instead_inclination: false
             property bool proform_treadmill_575i: false
 
@@ -1323,8 +1307,6 @@ import AndroidStatusBar 1.0
             property string mqtt_username: ""
             property string mqtt_password: ""
             property string mqtt_deviceid: "default"
-            property bool peloton_auto_start_with_intro: false
-            property bool peloton_auto_start_without_intro: false
 
             // from version 2.18.7
             property bool nordictrack_tseries5_treadmill: false
@@ -1358,11 +1340,6 @@ import AndroidStatusBar 1.0
             property bool proform_treadmill_705_cst_V80_44: false
 
             // from version 2.18.19
-            property string  peloton_accesstoken: ""
-            property string  peloton_refreshtoken: ""
-            property string  peloton_lastrefresh: ""
-            property string  peloton_expires: ""
-            property string  peloton_code: ""
 
             property bool nordictrack_treadmill_1750_adb: false
 
@@ -1416,7 +1393,6 @@ import AndroidStatusBar 1.0
             property bool domyos_elliptical_fmts: false
             property bool proform_xbike: false            
             property bool proform_225_csx_PFEX32925_INT_0: false
-            property string peloton_current_user_id: ""
 
             // 2.18.22
             property bool trainprogram_pid_ignore_inclination: false
@@ -1475,7 +1451,6 @@ import AndroidStatusBar 1.0
             property bool technogym_group_cycle: false
             property int ant_bike_device_number: 0
             property int ant_heart_device_number: 0
-            property int peloton_treadmill_walk_level: 1
             property int pid_heart_zone_erg_mode_watt_step: 5            
 
             // Automatic Virtual Shifting settings
@@ -1536,8 +1511,6 @@ import AndroidStatusBar 1.0
 			property bool domyos_treadmill_sync_start: false
 			property string garmin_device_serial: "3313379353"
 			property real treadmill_speed_min: 0
-			property real peloton_treadmill_walking_min_speed: 0.0
-			property real peloton_treadmill_running_min_speed: 0.0
 			property bool trainprogram_auto_lap_on_segment: false
 
 			property bool power_avg_3s: false
@@ -6846,399 +6819,6 @@ import AndroidStatusBar 1.0
                 color: Material.backgroundColor
                 accordionContent: ColumnLayout {
                     spacing: 0
-/*
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelPelotonUsername
-                            text: qsTr("Username:")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: pelotonUsernameTextField
-                            text: settings.peloton_username
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onAccepted: settings.peloton_username = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okPelotonUsernameButton
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.peloton_username = pelotonUsernameTextField.text; window.settings_restart_to_apply = true; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-
-                    Label {
-                        text: qsTr("Enter the email address you use to login to Peloton (NOT your leaderboard name). Ensure there are no spaces before or after your email. Click OK.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelPelotonPassword
-                            text: qsTr("Password:") + ((rootItem.pelotonLogin===-1)?"":(rootItem.pelotonLogin===1?"\u2705":"\u274c"))
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: pelotonPasswordTextField
-                            text: settings.peloton_password
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            inputMethodHints: Qt.ImhHiddenText
-                            echoMode: TextInput.PasswordEchoOnEdit
-                            onAccepted: settings.peloton_password = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okPelotonPasswordButton
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.peloton_password = pelotonPasswordTextField.text; window.settings_restart_to_apply = true; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("Enter the password you use to login to Peloton. Click OK. If you have entered the correct login credentials and the QZ is able to access your account, you will see a when you reopen QZ. This is a secure login, not accessible by anyone but you.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-*/
-
-                    ItemDelegate {
-                        Image {
-                            anchors.left: parent.left;
-                            anchors.verticalCenter: parent.verticalCenter
-                            source: "icons/icons/Button_Connect_Rect_DarkMode.png"
-                            fillMode: Image.PreserveAspectFit
-                            visible: true
-                            width: parent.width
-                        }
-                        Layout.fillWidth: true
-                        onClicked: {
-                            stackView.push("WebPelotonAuth.qml")
-                            peloton_connect_clicked()
-                        }
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelPelotonDifficulty
-                            text: qsTr("Difficulty:")
-                            Layout.fillWidth: true
-                        }
-                        ComboBox {
-                            id: pelotonDifficultyTextField
-                            model: [ "lower", "upper", "average" ]
-                            displayText: settings.peloton_difficulty
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onActivated: {
-                                console.log("combomodel activated" + pelotonDifficultyTextField.currentIndex)
-                                displayText = pelotonDifficultyTextField.currentValue
-                             }
-
-                        }
-                        Button {
-                            id: okPelotonDifficultyButton
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.peloton_difficulty = pelotonDifficultyTextField.displayText; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("Typically, Peloton coaches call out a range for target incline, resistance and/or speed. Use this setting to choose the difficulty of the target QZ communicates. Difficulty level can be set to lower, upper or average. Click OK.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            text: qsTr("Treadmill Level:")
-                            Layout.fillWidth: true
-                        }
-                        ComboBox {
-                            id: pelotonTreadmillLevelTextField
-                            model: [ "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ]
-                            displayText: settings.peloton_treadmill_level
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onActivated: {
-                                console.log("combomodel activated" + pelotonTreadmillLevelTextField.currentIndex)
-                                displayText = pelotonTreadmillLevelTextField.currentValue
-                             }
-
-                        }
-                        Button {
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.peloton_treadmill_level = parseInt(pelotonTreadmillLevelTextField.displayText); toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("Difficulty level for Peloton treadmill classes. 1 is easy 10 is hard.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            text: qsTr("Treadmill Walk Level:")
-                            Layout.fillWidth: true
-                        }
-                        ComboBox {
-                            id: pelotonTreadmillWalkLevelTextField
-                            model: [ "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ]
-                            displayText: settings.peloton_treadmill_walk_level
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onActivated: {
-                                console.log("combomodel activated" + pelotonTreadmillWalkLevelTextField.currentIndex)
-                                displayText = pelotonTreadmillWalkLevelTextField.currentValue
-                             }
-
-                        }
-                        Button {
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.peloton_treadmill_walk_level = parseInt(pelotonTreadmillWalkLevelTextField.displayText); toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("Difficulty level for Peloton treadmill walking classes. 1 is easy 10 is hard.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            text: qsTr("Walking Min Speed:") + (settings.miles_unit ? " (mph)" : " (km/h)")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: pelotonTreadmillWalkingMinSpeedTextField
-                            text: (settings.miles_unit ? settings.peloton_treadmill_walking_min_speed * 0.621371 : settings.peloton_treadmill_walking_min_speed).toFixed(1)
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            inputMethodHints: Qt.ImhFormattedNumbersOnly
-                        }
-                        Button {
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.peloton_treadmill_walking_min_speed = (settings.miles_unit ? pelotonTreadmillWalkingMinSpeedTextField.text / 0.621371 : pelotonTreadmillWalkingMinSpeedTextField.text); toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("Minimum speed for Peloton walking sessions. Set to 0 to disable. Applied to all speed targets in walking workouts.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            text: qsTr("Running Min Speed:") + (settings.miles_unit ? " (mph)" : " (km/h)")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: pelotonTreadmillRunningMinSpeedTextField
-                            text: (settings.miles_unit ? settings.peloton_treadmill_running_min_speed * 0.621371 : settings.peloton_treadmill_running_min_speed).toFixed(1)
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            inputMethodHints: Qt.ImhFormattedNumbersOnly
-                        }
-                        Button {
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.peloton_treadmill_running_min_speed = (settings.miles_unit ? pelotonTreadmillRunningMinSpeedTextField.text / 0.621371 : pelotonTreadmillRunningMinSpeedTextField.text); toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("Minimum speed for Peloton running sessions. Set to 0 to disable. Applied to all speed targets in running workouts.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            text: qsTr("Rower Level:")
-                            Layout.fillWidth: true
-                        }
-                        ComboBox {
-                            id: pelotonRowerLevelTextField
-                            model: [ "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ]
-                            displayText: settings.peloton_rower_level
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onActivated: {
-                                console.log("combomodel activated" + pelotonRowerLevelTextField.currentIndex)
-                                displayText = pelotonRowerLevelTextField.currentValue
-                             }
-
-                        }
-                        Button {
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.peloton_rower_level = parseInt(pelotonRowerLevelTextField.displayText); toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("Difficulty level for Peloton rower classes. 1 is easy 10 is hard.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelPZPUsername
-                            text: qsTr("PZP Username:")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: pzpUsernameTextField
-                            text: settings.pzp_username
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onAccepted: settings.pzp_username = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okPZPUsernameButton
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.pzp_username = pzpUsernameTextField.text; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("As of 4/1/2022, this feature is broken due to a Power Zone Pack (PZP) website change. Leave (or change back to) the default of “username” (without quotation marks, all lowercase and all one word) until further notice.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelPZPPassword
-                            text: qsTr("PZP Password:") + ((rootItem.pzpLogin===-1)?"":(rootItem.pzpLogin===1?"\u2705":"\u274c"))
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: pzpPasswordTextField
-                            text: settings.pzp_password
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            inputMethodHints: Qt.ImhHiddenText
-                            echoMode: TextInput.PasswordEchoOnEdit
-                            onAccepted: settings.pzp_password = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okPZPPasswordButton
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.pzp_password = pzpPasswordTextField.text; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("As of 4/1/2022, this feature is broken due to a Power Zone Pack (PZP) website change. Leave this setting blank until further notice.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
                     RowLayout {
                         spacing: 10
                         Label {
@@ -7343,60 +6923,6 @@ import AndroidStatusBar 1.0
                         color: Material.color(Material.Lime)
                     }                    
 
-                    IndicatorOnlySwitch {
-                        text: qsTr("Auto Start (with intro)")
-                        spacing: 0
-                        bottomPadding: 0
-                        topPadding: 0
-                        rightPadding: 0
-                        leftPadding: 0
-                        clip: false
-                        checked: settings.peloton_auto_start_with_intro
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        onClicked: { settings.peloton_auto_start_with_intro = checked; if(settings.peloton_auto_start_with_intro === true) { settings.peloton_auto_start_without_intro = false; } }
-                    }
-
-                    Label {
-                        text: qsTr("Turn this on to start a workout automatically when you start a workout on Peloton (waiting the intro). Default is off.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    IndicatorOnlySwitch {
-                        text: qsTr("Auto Start (without intro)")
-                        spacing: 0
-                        bottomPadding: 0
-                        topPadding: 0
-                        rightPadding: 0
-                        leftPadding: 0
-                        clip: false
-                        checked: settings.peloton_auto_start_without_intro
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        onClicked: { settings.peloton_auto_start_without_intro = checked; if(settings.peloton_auto_start_without_intro === true) { settings.peloton_auto_start_with_intro = false; } }
-                    }
-
-                    Label {
-                        text: qsTr("Turn this on to start a workout automatically when you start a workout on Peloton (skipping the intro). Default is off.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
                     /*
                     RowLayout {
                         spacing: 10
@@ -7454,126 +6980,6 @@ import AndroidStatusBar 1.0
 
                     Label {
                         text: qsTr("By default, QZ communicates heart rate to Peloton. Use this setting to change the metric that appears on the Peloton screen.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelpelotonDateOnStrava
-                            text: qsTr("Date on Strava:")
-                            Layout.fillWidth: true
-                        }
-                        ComboBox {
-                            id: pelotonDateOnStravaTextField
-                            model: [ "Before Title", "After Title", "Disabled" ]
-                            displayText: settings.peloton_date
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onActivated: {
-                                console.log("combomodel activated" + pelotonDateOnStravaTextField.currentIndex)
-                                displayText = pelotonDateOnStravaTextField.currentValue
-                            }
-
-                        }
-                        Button {
-                            id: okPelotonDateOnStrava
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.peloton_date = pelotonDateOnStravaTextField.displayText; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("Allows you to choose whether you would like the Peloton class air date to display before or after the class title on Strava.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            text: qsTr("Date Format:")
-                            Layout.fillWidth: true
-                        }
-                        ComboBox {
-                            id: pelotonDateFormatTextField
-                            model: [ "MM/dd/yy", "yy/MM/dd" ]
-                            displayText: settings.peloton_date_format
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onActivated: {
-                                console.log("combomodel activated" + pelotonDateFormatTextField.currentIndex)
-                                displayText = pelotonDateFormatTextField.currentValue
-                            }
-
-                        }
-                        Button {
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.peloton_date_format = pelotonDateFormatTextField.displayText; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    IndicatorOnlySwitch {
-                        id: pelotonDescriptionLinkDelegate
-                        text: qsTr("Activity Link in Strava")
-                        spacing: 0
-                        bottomPadding: 0
-                        topPadding: 0
-                        rightPadding: 0
-                        leftPadding: 0
-                        clip: false
-                        checked: settings.peloton_description_link
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        onClicked: settings.peloton_description_link = checked
-                    }
-
-                    Label {
-                        text: qsTr("Turn this on if you want QZ to capture a link to the Peloton class and display it in Strava.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    IndicatorOnlySwitch {
-                        text: qsTr("Spinups Autoresistance")
-                        spacing: 0
-                        bottomPadding: 0
-                        topPadding: 0
-                        rightPadding: 0
-                        leftPadding: 0
-                        clip: false
-                        checked: settings.peloton_spinups_autoresistance
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        onClicked: settings.peloton_spinups_autoresistance = checked
-                    }
-
-                    Label {
-                        text: qsTr("By default, QZ treats Spin-UPS in Power Zone rides as an increasing ramp to warm you up. You can disable this, to leave the resistance up to you.")
                         font.bold: true
                         font.italic: true
                         font.pixelSize: Qt.application.font.pixelSize - 2
@@ -12545,103 +11951,6 @@ import AndroidStatusBar 1.0
                         color: Material.color(Material.Lime)
                     }                   
 
-                    Label {
-                        id: stravaLabel
-                        text: qsTr("Strava")
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            text: qsTr("Strava Upload:")
-                            Layout.fillWidth: true
-                        }
-                        ComboBox {
-                            id: stravaUploadMode
-                            model: [ "Always", "Request", "Disabled" ]
-                            displayText: settings.strava_upload_mode
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onActivated: {
-                                console.log("combomodel activated" + stravaUploadMode.currentIndex)
-                                displayText = stravaUploadMode.currentValue
-                             }
-
-                        }
-                        Button {
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.strava_upload_mode = stravaUploadMode.displayText; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelStravaSuffix
-                            text: qsTr("Suffix activity:")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: stravaSuffixTextField
-                            text: settings.strava_suffix
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onAccepted: settings.strava_suffix = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okStravaSuffixButton
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.strava_suffix = stravaSuffixTextField.text; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("Default is “QZ.” Please leave this set to default so that other Strava users will see the QZ; a tiny bit of advertising that helps promote the app and support its development. If you choose to remove it, please consider contributing to the developer’s Patreon or Buy Me a Coffee accounts or just subscribe to the Swag bag in the left side bar to allow me to continue developing and supporting the app.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    IndicatorOnlySwitch {
-                        text: qsTr("Strava External Browser Auth")
-                        spacing: 0
-                        bottomPadding: 0
-                        topPadding: 0
-                        rightPadding: 0
-                        leftPadding: 0
-                        clip: false
-                        checked: settings.strava_auth_external_webbrowser
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        onClicked: { settings.strava_auth_external_webbrowser = checked; window.settings_restart_to_apply = true; }
-                    }
-
-                    Label {
-                        text: qsTr("QZ can open an external browser to authorize Strava. Default: disabled.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }                    
-
                     IndicatorOnlySwitch {
                         id: stravaVirtualActivityDelegate
                         text: qsTr("Strava Virtual Activity Tag")
@@ -12686,33 +11995,6 @@ import AndroidStatusBar 1.0
 
                     Label {
                         text: qsTr("Append the Treadmill Tag to the Strava Activity when you are using a treadmill. If you want to see the elevation on Strava, you need to disable this.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    IndicatorOnlySwitch {
-                        text: qsTr("Date Prefix on Strava Workout")
-                        spacing: 0
-                        bottomPadding: 0
-                        topPadding: 0
-                        rightPadding: 0
-                        leftPadding: 0
-                        clip: false
-                        checked: settings.strava_date_prefix
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        onClicked: settings.strava_date_prefix = checked
-                    }
-
-                    Label {
-                        text: qsTr("Append the Date to the Strava Activity as a prefix only for non-Peloton workout")
                         font.bold: true
                         font.italic: true
                         font.pixelSize: Qt.application.font.pixelSize - 2

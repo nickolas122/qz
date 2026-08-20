@@ -7,7 +7,6 @@
 #include <QMetaObject>
 #include "homeform.h"
 #include "lockscreen.h"
-#include "authutils.h"
 
 // Qt defines QIOSApplicationDelegate internally as a UIResponder-backed
 // UIApplicationDelegate.  Keep the local declaration aligned with that shape
@@ -169,37 +168,5 @@ performFetchWithCompletionHandler:(void (^)(UIBackgroundFetchResult result))comp
 {
 }
 
-- (BOOL)application:(UIApplication *)application
- continueUserActivity:(NSUserActivity *)userActivity
-   restorationHandler:(void (^)(NSArray * _Nullable))restorationHandler
-{
-    Q_UNUSED(application)
-    Q_UNUSED(restorationHandler)
-
-    qDebug() << "QZ iOS continueUserActivity called: activityType="
-             << QString::fromUtf8(userActivity.activityType.UTF8String);
-
-    if ([userActivity.activityType isEqualToString:NSUserActivityTypeBrowsingWeb]) {
-        NSURL *url = userActivity.webpageURL;
-        qDebug() << "QZ iOS continueUserActivity webpageURL="
-                 << (url ? sanitizedOAuthCallbackUrl(QString::fromUtf8(url.absoluteString.UTF8String))
-                         : QStringLiteral("(null)"));
-        if (url != nil && homeform::singleton()) {
-            const QString callbackUrl = QString::fromUtf8(url.absoluteString.UTF8String);
-            const QUrl qUrl(callbackUrl);
-            if (qUrl.isValid() && qUrl.host() == QStringLiteral("www.qzfitness.com") &&
-                qUrl.path().startsWith(QStringLiteral("/peloton/callback"))) {
-                qDebug() << "QZ iOS continueUserActivity matched Peloton callback";
-                QMetaObject::invokeMethod(homeform::singleton(), "handleOAuthCallbackUrl", Qt::QueuedConnection,
-                                          Q_ARG(QString, callbackUrl));
-                return YES;
-            }
-            qDebug() << "QZ iOS continueUserActivity ignored URL";
-        }
-    }
-
-    qDebug() << "QZ iOS continueUserActivity returning NO";
-    return NO;
-}
 @end
 #endif

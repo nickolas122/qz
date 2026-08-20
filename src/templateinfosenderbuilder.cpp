@@ -1413,24 +1413,6 @@ void TemplateInfoSenderBuilder::onResistanceMinus(const QJsonValue &msgContent, 
     tempSender->send(out.toJson());
 }
 
-void TemplateInfoSenderBuilder::onPelotonStartWorkout(const QJsonValue &msgContent, TemplateInfoSender *tempSender) {
-    Q_UNUSED(msgContent);
-    QJsonObject main, outObj;
-    emit peloton_start_workout();
-    main[QStringLiteral("msg")] = QStringLiteral("R_peloton_start_workout");
-    QJsonDocument out(main);
-    tempSender->send(out.toJson());
-}
-
-void TemplateInfoSenderBuilder::onPelotonAbortWorkout(const QJsonValue &msgContent, TemplateInfoSender *tempSender) {
-    Q_UNUSED(msgContent);
-    QJsonObject main, outObj;
-    emit peloton_abort_workout();
-    main[QStringLiteral("msg")] = QStringLiteral("R_peloton_abort_workout");
-    QJsonDocument out(main);
-    tempSender->send(out.toJson());
-}
-
 void TemplateInfoSenderBuilder::onFloatingClose(const QJsonValue &msgContent, TemplateInfoSender *tempSender) {
     Q_UNUSED(msgContent);
     QJsonObject main, outObj;
@@ -1473,17 +1455,6 @@ void TemplateInfoSenderBuilder::onSaveChart(const QJsonValue &msgContent, Templa
     outObj[QStringLiteral("name")] = filename;
     main[QStringLiteral("content")] = outObj;
     main[QStringLiteral("msg")] = QStringLiteral("R_savechart");
-    QJsonDocument out(main);
-    tempSender->send(out.toJson());
-}
-
-void TemplateInfoSenderBuilder::onGetPelotonImage(const QJsonValue &msgContent, TemplateInfoSender *tempSender) {
-    QJsonObject main;
-    QString base64 = "";
-    if (homeform::singleton() && !homeform::singleton()->currentPelotonImage().isEmpty())
-        base64 = homeform::singleton()->currentPelotonImage().toBase64();
-    main[QStringLiteral("content")] = base64;
-    main[QStringLiteral("msg")] = QStringLiteral("R_getpelotonimage");
     QJsonDocument out(main);
     tempSender->send(out.toJson());
 }
@@ -1575,9 +1546,6 @@ void TemplateInfoSenderBuilder::onDataReceived(const QByteArray &data) {
                 } else if (msg == QStringLiteral("savechart")) {
                     onSaveChart(jsonObject[QStringLiteral("content")], sender);
                     return;
-                } else if (msg == QStringLiteral("getpelotonimage")) {
-                    onGetPelotonImage(jsonObject[QStringLiteral("content")], sender);
-                    return;
                 } else if (msg == QStringLiteral("lap")) {
                     onLap(jsonObject[QStringLiteral("content")], sender);
                     return;
@@ -1610,12 +1578,6 @@ void TemplateInfoSenderBuilder::onDataReceived(const QByteArray &data) {
                     return;
                 } else if (msg == QStringLiteral("resistance_minus")) {
                     onResistanceMinus(jsonObject[QStringLiteral("content")], sender);
-                    return;
-                } else if (msg == QStringLiteral("peloton_start_workout")) {
-                    onPelotonStartWorkout(jsonObject[QStringLiteral("content")], sender);
-                    return;
-                } else if (msg == QStringLiteral("peloton_abort_workout")) {
-                    onPelotonAbortWorkout(jsonObject[QStringLiteral("content")], sender);
                     return;
                 } else if (msg == QStringLiteral("floating_close")) {
                     onFloatingClose(jsonObject[QStringLiteral("content")], sender);
@@ -1786,7 +1748,6 @@ void TemplateInfoSenderBuilder::buildContext(bool forceReinit) {
         obj.setProperty(QStringLiteral("longitude"), device->currentCordinate().longitude());
         obj.setProperty(QStringLiteral("altitude"), device->currentCordinate().altitude());
         obj.setProperty(QStringLiteral("peloton_offset"), pelotonOffset());
-        obj.setProperty(QStringLiteral("peloton_ask_start"), pelotonAskStart());
         obj.setProperty(QStringLiteral("autoresistance"), homeform::singleton()->autoResistance());
         obj.setProperty(QStringLiteral("nextrow"), homeform::singleton()->nextRows->value());
         if (homeform::singleton()->trainingProgram()) {

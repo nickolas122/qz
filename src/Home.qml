@@ -22,8 +22,6 @@ HomeForm {
     signal start_clicked;
     signal stop_clicked;
     signal lap_clicked;
-    signal peloton_start_workout;
-    signal peloton_abort_workout;
     signal plus_clicked(string name)
     signal minus_clicked(string name)
     signal largeButton_clicked(string name)
@@ -50,16 +48,6 @@ HomeForm {
     Connections {
         target: rootItem
         onTrainingProgramIntervalSoundRequested: trainingProgramSegmentSound.play()
-    }
-
-    MessageDialog {
-        id: messagePelotonAskStart
-        text: qsTr("Peloton Workout in progress")
-        informativeText: qsTr("Do you want to follow the resistance? ") + rootItem.pelotonProvider
-        buttons: (MessageDialog.Yes | MessageDialog.No)
-        onYesClicked: {rootItem.pelotonAskStart = false; peloton_start_workout();}
-        onNoClicked: {rootItem.pelotonAskStart = false; peloton_abort_workout();}
-        visible: rootItem.pelotonAskStart
     }
 
     Popup {

@@ -1,5 +1,4 @@
 #include "homeform.h"
-#include "qtoauthcompat.h"
 #ifdef Q_OS_IOS
 #include "ios/lockscreen.h"
 #include "ios/ios_liveactivity.h"
@@ -18,9 +17,7 @@
 #include "templateinfosenderbuilder.h"
 #include "workoutmodel.h"
 #include "zwiftworkout.h"
-#include "authutils.h"
 
-#include <QAbstractOAuth2>
 #include <QApplication>
 #include <QByteArray>
 #include <QClipboard>
@@ -39,8 +36,6 @@
 #include <QNetworkAccessManager>
 #include <QNetworkCookieJar>
 #include <QNetworkInterface>
-#include <QOAuth2AuthorizationCodeFlow>
-#include <QOAuthHttpServerReplyHandler>
 #include <QProcess>
 #include <QQmlContext>
 #include <QQmlFile>
@@ -347,16 +342,6 @@ class MailSenderThread : public QThread {
 };
 } // namespace
 
-#ifndef STRAVA_CLIENT_ID
-#define STRAVA_CLIENT_ID 7976
-#if defined(WIN32)
-#pragma message("DEFINE STRAVA_CLIENT_ID!!!")
-#else
-#pragma message "DEFINE STRAVA_CLIENT_ID!!!"
-#endif
-#endif
-#define STRAVA_CLIENT_ID_S STRINGIFY(STRAVA_CLIENT_ID)
-
 DataObject::DataObject(const QString &name, const QString &icon, const QString &value, bool writable, const QString &id,
                        int valueFontSize, int labelFontSize, const QString &valueFontColor, const QString &secondLine,
                        const int gridId, bool largeButton, QString largeButtonLabel, QString largeButtonColor) {
@@ -462,8 +447,6 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
     const int valueTimeFontSize = 22;
 #endif
 
-    stravaAuthWebVisible = false;
-    stravaWebVisibleChanged(stravaAuthWebVisible);
 
     QString innerId = QStringLiteral("inner");
     QString sKey = QStringLiteral("template_") + innerId + QStringLiteral("_" TEMPLATE_PRIVATE_WEBSERVER_ID "_");
@@ -866,11 +849,6 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
     connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::resistance_Plus, this, [this]() { Plus(QStringLiteral("resistance")); });
     connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::resistance_Minus, this, [this]() { Minus(QStringLiteral("resistance")); });
     connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::pelotonOffset, this, &homeform::pelotonOffset);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::pelotonAskStart, this, &homeform::pelotonAskStart);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::peloton_start_workout, this,
-            &homeform::peloton_start_workout);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::peloton_abort_workout, this,
-            &homeform::peloton_abort_workout);
     connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::Start, this, &homeform::StartRequested);
     connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::Pause, this, &homeform::Start);
     connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::Stop, this, &homeform::StopRequested);
@@ -935,12 +913,9 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
     QObject::connect(stack, SIGNAL(gpx_open_clicked(QUrl)), this, SLOT(gpx_open_clicked(QUrl)));
     QObject::connect(stack, SIGNAL(gpx_save_clicked()), this, SLOT(gpx_save_clicked()));
     QObject::connect(stack, SIGNAL(fit_save_clicked()), this, SLOT(fit_save_clicked()));
-    QObject::connect(stack, SIGNAL(strava_connect_clicked()), this, SLOT(strava_connect_clicked()));
     QObject::connect(stack, SIGNAL(refresh_bluetooth_devices_clicked()), this,
                      SLOT(refresh_bluetooth_devices_clicked()));
     QObject::connect(home, SIGNAL(lap_clicked()), this, SLOT(Lap()));
-    QObject::connect(home, SIGNAL(peloton_start_workout()), this, SLOT(peloton_start_workout()));
-    QObject::connect(home, SIGNAL(peloton_abort_workout()), this, SLOT(peloton_abort_workout()));
     QObject::connect(stack, SIGNAL(loadSettings(QUrl)), this, SLOT(loadSettings(QUrl)));
     QObject::connect(stack, SIGNAL(saveSettings(QUrl)), this, SLOT(saveSettings(QUrl)));
     QObject::connect(stack, SIGNAL(deleteSettings(QUrl)), this, SLOT(deleteSettings(QUrl)));
@@ -954,7 +929,6 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
     QObject::connect(stack, SIGNAL(keyMediaNext()), this, SLOT(keyMediaNext()));
     QObject::connect(stack, SIGNAL(floatingOpen()), this, SLOT(floatingOpen()));
     QObject::connect(stack, SIGNAL(openFloatingWindowBrowser()), this, SLOT(openFloatingWindowBrowser()));
-    QObject::connect(stack, SIGNAL(strava_upload_file_prepare()), this, SLOT(strava_upload_file_prepare()));
 
     qDebug() << "homeform constructor events linked";
 
@@ -972,15 +946,6 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
     }
 
     emit tile_orderChanged(tile_order()); // NOTE: clazy-incorrecrt-emit
-
-    pelotonHandler = new peloton(bl);
-    connect(pelotonHandler, &peloton::workoutStarted, this, &homeform::pelotonWorkoutStarted);
-    connect(pelotonHandler, &peloton::workoutChanged, this, &homeform::pelotonWorkoutChanged);
-    connect(pelotonHandler, &peloton::loginState, this, &homeform::pelotonLoginState);
-    connect(pelotonHandler, &peloton::pzpLoginState, this, &homeform::pzpLoginState);
-    connect(pelotonHandler, &peloton::pelotonAuthUrlChanged, this, &homeform::pelotonAuthUrlChanged);
-    connect(pelotonHandler, &peloton::pelotonWebVisibleChanged, this, &homeform::pelotonWebVisibleChanged);
-    connect(stack, SIGNAL(peloton_connect_clicked()), pelotonHandler, SLOT(peloton_connect_clicked()));
 
     // copying bundles zwo files in the right path if necessary
     QDirIterator itZwo(":/zwo/");
@@ -1206,25 +1171,6 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
 #ifdef Q_OS_ANDROID
 extern "C" {
 JNIEXPORT void JNICALL
-Java_org_cagnulen_qdomyoszwift_CustomQtActivity_nativeOnOAuthCallback(JNIEnv *env, jclass clazz, jstring callbackUrl) {
-    Q_UNUSED(clazz)
-    if (!callbackUrl) {
-        return;
-    }
-
-    const char *callbackChars = env->GetStringUTFChars(callbackUrl, nullptr);
-    const QString url = QString::fromUtf8(callbackChars ? callbackChars : "");
-    if (callbackChars) {
-        env->ReleaseStringUTFChars(callbackUrl, callbackChars);
-    }
-
-    if (homeform::singleton()) {
-        QMetaObject::invokeMethod(homeform::singleton(), "handleOAuthCallbackUrl", Qt::QueuedConnection,
-                                  Q_ARG(QString, url));
-    }
-}
-
-JNIEXPORT void JNICALL
 Java_org_cagnulen_qdomyoszwift_CustomQtActivity_nativeOnDocumentPicked(JNIEnv *env, jclass clazz, jint requestCode,
                                                                        jint resultCode, jstring localPathString) {
     Q_UNUSED(clazz)
@@ -1386,87 +1332,6 @@ void homeform::openFloatingWindowBrowser() {
     QDesktopServices::openUrl(url);
 }
 
-void homeform::peloton_abort_workout() {
-    m_pelotonAskStart = false;
-    emit changePelotonAskStart(pelotonAskStart());
-    qDebug() << QStringLiteral("peloton_abort_workout!");
-    pelotonAbortedName = pelotonAskedName;
-    pelotonAbortedInstructor = pelotonAskedInstructor;
-}
-
-void homeform::peloton_start_workout() {
-
-    QSettings settings;
-    stravaPelotonActivityName = pelotonAskedName;
-    stravaPelotonInstructorName = pelotonAskedInstructor;
-    if (pelotonHandler) {
-        if (pelotonHandler->current_workout_type.toLower().startsWith("meditation") ||
-            pelotonHandler->current_workout_type.toLower().startsWith("cardio") ||
-            pelotonHandler->current_workout_type.toLower().startsWith("strength") ||
-            pelotonHandler->current_workout_type.toLower().startsWith("stretching") ||
-            pelotonHandler->current_workout_type.toLower().startsWith("yoga"))
-            stravaPelotonWorkoutType = FIT_SPORT_GENERIC;
-        else if (pelotonHandler->isWalkingWorkout())
-            stravaPelotonWorkoutType = FIT_SPORT_WALKING;
-        else if (pelotonHandler->current_workout_type.toLower().startsWith("running"))
-            stravaPelotonWorkoutType = FIT_SPORT_RUNNING;
-        else if (pelotonHandler->current_workout_type.toLower().startsWith("circuit"))
-            stravaPelotonWorkoutType = FIT_SPORT_GENERIC;
-        else
-            stravaPelotonWorkoutType = FIT_SPORT_INVALID;
-
-        pelotonHandler->downloadImage();
-    } else {
-        stravaPelotonWorkoutType = FIT_SPORT_INVALID;
-    }
-    emit workoutNameChanged(workoutName());
-    emit instructorNameChanged(instructorName());
-
-    if (settings.value(QZSettings::top_bar_enabled, QZSettings::default_top_bar_enabled).toBool()) {
-        m_info = stravaPelotonActivityName;
-        emit infoChanged(m_info);
-    }
-
-    m_pelotonAskStart = false;
-    emit changePelotonAskStart(pelotonAskStart());
-    qDebug() << QStringLiteral("peloton_start_workout!");
-    if (pelotonHandler && !pelotonHandler->trainrows.isEmpty()) {
-        if (trainProgram) {
-            // useless, cause a treadmill to stop
-            // emit trainProgram->stop(false);
-
-            delete trainProgram;
-            trainProgram = nullptr;
-        }
-        trainProgram = new trainprogram(pelotonHandler->trainrows, bluetoothManager);
-        if (!stravaPelotonActivityName.isEmpty() && !stravaPelotonInstructorName.isEmpty()) {
-            QString path = getWritableAppDir() + "training/" + workoutNameBasedOnBluetoothDevice() + "/" +
-                           stravaPelotonInstructorName + "/";
-            QDir().mkpath(path);
-            lastTrainProgramFileSaved =
-                path + stravaPelotonActivityName.replace("/", "-") + " - " + stravaPelotonInstructorName + ".xml";
-            trainProgram->save(lastTrainProgramFileSaved);
-        }
-        trainProgramSignals();
-        trainProgram->restart();
-    }
-}
-
-void homeform::pzpLoginState(bool ok) {
-
-    m_pzpLoginState = (ok ? 1 : 0);
-    emit pzpLoginChanged(m_pzpLoginState);
-}
-
-void homeform::pelotonLoginState(bool ok) {
-
-    m_pelotonLoginState = (ok ? 1 : 0);
-    emit pelotonLoginChanged(m_pelotonLoginState);
-    if (!ok) {
-        setToastRequested("Peloton Login Error!");        
-    }
-}
-
 void homeform::zwiftLoginState(bool ok) {
 
     m_zwiftLoginState = (ok ? 1 : 0);
@@ -1476,75 +1341,6 @@ void homeform::zwiftLoginState(bool ok) {
     }
 }
 
-
-void homeform::pelotonWorkoutStarted(const QString &name, const QString &instructor) {
-    pelotonAskedName = name;
-    pelotonAskedInstructor = instructor;
-
-    if (!pelotonAskedName.compare(pelotonAbortedName) && !pelotonAskedInstructor.compare(pelotonAbortedInstructor)) {
-        qDebug() << QStringLiteral("Peloton class aborted before");
-        return;
-    }
-    pelotonAbortedName.clear();
-    pelotonAbortedInstructor.clear();
-
-    if (pelotonHandler) {
-        switch (pelotonHandler->currentApi()) {
-        case peloton::homefitnessbuddy_api:
-            m_pelotonProvider = QStringLiteral("Metrics are provided from https://www.homefitnessbuddy.com");
-            break;
-        case peloton::powerzonepack_api:
-            m_pelotonProvider = QStringLiteral("Metrics are provided from https://pzpack.com");
-            break;
-        case peloton::no_metrics:
-            m_pelotonProvider = QStringLiteral("No metrics are provided for this class");
-            break;
-        default:
-            m_pelotonProvider = QStringLiteral("Metrics are provided from https://onepeloton.com");
-            break;
-        }
-    }
-    emit changePelotonProvider(pelotonProvider());
-    int peloton_start_offset = pelotonHandler->getIntroOffset();
-    qDebug() << "peloton_start_time" << pelotonHandler->start_time << "current epoch" << QDateTime::currentSecsSinceEpoch() << qAbs(pelotonHandler->start_time - QDateTime::currentSecsSinceEpoch()) << peloton_start_offset;
-    QSettings settings;
-    bool peloton_auto_start_with_intro = settings.value(QZSettings::peloton_auto_start_with_intro, QZSettings::default_peloton_auto_start_with_intro).toBool();
-    bool peloton_auto_start_without_intro = settings.value(QZSettings::peloton_auto_start_without_intro, QZSettings::default_peloton_auto_start_without_intro).toBool();
-    if(qAbs(pelotonHandler->start_time - QDateTime::currentSecsSinceEpoch()) < 180 && (peloton_auto_start_with_intro || peloton_auto_start_without_intro)) {
-        // auto start is possible!        
-        int timer = 0;        
-
-        if(peloton_auto_start_with_intro) {
-            setToastRequested(QStringLiteral("Peloton workout auto started! It will start automatically after the intro! ") + name + QStringLiteral(" - ") + instructor);
-            timer = (pelotonHandler->start_time - QDateTime::currentSecsSinceEpoch()) + (peloton_start_offset + 4);  // + 64; // // 4 average time to buffer and 60 to the intro
-        } else {
-            setToastRequested(QStringLiteral("Peloton workout auto started skipping the intro! ") + name + QStringLiteral(" - ") + instructor);
-            timer = (pelotonHandler->start_time - QDateTime::currentSecsSinceEpoch()) + 6;  // 6 average time to push skip intro and wait the 3 seconds of the intro
-        }
-        if(timer <= 0) {
-            if(paused) {
-                qDebug() << "starting due to peloton auto start";
-                Start_inner(true);
-            }
-            peloton_start_workout();
-        } else {
-            QTimer::singleShot(timer * 1000, this, [this]() {
-                if(paused) {
-                    qDebug() << "starting due to peloton auto start";
-                    Start_inner(true);
-                }
-                peloton_start_workout();
-            });
-        }
-    } else {
-        m_pelotonAskStart = true;
-        emit changePelotonAskStart(pelotonAskStart());
-    }
-}
-
-void homeform::pelotonWorkoutChanged(const QString &name, const QString &instructor) {
-
-}
 
 QString homeform::getWritableAppDir() {
     QString path = QLatin1String("");
@@ -5689,15 +5485,13 @@ void homeform::Start_inner(bool send_event_to_device) {
                 this->innerTemplateManager->start(bluetoothManager->device());
 #endif
 
-            if (!pelotonHandler || (pelotonHandler && !pelotonHandler->isWorkoutInProgress())) {
-                stravaPelotonActivityName = QLatin1String("");
-                stravaPelotonInstructorName = QLatin1String("");
-                movieFileName = QLatin1String("");
-                stravaWorkoutName = QLatin1String("");
-                stravaPelotonWorkoutType = FIT_SPORT_INVALID;
-                emit workoutNameChanged(workoutName());
-                emit instructorNameChanged(instructorName());
-            }
+            stravaPelotonActivityName = QLatin1String("");
+            stravaPelotonInstructorName = QLatin1String("");
+            movieFileName = QLatin1String("");
+            stravaWorkoutName = QLatin1String("");
+            stravaPelotonWorkoutType = FIT_SPORT_INVALID;
+            emit workoutNameChanged(workoutName());
+            emit instructorNameChanged(instructorName());
             emit workoutEventStateChanged(bluetoothdevice::STARTED);
         } else {
             // if loading a training program (gpx or xml) directly from the startup of QZ, there is no way to start
@@ -5821,10 +5615,7 @@ void homeform::Stop() {
 
     emit workoutEventStateChanged(bluetoothdevice::STOPPED);
 
-    // Save session as training program only if it's not a Peloton workout
-    if (!(pelotonHandler && !pelotonHandler->current_ride_id.isEmpty())) {
-        saveSessionAsTrainingProgram();
-    }
+    saveSessionAsTrainingProgram();
 
     m_workoutRpe = -1;
     m_workoutFeel = -1;
@@ -6554,9 +6345,9 @@ void homeform::update() {
                 }
             }
 
-            // Use different zone names for walking vs running workouts
-            bool isWalkingWorkout = pelotonHandler && pelotonHandler->isWalkingWorkout();
-
+            // Zones 2-4 used to be renamed Brisk/Power/Max for a walking workout. The
+            // only thing that ever reported one was the Peloton class metadata, so the
+            // running names are the only ones reachable now.
             switch (trainProgram->currentRow().pace_intensity) {
             case 0:
                 this->target_zone->setValue(tr("Rec."));
@@ -6565,25 +6356,13 @@ void homeform::update() {
                 this->target_zone->setValue(tr("Easy"));
                 break;
             case 2:
-                if (isWalkingWorkout) {
-                    this->target_zone->setValue(tr("Brisk"));
-                } else {
-                    this->target_zone->setValue(tr("Moder."));
-                }
+                this->target_zone->setValue(tr("Moder."));
                 break;
             case 3:
-                if (isWalkingWorkout) {
-                    this->target_zone->setValue(tr("Power"));
-                } else {
-                    this->target_zone->setValue(tr("Chall."));
-                }
+                this->target_zone->setValue(tr("Chall."));
                 break;
             case 4:
-                if (isWalkingWorkout) {
-                    this->target_zone->setValue(tr("Max"));
-                } else {
-                    this->target_zone->setValue(tr("Hard"));
-                }
+                this->target_zone->setValue(tr("Hard"));
                 break;
             case 5:
                 this->target_zone->setValue(tr("V.Hard"));
@@ -8996,24 +8775,6 @@ void homeform::clipboard_keep_finished_workout() {
     setClipboardWorkoutDeletePromptRequested(false);
 }
 
-void homeform::handleOAuthCallbackUrl(const QString &callbackUrl) {
-    qDebug() << "homeform::handleOAuthCallbackUrl received" << sanitizedOAuthCallbackUrl(callbackUrl);
-    const QUrl url(callbackUrl);
-    if (!url.isValid()) {
-        qDebug() << "Ignoring invalid OAuth callback URL";
-        return;
-    }
-
-    if (pelotonHandler) {
-        qDebug() << "homeform::handleOAuthCallbackUrl routing to Peloton";
-        pelotonHandler->handleOAuthCallbackUrl(url);
-    }
-}
-
-void homeform::handleOAuthCallbackFromQml(const QString &callbackUrl) {
-    handleOAuthCallbackUrl(callbackUrl);
-}
-
 void homeform::trainprogram_preview(const QUrl &fileName) {
     qDebug() << QStringLiteral("trainprogram_preview") << fileName;
 
@@ -9232,28 +8993,19 @@ void homeform::fit_save_clicked() {
 
         // Determine workout source and metadata
         QString workoutSource = "QZ";
-        QString pelotonWorkoutId = "";
-        QString pelotonUrl = "";
+        // The FIT file still carries a Peloton workout id and URL as developer fields,
+        // written by qfit and read back by the history database. Nothing produces them
+        // any more, so they go out empty; the fields themselves belong to recording and
+        // come out with it.
         QString trainingProgramFile = "";
-        
-        if (pelotonHandler && !pelotonHandler->current_ride_id.isEmpty()) {
-            workoutSource = "PELOTON";
-            pelotonWorkoutId = pelotonHandler->current_ride_id;
-            pelotonUrl = pelotonHandler->getPelotonWorkoutUrl();
-            if (!lastTrainProgramFileSaved.isEmpty()) {
-                trainingProgramFile = lastTrainProgramFileSaved;
-            }
-        } else {
-            // For non-Peloton workouts, use the session XML file if available
-            if (!lastTrainProgramFileSaved.isEmpty()) {
-                trainingProgramFile = lastTrainProgramFileSaved;
-            }
+        if (!lastTrainProgramFileSaved.isEmpty()) {
+            trainingProgramFile = lastTrainProgramFileSaved;
         }
-        
+
         qfit::save(filename, Session, dev->deviceType(),
                    QFIT_PROCESS_NONE,
                    stravaPelotonWorkoutType, workoutName, dev->bluetoothDevice.name(),
-                   workoutSource, pelotonWorkoutId, pelotonUrl, trainingProgramFile,
+                   workoutSource, QString(), QString(), trainingProgramFile,
                    m_workoutRpe, m_workoutFeel);
         lastFitFileSaved = filename;
 
@@ -9266,30 +9018,7 @@ void homeform::fit_save_clicked() {
 #ifdef Q_OS_ANDROID
         healthConnectWriteWorkout(Session, dev, workoutName);
 #endif
-
-        QSettings settings;
-        if (!settings.value(QZSettings::strava_accesstoken, QZSettings::default_strava_accesstoken)
-                 .toString()
-                 .isEmpty()) {
-
-            QString mode = settings.value(QZSettings::strava_upload_mode, QZSettings::default_strava_upload_mode).toString();
-            if(mode.startsWith("Always")) { // always
-                strava_upload_file_prepare();
-            } else if(mode.startsWith("Request")) {
-                setStravaUploadRequested(true);
-                emit stravaUploadRequestedChanged(true);
-            }
-        }
     }
-}
-
-void homeform::strava_upload_file_prepare() {
-    qDebug() << lastFitFileSaved;
-    QFile f(lastFitFileSaved);
-    f.open(QFile::OpenModeFlag::ReadOnly);
-    QByteArray fitfile = f.readAll();
-    strava_upload_file(fitfile, lastFitFileSaved);
-    f.close();
 }
 
 void homeform::gpx_open_clicked(const QUrl &fileName) {
@@ -9445,492 +9174,6 @@ QStringList homeform::bluetoothDevices() {
 
 QStringList homeform::metrics() { return bluetoothdevice::metrics(); }
 
-QAbstractOAuth::ModifyParametersFunction
-homeform::buildModifyParametersFunction(const QUrl &clientIdentifier, const QUrl &clientIdentifierSharedKey) {
-    return [clientIdentifier, clientIdentifierSharedKey](QAbstractOAuth::Stage stage, auto *parameters) {
-        // Qt 6 changed ModifyParametersFunction's second argument from QVariantMap*
-        // to QMultiMap<QString, QVariant>*; the generic lambda absorbs that, and
-        // qzOAuthSetParameter() absorbs QMultiMap::insert() appending where
-        // QMap::insert() replaced. See qtoauthcompat.h.
-        if (stage == QAbstractOAuth::Stage::RequestingAuthorization) {
-            qzOAuthSetParameter(parameters, QStringLiteral("responseType"), QStringLiteral("code")); /* Request refresh token*/
-            qzOAuthSetParameter(parameters, QStringLiteral("approval_prompt"), QStringLiteral("force")); /* force user check scope again */
-            QByteArray code = parameters->value(QStringLiteral("code")).toByteArray();
-            // DON'T TOUCH THIS LINE, THANKS Roberto Viola
-            qzOAuthSetParameter(parameters, QStringLiteral("code"), QUrl::fromPercentEncoding(code)); // NOTE: Old code replaced by
-        }
-        if (stage == QAbstractOAuth::Stage::RefreshingAccessToken) {
-            qzOAuthSetParameter(parameters, QStringLiteral("client_id"), clientIdentifier);
-            qzOAuthSetParameter(parameters, QStringLiteral("client_secret"), clientIdentifierSharedKey);
-        }
-    };
-}
-
-void homeform::strava_refreshtoken() {
-
-    QSettings settings;
-    // QUrlQuery params; //NOTE: clazy-unuse-non-tirial-variable
-
-    if (settings.value(QZSettings::strava_refreshtoken).toString().isEmpty()) {
-
-        strava_connect();
-        return;
-    }
-
-    QNetworkRequest request(QUrl(QStringLiteral("https://www.strava.com/oauth/token?")));
-    request.setRawHeader("Content-Type", "application/x-www-form-urlencoded");
-
-    // set params
-    QString data;
-    data += QStringLiteral("client_id=" STRAVA_CLIENT_ID_S);
-#ifdef STRAVA_SECRET_KEY
-    data += "&client_secret=";
-    data += STRINGIFY(STRAVA_SECRET_KEY);
-#endif
-    data += QStringLiteral("&refresh_token=") + settings.value(QZSettings::strava_refreshtoken).toString();
-    data += QStringLiteral("&grant_type=refresh_token");
-
-    // make request
-    if (manager) {
-
-        delete manager;
-        manager = nullptr;
-    }
-    manager = new QNetworkAccessManager(this);
-    QNetworkReply *reply = manager->post(request, data.toLatin1());
-
-    // blocking request
-    QEventLoop loop;
-    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-    loop.exec();
-
-    int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    qDebug() << QStringLiteral("HTTP response code: ") << statusCode;
-
-    // oops, no dice
-    if (reply->error() != 0) {
-        qDebug() << QStringLiteral("Got error") << reply->errorString().toStdString().c_str();
-        setToastRequested("Strava Auth Failed!");
-        return;
-    }
-
-    // lets extract the access token, and possibly a new refresh token
-    QByteArray r = reply->readAll();
-    qDebug() << QStringLiteral("Got response:") << r.data();
-
-    QJsonParseError parseError;
-    QJsonDocument document = QJsonDocument::fromJson(r, &parseError);
-
-    // failed to parse result !?
-    if (parseError.error != QJsonParseError::NoError) {
-        qDebug() << tr("JSON parser error") << parseError.errorString();
-    }
-
-    QString access_token = document[QStringLiteral("access_token")].toString();
-    QString refresh_token = document[QStringLiteral("refresh_token")].toString();
-
-    settings.setValue(QZSettings::strava_accesstoken, access_token);
-    settings.setValue(QZSettings::strava_refreshtoken, refresh_token);
-    settings.setValue(QZSettings::strava_lastrefresh, QDateTime::currentDateTime());
-
-    setToastRequested("Strava Login OK!");
-}
-
-bool homeform::strava_upload_file(const QByteArray &data, const QString &remotename) {
-
-    strava_refreshtoken();
-
-    QSettings settings;
-    QString token = settings.value(QZSettings::strava_accesstoken).toString();
-
-    qDebug() << "File size to upload:" << data.size() << "bytes";
-    qDebug() << "Remote filename:" << remotename;
-
-    // The V3 API doc said "https://api.strava.com" but it is not working yet
-    QUrl url = QUrl(QStringLiteral("https://www.strava.com/api/v3/uploads"));
-    QNetworkRequest request = QNetworkRequest(url);
-
-    // QString boundary = QString::number(qrand() * (90000000000) / (RAND_MAX + 1) + 10000000000, 16);
-    QString boundary = QVariant(QRandomGenerator::global()->generate()).toString() +
-                       QVariant(QRandomGenerator::global()->generate()).toString() +
-                       QVariant(QRandomGenerator::global()->generate()).toString(); // NOTE: qrand is deprecated
-
-    // MULTIPART *****************
-
-    QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
-    multiPart->setBoundary(boundary.toLatin1());
-
-    QHttpPart accessTokenPart;
-    accessTokenPart.setHeader(QNetworkRequest::ContentDispositionHeader,
-                              QVariant(QStringLiteral("form-data; name=\"access_token\"")));
-    accessTokenPart.setBody(token.toLatin1());
-    multiPart->append(accessTokenPart);
-
-    QHttpPart activityNamePart;
-    activityNamePart.setHeader(QNetworkRequest::ContentDispositionHeader,
-                               QVariant(QStringLiteral("form-data; name=\"name\"")));
-
-    QString prefix = QStringLiteral("");
-    if (settings.value(QZSettings::strava_date_prefix, QZSettings::default_strava_date_prefix).toBool())
-        prefix = " " + QDate::currentDate().toString(Qt::TextDate);
-
-    // use metadata config if the user selected it
-    QString activityName =
-        QStringLiteral(" ") + settings.value(QZSettings::strava_suffix, QZSettings::default_strava_suffix).toString();
-    if (!stravaPelotonActivityName.isEmpty()) {
-        activityName = stravaPelotonActivityName + QStringLiteral(" - ") + stravaPelotonInstructorName + activityName;
-        if (pelotonHandler &&
-            settings.value(QZSettings::peloton_description_link, QZSettings::default_peloton_description_link).toBool())
-            activityDescription =
-                QStringLiteral("https://members.onepeloton.com/classes/cycling?modal=classDetailsModal&classId=") +
-                pelotonHandler->current_ride_id;
-    } else {
-        QString activityLabel = QStringLiteral("Ride");
-        if (bluetoothManager && bluetoothManager->device()) {
-            if (bluetoothManager->device()->deviceType() == TREADMILL) {
-                activityLabel = QStringLiteral("Run");
-            } else if (bluetoothManager->device()->deviceType() == ROWING) {
-                activityLabel = QStringLiteral("Row");
-            }
-        } else {
-            activityLabel = uploadActivityLabelFromFitFile(remotename);
-        }
-        activityName = prefix + activityLabel + activityName;
-    }
-    activityNamePart.setHeader(QNetworkRequest::ContentTypeHeader,
-                               QVariant(QStringLiteral("text/plain;charset=utf-8")));
-    activityNamePart.setBody(activityName.toUtf8());
-    if (activityName != QLatin1String("")) {
-        multiPart->append(activityNamePart);
-    }
-
-    QHttpPart activityDescriptionPart;
-    activityDescriptionPart.setHeader(QNetworkRequest::ContentDispositionHeader,
-                                      QVariant(QStringLiteral("form-data; name=\"description\"")));
-    activityDescriptionPart.setHeader(QNetworkRequest::ContentTypeHeader,
-                                      QVariant(QStringLiteral("text/plain;charset=utf-8")));
-    activityDescriptionPart.setBody(activityDescription.toUtf8());
-    if (activityDescription != QLatin1String("")) {
-        multiPart->append(activityDescriptionPart);
-    }
-
-    // upload file data
-    QString filename = QFileInfo(remotename).baseName();
-
-    QHttpPart dataTypePart;
-    dataTypePart.setHeader(QNetworkRequest::ContentDispositionHeader,
-                           QVariant(QStringLiteral("form-data; name=\"data_type\"")));
-    dataTypePart.setBody("fit");
-    multiPart->append(dataTypePart);
-
-    QHttpPart externalIdPart;
-    externalIdPart.setHeader(QNetworkRequest::ContentDispositionHeader,
-                             QVariant(QStringLiteral("form-data; name=\"external_id\"")));
-    externalIdPart.setBody(filename.toStdString().c_str());
-    multiPart->append(externalIdPart);
-
-    QHttpPart filePart;
-    filePart.setHeader(QNetworkRequest::ContentTypeHeader, QVariant(QStringLiteral("application/octet-stream")));
-    filePart.setHeader(QNetworkRequest::ContentDispositionHeader,
-                       QVariant(QStringLiteral("form-data; name=\"file\"; filename=\"") + remotename +
-                                QStringLiteral("\"; type=\"application/octet-stream\"")));
-    filePart.setBody(data);
-    multiPart->append(filePart);
-
-    // this must be performed asynchronously and call made
-    // to notifyWriteCompleted(QString remotename, QString message) when done
-    if (manager) {
-
-        delete manager;
-        manager = 0;
-    }
-    manager = new QNetworkAccessManager(this);
-    replyStrava = manager->post(request, multiPart);
-
-   connect(replyStrava, &QNetworkReply::uploadProgress,
-            [](qint64 bytesSent, qint64 bytesTotal) {
-                qDebug() << "Upload progress:" << bytesSent << "/" << bytesTotal;
-            });    
-
-    // catch finished signal
-    connect(replyStrava, &QNetworkReply::finished, this, &homeform::writeFileCompleted);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 13, 0))
-    connect(replyStrava, &QNetworkReply::errorOccurred, this, &homeform::errorOccurredUploadStrava);
-#endif
-    return true;
-}
-
-void homeform::errorOccurredUploadStrava(QNetworkReply::NetworkError code) {
-    qDebug() << "Strava upload error details:";
-    qDebug() << "Error code:" << code;
-    if(replyStrava) {
-        qDebug() << "Error string:" << replyStrava->errorString();
-        qDebug() << "HTTP status code:" << replyStrava->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-
-        QByteArray errorData = replyStrava->readAll();
-        qDebug() << "Error response body:" << QString(errorData);
-        
-        QJsonDocument jsonResponse = QJsonDocument::fromJson(errorData);
-        if (!jsonResponse.isNull()) {
-            qDebug() << "JSON error message:" << jsonResponse.toJson();
-        }
-        
-        setToastRequested("Strava Upload Failed: " + replyStrava->errorString());        
-    } else {
-        setToastRequested("Strava Upload Failed");
-    }
-}
-
-void homeform::writeFileCompleted() {
-    qDebug() << QStringLiteral("strava upload completed!");
-
-    QNetworkReply *reply = static_cast<QNetworkReply *>(QObject::sender());
-
-    QString response = reply->readAll();
-    // QString uploadError = QStringLiteral("invalid response or parser error");
-    // NOTE: clazy-unused-non-trivial-variable
-
-    qDebug() << "reply:" << response;
-
-    setToastRequested("Strava Upload Completed!");
-}
-
-void homeform::onStravaGranted() {
-
-    stravaAuthWebVisible = false;
-    stravaWebVisibleChanged(stravaAuthWebVisible);
-    QSettings settings;
-    settings.setValue(QZSettings::strava_accesstoken, strava->token());
-    settings.setValue(QZSettings::strava_refreshtoken, strava->refreshToken());
-    settings.setValue(QZSettings::strava_lastrefresh, QDateTime::currentDateTime());
-    qDebug() << QStringLiteral("strava authenticated successfully");
-    strava_refreshtoken();
-    setGeneralPopupVisible(true);
-}
-
-void homeform::onStravaAuthorizeWithBrowser(const QUrl &url) {
-
-    // ui->textBrowser->append(tr("Open with browser:") + url.toString());
-    QSettings settings;
-    bool strava_auth_external_webbrowser =
-        settings.value(QZSettings::strava_auth_external_webbrowser, QZSettings::default_strava_auth_external_webbrowser)
-            .toBool();
-#if defined(Q_OS_WIN) || (defined(Q_OS_MAC) && !defined(Q_OS_IOS))
-    strava_auth_external_webbrowser = true;
-#endif
-    stravaAuthUrl = url.toString();
-    emit stravaAuthUrlChanged(stravaAuthUrl);
-
-    if (strava_auth_external_webbrowser)
-        QDesktopServices::openUrl(url);
-    else {
-        stravaAuthWebVisible = true;
-        stravaWebVisibleChanged(stravaAuthWebVisible);
-    }
-}
-
-void homeform::replyDataReceived(const QByteArray &v) {
-
-    qDebug() << v;
-
-    QByteArray data;
-    QSettings settings;
-    QString s(v);
-    QJsonDocument jsonResponse = QJsonDocument::fromJson(s.toUtf8());
-    settings.setValue(QZSettings::strava_accesstoken, jsonResponse[QStringLiteral("access_token")]);
-    settings.setValue(QZSettings::strava_refreshtoken, jsonResponse[QStringLiteral("refresh_token")]);
-    settings.setValue(QZSettings::strava_expires, jsonResponse[QStringLiteral("expires_at")]);
-
-    qDebug() << "Strava tokens received successfully, expires at:" << jsonResponse[QStringLiteral("expires_at")];
-
-    QString urlstr = QStringLiteral("https://www.strava.com/oauth/token?");
-    QUrlQuery params;
-    params.addQueryItem(QStringLiteral("client_id"), QStringLiteral(STRAVA_CLIENT_ID_S));
-#ifdef STRAVA_SECRET_KEY
-#define _STR(x) #x
-#define STRINGIFY(x) _STR(x)
-    params.addQueryItem("client_secret", STRINGIFY(STRAVA_SECRET_KEY));
-#endif
-
-    params.addQueryItem(QStringLiteral("code"), strava_code);
-    data.append(params.query(QUrl::FullyEncoded).toUtf8());
-
-    // trade-in the temporary access code retrieved by the Call-Back URL for the finale token
-    QUrl url = QUrl(urlstr);
-
-    QNetworkRequest request = QNetworkRequest(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/x-www-form-urlencoded"));
-
-    // now get the final token - but ignore errors
-    if (manager) {
-
-        delete manager;
-        manager = 0;
-    }
-    manager = new QNetworkAccessManager(this);
-    // connect(manager, SIGNAL(sslErrors(QNetworkReply*, const QList<QSslError> & )), this,
-    // SLOT(onSslErrors(QNetworkReply*, const QList<QSslError> & ))); connect(manager,
-    // SIGNAL(finished(QNetworkReply*)), this, SLOT(networkRequestFinished(QNetworkReply*)));
-    manager->post(request, data);
-}
-
-void homeform::onSslErrors(QNetworkReply *reply, const QList<QSslError> &error) {
-
-    reply->ignoreSslErrors();
-    qDebug() << QStringLiteral("homeform::onSslErrors") << error;
-}
-
-void homeform::networkRequestFinished(QNetworkReply *reply) {
-
-    QSettings settings;
-
-    // we can handle SSL handshake errors, if we got here then some kind of protocol was agreed
-    if (reply->error() == QNetworkReply::NoError || reply->error() == QNetworkReply::SslHandshakeFailedError) {
-
-        QByteArray payload = reply->readAll(); // JSON
-        QString refresh_token;
-        QString access_token;
-
-        // parse the response and extract the tokens, pretty much the same for all services
-        // although polar choose to also pass a user id, which is needed for future calls
-        QJsonParseError parseError;
-        QJsonDocument document = QJsonDocument::fromJson(payload, &parseError);
-        if (parseError.error == QJsonParseError::NoError) {
-            refresh_token = document[QStringLiteral("refresh_token")].toString();
-            access_token = document[QStringLiteral("access_token")].toString();
-        }
-
-        settings.setValue(QZSettings::strava_accesstoken, access_token);
-        settings.setValue(QZSettings::strava_refreshtoken, refresh_token);
-        settings.setValue(QZSettings::strava_lastrefresh, QDateTime::currentDateTime());
-
-        qDebug() << "Strava tokens refreshed successfully";
-
-    } else {
-
-        // general error getting response
-        QString error =
-            QString(tr("Error retrieving access token, %1 (%2)")).arg(reply->errorString()).arg(reply->error());
-        qDebug() << error << reply->url() << reply->readAll();
-    }
-}
-
-void homeform::callbackReceived(const QVariantMap &values) {
-    qDebug() << QStringLiteral("homeform::callbackReceived") << values;
-    if (!values.value(QZSettings::code).toString().isEmpty()) {
-        strava_code = values.value(QZSettings::code).toString();
-
-        qDebug() << strava_code;
-    }
-}
-
-QOAuth2AuthorizationCodeFlow *homeform::strava_connect() {
-    if (manager) {
-
-        delete manager;
-        manager = nullptr;
-    }
-    if (strava) {
-
-        delete strava;
-        strava = nullptr;
-    }
-    if (stravaReplyHandler) {
-
-        delete stravaReplyHandler;
-        stravaReplyHandler = nullptr;
-    }
-    manager = new QNetworkAccessManager(this);
-    OAuth2Parameter parameter;
-    strava = new QOAuth2AuthorizationCodeFlow(manager, this);
-    strava->setScope(QStringLiteral("activity:read_all,activity:write"));
-    strava->setClientIdentifier(QStringLiteral(STRAVA_CLIENT_ID_S));
-    strava->setAuthorizationUrl(QUrl(QStringLiteral("https://www.strava.com/oauth/authorize")));
-    strava->setAccessTokenUrl(QUrl(QStringLiteral("https://www.strava.com/oauth/token")));
-#ifdef STRAVA_SECRET_KEY
-#define _STR(x) #x
-#define STRINGIFY(x) _STR(x)
-    strava->setClientIdentifierSharedKey(STRINGIFY(STRAVA_SECRET_KEY));
-#elif defined(WIN32)
-#pragma message("DEFINE STRAVA_SECRET_KEY!!!")
-#else
-#pragma message "DEFINE STRAVA_SECRET_KEY!!!"
-#endif
-    strava->setModifyParametersFunction(
-        buildModifyParametersFunction(QUrl(QLatin1String("")), QUrl(QLatin1String(""))));
-    stravaReplyHandler = new QOAuthHttpServerReplyHandler(QHostAddress(QStringLiteral("127.0.0.1")), 8091, this);
-    connect(stravaReplyHandler, &QOAuthHttpServerReplyHandler::replyDataReceived, this, &homeform::replyDataReceived);
-    connect(stravaReplyHandler, &QOAuthHttpServerReplyHandler::callbackReceived, this, &homeform::callbackReceived);
-
-    strava->setReplyHandler(stravaReplyHandler);
-
-    return strava;
-}
-
-void homeform::strava_connect_clicked() {
-    QLoggingCategory::setFilterRules(QStringLiteral("qt.networkauth.*=true"));
-
-    strava_connect();
-    connect(strava, &QOAuth2AuthorizationCodeFlow::authorizeWithBrowser, this, &homeform::onStravaAuthorizeWithBrowser);
-    connect(strava, &QOAuth2AuthorizationCodeFlow::granted, this, &homeform::onStravaGranted);
-
-    strava->grant();
-    // qDebug() <<
-    // QAbstractOAuth2::post("https://www.strava.com/oauth/authorize?client_id=7976&scope=activity:read_all,activity:write&redirect_uri=http://127.0.0.1&response_type=code&approval_prompt=force");
-}
-
-bool homeform::isStravaLoggedIn() {
-    QSettings settings;
-    return !settings.value(QZSettings::strava_accesstoken, QZSettings::default_strava_accesstoken).toString().isEmpty();
-}
-
-bool homeform::isPelotonLoggedIn() {
-    QSettings settings;
-    QString userId = settings.value(QZSettings::peloton_current_user_id, QZSettings::default_peloton_current_user_id).toString();
-    if (!userId.isEmpty()) {
-        QString key = QStringLiteral("peloton_accesstoken_") + userId;
-        if (!settings.value(key).toString().isEmpty())
-            return true;
-    }
-    return !settings.value(QZSettings::peloton_accesstoken, QZSettings::default_peloton_accesstoken).toString().isEmpty();
-}
-
-void homeform::uploadHistoricalWorkoutToStrava(const QString &filePath) {
-    QFile f(filePath);
-    if (!f.open(QFile::OpenModeFlag::ReadOnly)) {
-        setToastRequested("Strava: unable to open FIT file");
-        return;
-    }
-
-    strava_upload_file(f.readAll(), filePath);
-}
-
-void homeform::strava_logout() {
-    qDebug() << "Strava logout requested";
-    QSettings settings;
-    settings.setValue(QZSettings::strava_accesstoken, QStringLiteral(""));
-    settings.setValue(QZSettings::strava_refreshtoken, QStringLiteral(""));
-    settings.setValue(QZSettings::strava_lastrefresh, QStringLiteral(""));
-    settings.setValue(QZSettings::strava_expires, QStringLiteral(""));
-    if (strava) {
-        strava->setToken(QStringLiteral(""));
-        strava->setRefreshToken(QStringLiteral(""));
-    }
-    if (manager) {
-        manager->setCookieJar(new QNetworkCookieJar(manager));
-    }
-    clearWebViewCache();
-    qDebug() << "Strava: tokens cleared";
-}
-
-void homeform::peloton_logout() {
-    qDebug() << "Peloton logout requested";
-    if (pelotonHandler) {
-        pelotonHandler->peloton_logout();
-    }
-    clearWebViewCache();
-}
-
 void homeform::clearWebViewCache() {
 #ifdef Q_OS_ANDROID
     QtAndroid::runOnAndroidThread([] {
@@ -9964,14 +9207,6 @@ void homeform::setGeneralPopupVisible(bool value) {
 
     m_generalPopupVisible = value;
     emit generalPopupVisibleChanged(m_generalPopupVisible);
-}
-
-bool homeform::pelotonPopupVisible() { return m_pelotonPopupVisible; }
-
-void homeform::setPelotonPopupVisible(bool value) {
-
-    m_pelotonPopupVisible = value;
-    emit pelotonPopupVisibleChanged(m_pelotonPopupVisible);
 }
 
 bool homeform::licensePopupVisible() { return m_LicensePopupVisible; }
@@ -10023,13 +9258,6 @@ void homeform::setVideoRate(double value) {
 }
 
 void homeform::smtpError(SmtpClient::SmtpError e) { qDebug() << QStringLiteral("SMTP ERROR") << e; }
-
-QByteArray homeform::currentPelotonImage() {
-    if (pelotonHandler && pelotonHandler->current_image_downloaded &&
-        !pelotonHandler->current_image_downloaded->downloadedData().isEmpty())
-        return pelotonHandler->current_image_downloaded->downloadedData();
-    return QByteArray();
-}
 
 void homeform::sendMail() {
 
@@ -10087,15 +9315,6 @@ void homeform::sendMail() {
     MimeText *text = new MimeText;
 
     QString textMessage = QStringLiteral("Great workout!\n\n");
-
-    if (pelotonHandler) {
-        if (!pelotonHandler->current_ride_id.isEmpty()) {
-            textMessage +=
-                stravaPelotonActivityName + QStringLiteral(" - ") + stravaPelotonInstructorName +
-                QStringLiteral(" https://members.onepeloton.com/classes/cycling?modal=classDetailsModal&classId=") +
-                pelotonHandler->current_ride_id;
-        }
-    }
 
     textMessage += '\n';
     textMessage += QStringLiteral("Average Speed: ") +
@@ -10351,37 +9570,9 @@ void homeform::sendMail() {
         lastTrainProgramFileSaved = "";
     }
 
-    QString filenameJPG = QStringLiteral("");
-    if (pelotonHandler && pelotonHandler->current_image_downloaded &&
-        !pelotonHandler->current_image_downloaded->downloadedData().isEmpty()) {
-
-        QString path = getWritableAppDir();
-        QString filename = path +
-                           QDateTime::currentDateTime().toString().replace(QStringLiteral(":"), QStringLiteral("_")) +
-                           QStringLiteral("_peloton_image.png");
-        filenameJPG =
-            path + QDateTime::currentDateTime().toString().replace(QStringLiteral(":"), QStringLiteral("_")) +
-            QStringLiteral("_peloton_image.jpg");
-        QFile file(filename);
-        file.open(QIODevice::WriteOnly);
-        file.write(pelotonHandler->current_image_downloaded->downloadedData());
-        file.close();
-        QImage image(filename);
-        QImageWriter writer(filename, "png");
-        writer.setFileName(filenameJPG);
-        writer.setFormat("jpg");
-        writer.setQuality(30);
-        writer.write(image);
-        QFile::remove(filename);        
-
-        // Create a MimeInlineFile object for each image
-        MimeInlineFile *pelotonImage = new MimeInlineFile((new QFile(filenameJPG)));
-
-        // An unique content id must be setted
-        pelotonImage->setContentId(filenameJPG);
-        pelotonImage->setContentType(QStringLiteral("image/jpg"));
-        message->addPart(pelotonImage);
-    }
+    // The class artwork used to be attached here; nothing downloads an image any
+    // more, so the mail thread gets an empty name and skips the cleanup.
+    const QString filenameJPG;
 
     if (!compressedDebugLogForMail.isEmpty()) {
         MimeAttachment *log = new MimeAttachment(new QFile(compressedDebugLogForMail));
@@ -10522,15 +9713,12 @@ void homeform::loadSettings(const QUrl &filename) {
     auto settings2LoadAllKeys = settings2Load.allKeys();
     for (const QString &s : qAsConst(settings2LoadAllKeys)) {
         if (!s.contains(QZSettings::cryptoKeySettingsProfiles)) {
-            // peloton refresh token must not be changed because it has one refresh token for peloton user saved locally on the device
-            if(!s.contains(QStringLiteral("peloton_refreshtoken"))) {
-                if (!s.contains(QStringLiteral("password")) && !s.contains(QStringLiteral("token"))) {
-                    settings.setValue(s, settings2Load.value(s));
-                } else {
-                    SimpleCrypt crypt;
-                    crypt.setKey(cryptoKeySettingsProfiles());
-                    settings.setValue(s, crypt.decryptToString(settings2Load.value(s).toString()));
-                }
+            if (!s.contains(QStringLiteral("password")) && !s.contains(QStringLiteral("token"))) {
+                settings.setValue(s, settings2Load.value(s));
+            } else {
+                SimpleCrypt crypt;
+                crypt.setKey(cryptoKeySettingsProfiles());
+                settings.setValue(s, crypt.decryptToString(settings2Load.value(s).toString()));
             }
         }
     }

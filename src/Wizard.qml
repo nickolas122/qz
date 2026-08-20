@@ -17,9 +17,6 @@ Page {
 
     Settings {
         id: settings
-        property string peloton_username: "username"
-        property string peloton_password: "password"
-        property string peloton_difficulty: "lower"
         property int bike_resistance_offset: 4
         property string zwift_username: ""
         property string zwift_password: ""
@@ -288,172 +285,20 @@ Page {
                         rowSpacing: 20
                         columnSpacing: 20
                         Repeater {
-                            model: ["Peloton", "Zwift", "MyWhoosh", "Rouvy", "Kinomap", "Indievelo", "Fulgaz", "EXR", "Other app", "QZ Standalone"]
+                            model: ["Zwift", "MyWhoosh", "Rouvy", "Kinomap", "Indievelo", "Fulgaz", "EXR", "Other app", "QZ Standalone"]
                             delegate: WizardButton {
                                 Layout.preferredWidth: 150
                                 text: modelData
                                 onClicked: {
                                     selectedOptions.step3 = modelData
-                                    if (modelData === "Peloton") {
-                                        stackViewLocal.push(pelotonLoginComponent)
+                                    if(modelData === "Zwift") {
+                                        settings.wahoo_rgt_dircon = false
                                     } else {
-                                        if(modelData === "Zwift") {
-                                            settings.wahoo_rgt_dircon = false
-                                        } else {
-                                            settings.wahoo_rgt_dircon = true
-                                        }
-                                        stackViewLocal.push(zwiftComponent)
+                                        settings.wahoo_rgt_dircon = true
                                     }
+                                    stackViewLocal.push(zwiftComponent)
                                 }
                             }
-                        }
-                    }
-
-                    Item {
-                        Layout.preferredHeight: 50
-                    }
-
-                    WizardButton {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("Back")
-                        onClicked: stackViewLocal.pop()
-                    }
-                }
-            }
-        }
-    }
-
-    Component {
-        id: pelotonLoginComponent
-
-        Item {
-            anchors.fill: parent
-            ScrollView {
-                contentWidth: -1
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.fill: parent
-                Layout.preferredHeight: parent.height
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                ColumnLayout {
-                    anchors.centerIn: parent
-                    spacing: 20
-                    width: parent.width * 0.9
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("Connect to Peloton")
-                        font.pixelSize: 24
-                        font.bold: true
-                        color: "white"
-                    }
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("Click the button below to connect your Peloton account")
-                        font.pixelSize: 20
-                        wrapMode: Text.WordWrap
-                        Layout.fillWidth: true
-                        width: stackViewLocal.width * 0.8
-                        horizontalAlignment: Text.AlignHCenter
-                        color: "white"
-                    }
-
-                    Image {
-                        Layout.alignment: Qt.AlignHCenter
-                        source: "icons/icons/Button_Connect_Rect_DarkMode.png"
-                        fillMode: Image.PreserveAspectFit
-                        width: parent.width * 0.8
-
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: {
-                                stackViewLocal.push("WebPelotonAuth.qml")
-                                stackViewLocal.currentItem.goBack.connect(function() {
-                                            stackViewLocal.pop();
-                                            stackViewLocal.push(pelotonDifficultyComponent)
-                                        })
-                                peloton_connect_clicked()
-                            }
-                        }
-                    }
-
-                    Item {
-                        Layout.preferredHeight: 50
-                    }
-
-                    WizardButton {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("Back")
-                        onClicked: stackViewLocal.pop()
-                    }
-                }
-            }
-        }
-    }
-
-    Component {
-        id: pelotonDifficultyComponent
-
-        Item {
-            anchors.fill: parent
-            ScrollView {
-                contentWidth: -1
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.fill: parent
-                Layout.preferredHeight: parent.height
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                ColumnLayout {
-                    anchors.centerIn: parent
-                    spacing: 20
-                    width: parent.width * 0.9
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("Peloton Difficulty")
-                        font.pixelSize: 24
-                        font.bold: true
-                        color: "white"
-                    }
-
-                    Text {
-                        text: qsTr("Typically, Peloton coaches call out a range for target incline, resistance and/or speed. Use this setting to choose the difficulty of the target QZ communicates. Difficulty level can be set to lower, upper or average")
-                        font.pixelSize: 20
-                        wrapMode: Text.WordWrap
-                        width: stackViewLocal.width * 0.8
-                        horizontalAlignment: Text.AlignHCenter
-                        color: "white"
-                        Layout.fillWidth: true
-                    }
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("Difficulty")
-                        font.pixelSize: 20
-                        font.bold: true
-                        color: "white"
-                    }
-
-                    ComboBox {
-                        id: pelotonDifficultyTextField
-                        model: [ "lower", "upper", "average" ]
-                        displayText: settings.peloton_difficulty
-                        Layout.fillHeight: false
-                        Layout.alignment: Qt.AlignHCenter
-                        onActivated: {
-                            console.log("combomodel activated" + pelotonDifficultyTextField.currentIndex)
-                            displayText = pelotonDifficultyTextField.currentValue
-                            settings.peloton_difficulty = pelotonDifficultyTextField.displayText;
-                        }
-                    }
-
-                    WizardButton {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("Finish")
-                        onClicked: {
-                            settings.peloton_difficulty = pelotonDifficultyTextField.displayText;
-                            stackViewLocal.push(finalStepComponent)
                         }
                     }
 
@@ -623,7 +468,6 @@ Page {
                     Repeater {
                         model: [
                             qsTr("Auto-incline with treadmill and Zwift"),
-                            qsTr("Auto-resistance with Peloton"),
                             qsTr("Zwift Click or Zwift Play"),
                             qsTr("Virtual Shifting")
                         ]
@@ -634,8 +478,6 @@ Page {
                                 selectedOptions.step2Help = modelData
                                 if(modelData === "Auto-incline with treadmill and Zwift")
                                     stackViewLocal.push(zwiftAutoInclination)
-                                else if(modelData === "Auto-resistance with Peloton")
-                                    stackViewLocal.push(pelotonLoginComponent)
                                 else if(modelData === "Zwift Click or Zwift Play")
                                     stackViewLocal.push(zwiftPlayClick)
                                 else if(modelData === "Virtual Shifting")
