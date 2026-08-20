@@ -624,15 +624,26 @@ validated on the bike: a 15-row table with neutral gear 7 maps gears 1–15 to r
 `gearsIndexOffset()` is centred so neutral adds no slope; gear changes clamp at both ends.
 This is the highest-value test in the project — it is behaviour that was expensive to get
 right and is invisible until you are on the bike.
+*Done 2026-08-16* — `tst/Devices/TestGearTable.*`.
 
 **2. Grade→resistance test** *(gtest)* — pin the formula
 `grade% × 1.5 + bike_resistance_offset + 1 + CRR + CW`, so the flat-terrain calibration
 (offset 13) cannot silently regress.
+*Done 2026-08-20* — `tst/Devices/TestGradeToResistance.*`, driving
+`CharacteristicWriteProcessor2AD9` both directly and through a whole 0x11 frame off the
+wire. Two things it pins that were not obvious from the formula as written: the
+`zwift_inclination_gain`/`offset` pair steers the *displayed* grade and never the
+resistance, and `CW_offset` reads the rolling-resistance byte rather than the wind one
+(recorded in [TODO.md](TODO.md); pinned as-is because correcting it changes how a gravel
+sector feels for anyone who turned the gains up).
 
 **3. Settings-integrity check** *(script, runs in CI)* — three assertions: `allSettingsCount`
 equals the declared count; catalog `settingCount` equals its array length; and **every
 setting name referenced in any `.qml` resolves to a key in `qzsettings.h`**. The third is
 new and is what makes mass deletion safe.
+*Done 2026-08-16* — `tools/check-settings-integrity.py`, its own CI job with no Qt and no
+build. Twenty-five pre-existing QML-only names are baselined, so the check fails when that
+list grows.
 
 **4. QML lint on both dialects** *(CI step)* — `qmllint` over the Qt 5 sources *and* the
 generated Qt 6 variants in `$$OUT_PWD/qml6`. This is the gate for §9.8's trap, where a Qt

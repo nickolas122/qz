@@ -47,6 +47,7 @@ SOURCES += \
         Devices/TestZwiftRideController.cpp \
         Devices/TestResistanceSlewLimiter.cpp \
         Devices/TestGearTable.cpp \
+        Devices/TestGradeToResistance.cpp \
         Devices/TestFtmsControlPointHandshake.cpp \
         Devices/TestServiceSubscriptionPlan.cpp \
         Devices/TestRideScenario.cpp \
@@ -106,6 +107,7 @@ HEADERS += \
     Devices/devicetestdataindex.h \
     Devices/TestResistanceSlewLimiter.h \
     Devices/TestGearTable.h \
+    Devices/TestGradeToResistance.h \
     Devices/TestFtmsControlPointHandshake.h \
     Devices/TestServiceSubscriptionPlan.h \
     Devices/TestRideScenario.h \

@@ -175,3 +175,39 @@ through that.
 
 - Hotspot on, Wi-Fi off: Rouvy pairs with QZ over DIRCON on the one phone.
 - Or the log says plainly that the query never arrived, so the wall is Rouvy's and known.
+
+---
+
+## The wind term of the surface calculation reads the rolling-resistance byte
+
+**Found 2026-08-20, pinning the grade formula.** `CharacteristicWriteProcessor::changeSlope()`
+computes two surface corrections from the FTMS Set Indoor Bike Simulation Parameters frame
+(`characteristicwriteprocessor.cpp`):
+
+```cpp
+const double fCRR = crr / 10000.0;
+const double CRR_offset = ((crr - 40) * 0.05) * CRRGain;
+
+const double fCW = cw / 100.0;
+const double CW_offset = ((crr - 40) * 0.05) * CWGain;   // crr, not cw
+```
+
+`CW_offset` is the wind coefficient's contribution and it never reads `cw`. Both offsets are
+therefore the same number scaled by two different gains, and the wind byte the training app
+sent is used for nothing but a debug line. `fCRR` and `fCW` are computed and also unused.
+
+It is upstream behaviour and it is inert by default - `CRRGain` and `CWGain` both default to
+0, so neither term contributes until a rider opts in. That is why it has survived: the only
+people it reaches are the ones who turned surface simulation on, and they calibrated their
+gains against the wrong variable without knowing it.
+
+`TestGradeToResistance.TheSurfaceGainsBothReadTheRollingResistanceByte` pins the behaviour as
+it stands rather than correcting it, deliberately: changing it changes how every gravel
+sector feels for anyone who did turn the gains up, and that is a judgement to make on the
+bike.
+
+### Done looks like
+
+- `CW_offset` reads `cw`, or a comment says why it must not.
+- Someone with the gains turned on has ridden the change and said whether it feels right.
+- The two unused `fCRR`/`fCW` locals are either used or gone.
