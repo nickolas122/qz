@@ -10,12 +10,9 @@
 #include <jni.h>
 #include <QAndroidJniObject>
 #endif
-#include "fitdatabaseprocessor.h"
 #include "material.h"
-#include "qfit.h"
 #include "simplecrypt.h"
 #include "templateinfosenderbuilder.h"
-#include "workoutmodel.h"
 #include "zwiftworkout.h"
 
 #include <QApplication>
@@ -58,18 +55,6 @@ homeform *homeform::m_singleton = 0;
 using namespace std::chrono_literals;
 
 namespace {
-QString uploadActivityLabelFromSport(FIT_SPORT sport) {
-    switch (sport) {
-    case FIT_SPORT_RUNNING:
-    case FIT_SPORT_WALKING:
-        return QStringLiteral("Run");
-    case FIT_SPORT_ROWING:
-        return QStringLiteral("Row");
-    default:
-        return QStringLiteral("Ride");
-    }
-}
-
 QString sanitizeClipboardWorkoutName(const QString &input) {
     QString trimmed = input.trimmed();
     if (trimmed.isEmpty()) {
@@ -121,17 +106,6 @@ bool writeClipboardWorkoutFile(const QString &path, const QString &content) {
     file.write(content.toUtf8());
     file.close();
     return true;
-}
-
-QString uploadActivityLabelFromFitFile(const QString &fitFilePath) {
-    if (!QFile::exists(fitFilePath)) {
-        return QStringLiteral("Ride");
-    }
-
-    QList<SessionLine> session;
-    FIT_SPORT sport = FIT_SPORT_INVALID;
-    qfit::open(fitFilePath, &session, &sport);
-    return uploadActivityLabelFromSport(sport);
 }
 
 #ifdef Q_OS_ANDROID
@@ -187,159 +161,6 @@ double interpolatedHeartZone(double percentHeartRate, double zone1, double zone2
     return 4.0 + ((percentHeartRate - z4) / (top - z4));
 }
 
-quint32 crc32ForGzip(const QByteArray &data) {
-    quint32 crc = 0xffffffffU;
-    for (const char byte : data) {
-        crc ^= static_cast<quint8>(byte);
-        for (int bit = 0; bit < 8; ++bit) {
-            crc = (crc >> 1) ^ (0xedb88320U & (0U - (crc & 1U)));
-        }
-    }
-    return crc ^ 0xffffffffU;
-}
-
-void appendLittleEndian32(QByteArray *data, quint32 value) {
-    data->append(static_cast<char>(value & 0xffU));
-    data->append(static_cast<char>((value >> 8) & 0xffU));
-    data->append(static_cast<char>((value >> 16) & 0xffU));
-    data->append(static_cast<char>((value >> 24) & 0xffU));
-}
-
-QByteArray gzipCompress(const QByteArray &data, bool *ok) {
-    if (ok) {
-        *ok = false;
-    }
-
-    const QByteArray qtCompressed = qCompress(data, 9);
-    if (qtCompressed.size() < 11) {
-        return QByteArray();
-    }
-
-    QByteArray gzip;
-    gzip.reserve(qtCompressed.size() + 18);
-    gzip.append('\x1f');
-    gzip.append('\x8b');
-    gzip.append('\x08');
-    gzip.append('\x00');
-    appendLittleEndian32(&gzip, 0);
-    gzip.append('\x02');
-    gzip.append('\xff');
-
-    gzip.append(qtCompressed.constData() + 6, qtCompressed.size() - 10);
-    appendLittleEndian32(&gzip, crc32ForGzip(data));
-    appendLittleEndian32(&gzip, static_cast<quint32>(data.size()));
-
-    if (ok) {
-        *ok = true;
-    }
-    return gzip;
-}
-
-class MailSenderThread : public QThread {
-  public:
-    MailSenderThread(MimeMessage *message, const QString &filenameJPG, const QList<QString> &chartImagesFilenamesForMail,
-                     const QList<QString> &temporaryFilesForMail, QObject *toastTarget)
-        : message(message), filenameJPG(filenameJPG), chartImagesFilenamesForMail(chartImagesFilenamesForMail),
-          temporaryFilesForMail(temporaryFilesForMail), toastTarget(toastTarget) {}
-
-  protected:
-    void run() override {
-        auto showToast = [this](const QString &msg) {
-            QMetaObject::invokeMethod(toastTarget, "setToastRequested", Qt::QueuedConnection,
-                                     Q_ARG(QString, msg));
-        };
-
-#ifdef SMTP_SERVER
-#define _STR(x) #x
-#define STRINGIFY(x) _STR(x)
-        SmtpClient smtp(STRINGIFY(SMTP_SERVER), 587, SmtpClient::TlsConnection);
-#else
-#pragma message "stmp server is unset!"
-        qDebug() << QStringLiteral("SMTP server is unset, email not sent");
-        SmtpClient smtp(QLatin1String(""), 25, SmtpClient::TlsConnection);
-        delete message;
-        return;
-#endif
-
-        // We need the username (your email address) and the password for smtp
-        // authentication. SmtpClient-for-Qt v2.0 takes them at login() rather than
-        // through setUser()/setPassword(), so they are held here until the retry
-        // loop below. Declared outside the #ifdef because the login() call that
-        // uses them is compiled either way - the #else branches just never reach it.
-        QString smtpUser, smtpPassword;
-#ifdef SMTP_USERNAME
-#define _STR(x) #x
-#define STRINGIFY(x) _STR(x)
-        smtpUser = QStringLiteral(STRINGIFY(SMTP_USERNAME));
-#else
-#pragma message "smtp username is unset!"
-        qDebug() << QStringLiteral("SMTP username is unset, email not sent");
-        delete message;
-        return;
-#endif
-#ifdef SMTP_PASSWORD
-#define _STR(x) #x
-#define STRINGIFY(x) _STR(x)
-        smtpPassword = QStringLiteral(STRINGIFY(SMTP_PASSWORD));
-#else
-#pragma message "smtp password is unset!"
-        qDebug() << QStringLiteral("SMTP password is unset, email not sent");
-        delete message;
-        return;
-#endif
-
-        showToast(QObject::tr("Sending workout email..."));
-
-        // v2.0 is asynchronous: connectToHost(), login() and sendMail() return
-        // void and completion is awaited with waitFor*(). The two timeouts the
-        // synchronous API used to carry are expressed here instead. 30s per SMTP
-        // command reply gives Brevo time to accept a large attachment without the
-        // client timing out and retrying (which would send a duplicate); 120s for
-        // the body covers a 10MB attachment on a slow mobile connection.
-        bool r = false;
-        uint8_t i = 0;
-        while (!r) {
-            qDebug() << "trying to send email #" << i;
-            smtp.connectToHost();
-            r = smtp.waitForReadyConnected(30000);
-            if (r) {
-                smtp.login(smtpUser, smtpPassword);
-                r = smtp.waitForAuthenticated(30000);
-            }
-            if (r) {
-                smtp.sendMail(*message);
-                r = smtp.waitForMailSent(120000);
-            }
-            if (i++ == 3)
-                break;
-            if (!r)
-                smtp.quit();
-        }
-        smtp.quit();
-
-        if (r)
-            showToast(QObject::tr("Workout email sent successfully"));
-        else
-            showToast(QObject::tr("Failed to send workout email"));
-
-        if (!filenameJPG.isEmpty())
-            QFile::remove(filenameJPG);
-        for (const QString &f : qAsConst(chartImagesFilenamesForMail)) {
-            QFile::remove(f);
-        }
-        for (const QString &f : qAsConst(temporaryFilesForMail)) {
-            QFile::remove(f);
-        }
-        delete message;
-    }
-
-  private:
-    MimeMessage *message;
-    QString filenameJPG;
-    QList<QString> chartImagesFilenamesForMail;
-    QList<QString> temporaryFilesForMail;
-    QObject *toastTarget;
-};
 } // namespace
 
 DataObject::DataObject(const QString &name, const QString &icon, const QString &value, bool writable, const QString &id,
@@ -831,7 +652,6 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
             &TemplateInfoSenderBuilder::workoutEventStateChanged);
     connect(this->userTemplateManager, &TemplateInfoSenderBuilder::activityDescriptionChanged, this,
             &homeform::setActivityDescription);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::chartSaved, this, &homeform::chartSaved);
     connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::lap, this, &homeform::Lap);
     connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::floatingClose, this, &homeform::floatingOpen);
     connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::autoResistance, this,
@@ -870,10 +690,6 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
     connect(timer, &QTimer::timeout, this, &homeform::update);
     timer->start(1s);
 
-    backupTimer = new QTimer(this);
-    connect(backupTimer, &QTimer::timeout, this, &homeform::backup);
-    backupTimer->start(1min);
-
     automaticShiftingTimer = new QTimer(this);
     connect(automaticShiftingTimer, &QTimer::timeout, this, &homeform::ten_hz);
     
@@ -888,12 +704,6 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
         connect(clipboardWorkoutTimer, &QTimer::timeout, this, &homeform::checkClipboardForWorkout);
         clipboardWorkoutTimer->start(5s);
     }
-
-    // Initialize FIT backup thread
-    fitBackupThread = new QThread(this);
-    fitBackupWriter = new FitBackupWriter();
-    fitBackupWriter->moveToThread(fitBackupThread);
-    fitBackupThread->start();
 
     QObject *rootObject = engine->rootObjects().constFirst();
     QObject *home = rootObject->findChild<QObject *>(QStringLiteral("home"));
@@ -1009,30 +819,6 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
         }
     }
 #endif
-
-    fitProcessor = new FitDatabaseProcessor(getWritableAppDir() + "ddb.sqlite");
-    connect(fitProcessor, &FitDatabaseProcessor::fileProcessed,
-            this, [](const QString& filename) {
-                qDebug() << "FitDatabaseProcessor Processing:" << filename;
-            });
-    connect(fitProcessor, &FitDatabaseProcessor::progress,
-            this, [](int processed, int total) {
-                qDebug() << "FitDatabaseProcessor Progress:" << processed << "/" << total;
-            });
-    connect(fitProcessor, &FitDatabaseProcessor::error,
-            this, [](const QString& error) {
-                qDebug() << "FitDatabaseProcessor Error:" << error;
-            });
-    workoutModel = new WorkoutModel(getWritableAppDir() + "ddb.sqlite");
-    engine->rootContext()->setContextProperty("workoutModel", workoutModel);
-    
-    connect(fitProcessor, &FitDatabaseProcessor::processingStopped,
-            this, [this]() {
-                qDebug() << "FitDatabaseProcessor Processing stopped - refreshing workout model";
-                workoutModel->setDatabaseProcessing(false);
-                workoutModel->refresh();
-            });
-    fitProcessor->processDirectory(getWritableAppDir() + "fit");
 
     m_speech.setLocale(QLocale::English);
 
@@ -1224,20 +1010,6 @@ JNIEXPORT void JNICALL
 
 void homeform::setActivityDescription(QString desc) { activityDescription = desc; }
 
-void homeform::chartSaved(QString fileName) {
-    if (!stopped)
-        return;
-    chartImagesFilenames.append(fileName);
-    if (chartImagesFilenames.length() >= 9) {
-        sendMail();
-        qDebug() << "removing chart images";
-        for (const QString &f : qAsConst(chartImagesFilenames)) {
-            QFile::remove(f);
-        }
-        chartImagesFilenames.clear();
-    }
-}
-
 void homeform::keyMediaPrevious() {
     qDebug() << QStringLiteral("keyMediaPrevious");
     QSettings settings;
@@ -1369,35 +1141,6 @@ QString homeform::getWritableAppDir() {
     return path;
 }
 
-void homeform::backup() {
-
-    static uint8_t index = 0;
-    qDebug() << QStringLiteral("scheduling fit file backup...");
-
-    QString path = getWritableAppDir();
-    bluetoothdevice *dev = bluetoothManager->device();
-    if (dev) {
-
-        QString filename = path + QString::number(index) + backupFitFileName;
-        
-        // Use thread to write FIT backup file
-        QMetaObject::invokeMethod(fitBackupWriter, "writeFitBackup",
-                                 Qt::QueuedConnection,
-                                 Q_ARG(QString, filename),
-                                 Q_ARG(QList<SessionLine>, Session),
-                                 Q_ARG(BLUETOOTH_TYPE, dev->deviceType()),
-                                 Q_ARG(uint32_t, QFIT_PROCESS_NONE),
-                                 Q_ARG(FIT_SPORT, stravaPelotonWorkoutType),
-                                 Q_ARG(QString, workoutName()),
-                                 Q_ARG(QString, dev->bluetoothDevice.name()));
-
-        index++;
-        if (index > 1) {
-            index = 0;
-        }
-    }
-}
-
 void homeform::ten_hz() {
     // Automatic Virtual Shifting logic - only for bikes and when device is connected
     if (!bluetoothManager->device() || bluetoothManager->device()->deviceType() != BIKE) {
@@ -1522,19 +1265,7 @@ bool homeform::hasConnectedDevice() const {
     return bluetoothManager && bluetoothManager->device();
 }
 
-homeform::~homeform() {
-    // Cleanup FIT backup thread
-    if (fitBackupThread && fitBackupThread->isRunning()) {
-        fitBackupThread->quit();
-        fitBackupThread->wait();
-    }
-    if (fitBackupWriter) {
-        delete fitBackupWriter;
-    }
-    
-    gpx_save_clicked();
-    fit_save_clicked();
-}
+homeform::~homeform() { gpx_save_clicked(); }
 
 void homeform::aboutToQuit() {
     qDebug() << "homeform::aboutToQuit()";
@@ -1552,12 +1283,6 @@ void homeform::aboutToQuit() {
     ios_liveactivity::endLiveActivity();
 #endif
 #endif
-
-    QSettings settings;
-    if (settings.value(QZSettings::fit_file_saved_on_quit, QZSettings::default_fit_file_saved_on_quit).toBool()) {
-        qDebug() << "fit_file_saved_on_quit true";
-        fit_save_clicked();
-    }
 
     // Before the device goes: RTSS keeps drawing whatever was left behind, so a
     // stale gear number would stay frozen over the training app.
@@ -1702,28 +1427,6 @@ void homeform::trainProgramSignals() {
         connect(this, &homeform::workoutEventStateChanged, bluetoothManager->device(),
                 &bluetoothdevice::workoutEventStateChanged);
         connect(trainProgram, &trainprogram::zwiftLoginState, this, &homeform::zwiftLoginState);
-
-        if (trainProgram) {
-            // chartTargetWorkout() also returns true for pure heart-rate-driven rows (HRabove/HRbelow/zoneHR/etc,
-            // e.g. Garmin-style HR triggered segments). Those don't have a target power/speed of their own, so a
-            // treadmill running one of them should still get the speed/inclination chart (which also renders the
-            // heart panel), not the bike/power chart.
-            bool treadmillMode = bluetoothManager->device()->deviceType() == TREADMILL &&
-                                  !trainProgram->powerzoneWorkout() &&
-                                  (trainProgram->speedInclinationTargetWorkout() || trainProgram->chartTargetWorkout());
-            setChartTreadmillMode(treadmillMode);
-            bool chartWorkout = trainProgram->chartTargetWorkout() || trainProgram->speedInclinationTargetWorkout();
-            setChartIconVisible(chartWorkout);
-            if (chartFooterVisible()) {
-                if (chartWorkout) {
-                    // reloading
-                    setChartFooterVisible(false);
-                    setChartFooterVisible(true);
-                } else {
-                    setChartFooterVisible(false);
-                }
-            }
-        }
 
         qDebug() << QStringLiteral("trainProgram associated to a device");
     } else {
@@ -5473,8 +5176,6 @@ void homeform::Start_inner(bool send_event_to_device) {
                 bluetoothManager->device()->clearStats();
             }
             Session.clear();
-            chartImagesFilenames.clear();
-            mailSent = false;
 
 #ifdef Q_OS_IOS
             // due to #857
@@ -5489,7 +5190,6 @@ void homeform::Start_inner(bool send_event_to_device) {
             stravaPelotonInstructorName = QLatin1String("");
             movieFileName = QLatin1String("");
             stravaWorkoutName = QLatin1String("");
-            stravaPelotonWorkoutType = FIT_SPORT_INVALID;
             emit workoutNameChanged(workoutName());
             emit instructorNameChanged(instructorName());
             emit workoutEventStateChanged(bluetoothdevice::STARTED);
@@ -5616,15 +5316,6 @@ void homeform::Stop() {
     emit workoutEventStateChanged(bluetoothdevice::STOPPED);
 
     saveSessionAsTrainingProgram();
-
-    m_workoutRpe = -1;
-    m_workoutFeel = -1;
-    if (!settings.value(QZSettings::rpe_feel_popup_enabled, QZSettings::default_rpe_feel_popup_enabled).toBool()) {
-        // Popup disabled: save (and upload) the FIT file right away, as before.
-        fit_save_clicked();
-    }
-    // else: QML shows the RPE/feel popup and calls finalizeFitSave() once the user answers,
-    // which writes the FIT file (with RPE/feel embedded) and triggers the uploads.
 
     if (bluetoothManager->device()) {
         bluetoothManager->device()->setPaused(paused | stopped);
@@ -8978,49 +8669,6 @@ static void healthConnectWriteWorkout(const QList<SessionLine> &session, bluetoo
 }
 #endif
 
-void homeform::fit_save_clicked() {
-
-    QString path = getWritableAppDir();
-    bluetoothdevice *dev = bluetoothManager->device();
-    if (dev) {
-        QString filename = path + "fit/" +
-                           QDateTime::currentDateTime().toString().replace(QStringLiteral(":"), QStringLiteral("_")) +
-                           QStringLiteral(".fit");
-
-        QString workoutName = "";
-        if (!stravaPelotonActivityName.isEmpty() && !stravaPelotonInstructorName.isEmpty())
-            workoutName = stravaPelotonActivityName + " - " + stravaPelotonInstructorName;
-
-        // Determine workout source and metadata
-        QString workoutSource = "QZ";
-        // The FIT file still carries a Peloton workout id and URL as developer fields,
-        // written by qfit and read back by the history database. Nothing produces them
-        // any more, so they go out empty; the fields themselves belong to recording and
-        // come out with it.
-        QString trainingProgramFile = "";
-        if (!lastTrainProgramFileSaved.isEmpty()) {
-            trainingProgramFile = lastTrainProgramFileSaved;
-        }
-
-        qfit::save(filename, Session, dev->deviceType(),
-                   QFIT_PROCESS_NONE,
-                   stravaPelotonWorkoutType, workoutName, dev->bluetoothDevice.name(),
-                   workoutSource, QString(), QString(), trainingProgramFile,
-                   m_workoutRpe, m_workoutFeel);
-        lastFitFileSaved = filename;
-
-        // Process the newly saved file immediately and refresh workout model
-        if (fitProcessor && workoutModel) {
-            fitProcessor->processFile(filename);
-            workoutModel->refresh();
-        }
-
-#ifdef Q_OS_ANDROID
-        healthConnectWriteWorkout(Session, dev, workoutName);
-#endif
-    }
-}
-
 void homeform::gpx_open_clicked(const QUrl &fileName) {
     qDebug() << QStringLiteral("gpx_open_clicked") << fileName;
 
@@ -9096,33 +8744,6 @@ void homeform::gpx_open_clicked(const QUrl &fileName) {
         }
 
         trainProgramSignals();
-    }
-}
-
-void homeform::fitfile_preview_clicked(const QUrl &fileName) {
-    qDebug() << QStringLiteral("fitfile_preview_clicked called with URL:") << fileName;
-    qDebug() << QStringLiteral("URL toString:") << fileName.toString();
-    qDebug() << QStringLiteral("URL toLocalFile:") << fileName.toLocalFile();
-
-    // Use the full file path directly instead of reconstructing it
-    QString filePath = fileName.toLocalFile();
-    QFile file(filePath);
-    qDebug() << "Opening FIT file:" << filePath;
-
-    if (file.exists()) {
-        QList<SessionLine> a;
-        FIT_SPORT sport;
-        QString workoutName;
-        qfit::open(filePath, &a, &sport, &workoutName);
-        qDebug() << "FIT file read:" << a.size() << "records, sport:" << sport << "workoutName:" << workoutName;
-        if (!a.isEmpty()) {
-            this->innerTemplateManager->previewSessionOnChart(&a, sport, workoutName);
-            emit previewFitFile(filePath, QTime(0,0,0,0).addSecs(a.last().elapsedTime).toString(), workoutName);
-        } else {
-            qDebug() << "No data read from FIT file";
-        }
-    } else {
-        qDebug() << "FIT file does not exist:" << filePath;
     }
 }
 
@@ -9233,14 +8854,6 @@ void homeform::setVideoIconVisible(bool value) {
     emit videoIconVisibleChanged(m_VideoIconVisible);
 }
 
-bool homeform::chartIconVisible() { return m_ChartIconVisible; }
-
-void homeform::setChartIconVisible(bool value) {
-
-    m_ChartIconVisible = value;
-    emit chartIconVisibleChanged(m_ChartIconVisible);
-}
-
 int homeform::videoPosition() { return m_VideoPosition; }
 
 void homeform::setVideoPosition(int value) {
@@ -9255,335 +8868,6 @@ void homeform::setVideoRate(double value) {
 
     m_VideoRate = value;
     emit videoRateChanged(m_VideoRate);
-}
-
-void homeform::smtpError(SmtpClient::SmtpError e) { qDebug() << QStringLiteral("SMTP ERROR") << e; }
-
-void homeform::sendMail() {
-
-    QSettings settings;
-
-    bool miles = settings.value(QZSettings::miles_unit, QZSettings::default_miles_unit).toBool();
-    double unit_conversion = 1.0;
-    double meter_feet_conversion = 1.0;
-    QString meter_feet_unit = QStringLiteral("meters");
-    QString weightLossUnit = QStringLiteral("Kg");
-    double WeightLoss = 0;
-
-    // TODO: add a condition to avoid sending mail when the user look at the chart while is riding
-    if (settings.value(QZSettings::user_email, QZSettings::default_user_email).toString().length() == 0 ||
-        !bluetoothManager->device()) {
-        return;
-    }
-
-    if (mailSent) {
-        qDebug() << QStringLiteral("sendMail already requested, ignoring duplicate");
-        return;
-    }
-    mailSent = true;
-
-    if (miles) {
-        unit_conversion = 0.621371; // clang, don't touch it!
-        weightLossUnit = QStringLiteral("Oz");
-        meter_feet_conversion = 3.28084;
-        meter_feet_unit = QStringLiteral("feet");
-    }
-    WeightLoss = (miles ? bluetoothManager->device()->weightLoss() * 35.274 : bluetoothManager->device()->weightLoss());
-
-    // Now we create a MimeMessage object. This will be the email.
-
-    MimeMessage *message = new MimeMessage;
-
-    // SmtpClient-for-Qt v2.0 takes addresses by value rather than by owning pointer.
-    message->setSender(EmailAddress(QStringLiteral("no-reply@qzapp.it"), QStringLiteral("QZ")));
-    message->addRecipient(EmailAddress(settings.value(QZSettings::user_email, QLatin1String("")).toString(),
-                                       settings.value(QZSettings::user_email, QLatin1String("")).toString()));
-    if (!Session.isEmpty()) {
-        QString title = Session.constFirst().time.toString();
-        if (!stravaPelotonActivityName.isEmpty()) {
-            title +=
-                QStringLiteral(" ") + stravaPelotonActivityName + QStringLiteral(" - ") + stravaPelotonInstructorName;
-        }
-        message->setSubject(title);
-    } else {
-        message->setSubject(QStringLiteral("Test"));
-    }
-
-    // Now add some text to the email.
-    // First we create a MimeText object.
-
-    MimeText *text = new MimeText;
-
-    QString textMessage = QStringLiteral("Great workout!\n\n");
-
-    textMessage += '\n';
-    textMessage += QStringLiteral("Average Speed: ") +
-                   QString::number(bluetoothManager->device()->currentSpeed().average() * unit_conversion, 'f', 1) +
-                   QStringLiteral("\n");
-    textMessage += QStringLiteral("Max Speed: ") +
-                   QString::number(bluetoothManager->device()->currentSpeed().max() * unit_conversion, 'f', 1) +
-                   QStringLiteral("\n");
-    textMessage += QStringLiteral("Calories burned: ") +
-                   QString::number(bluetoothManager->device()->calories().value(), 'f', 0) + QStringLiteral("\n");
-    textMessage += QStringLiteral("Distance: ") +
-                   QString::number(bluetoothManager->device()->odometer() * unit_conversion, 'f', 1) +
-                   QStringLiteral("\n");
-    textMessage += QStringLiteral("Elevation Gain (") + meter_feet_unit + "): " +
-                   QString::number(bluetoothManager->device()->elevationGain().value() * meter_feet_conversion, 'f',
-                                   (miles ? 0 : 1)) +
-                   QStringLiteral("\n");
-    textMessage += QStringLiteral("Average Watt: ") +
-                   QString::number(bluetoothManager->device()->wattsMetric().average(), 'f', 0) + QStringLiteral("\n");
-    textMessage += QStringLiteral("Max Watt: ") +
-                   QString::number(bluetoothManager->device()->wattsMetric().max(), 'f', 0) + QStringLiteral("\n");
-    textMessage += QStringLiteral("Average Watt/Kg: ") +
-                   QString::number(bluetoothManager->device()->wattKg().average(), 'f', 1) + "\n";
-    textMessage +=
-        QStringLiteral("Max Watt/Kg: ") + QString::number(bluetoothManager->device()->wattKg().max(), 'f', 1) + "\n";
-    textMessage += QStringLiteral("Average Heart Rate: ") +
-                   QString::number(bluetoothManager->device()->currentHeart().average(), 'f', 0) + QStringLiteral("\n");
-    textMessage += QStringLiteral("Max Heart Rate: ") +
-                   QString::number(bluetoothManager->device()->currentHeart().max(), 'f', 0) + QStringLiteral("\n");
-
-    for(int i=0; i<bluetoothManager->device()->maxHeartZone(); i++) {
-        textMessage += QStringLiteral("Heart Rate Z") + QString::number(i + 1) + QStringLiteral(": ") +
-                    QTime(0, 0, 0, 0).addSecs(bluetoothManager->device()->secondsForHeartZone(i)).toString("H:mm:ss") + QStringLiteral("\n");        
-    }
-
-    textMessage += QStringLiteral("Total Output: ") +
-                   QString::number(bluetoothManager->device()->jouls().max() / 1000.0, 'f', 0) + QStringLiteral("\n");
-    textMessage +=
-        QStringLiteral("Elapsed Time: ") + bluetoothManager->device()->elapsedTime().toString() + QStringLiteral("\n");
-    textMessage +=
-        QStringLiteral("Moving Time: ") + bluetoothManager->device()->movingTime().toString() + QStringLiteral("\n");
-    textMessage += QStringLiteral("Weight Loss (") + weightLossUnit + "): " + QString::number(WeightLoss, 'f', 2) +
-                   QStringLiteral("\n");
-    double vo2max = metric::calculateVO2Max(&Session);
-    if(vo2max)
-        textMessage += QStringLiteral("Estimated VO2Max: ") + QString::number(vo2max, 'f', 0) +
-                   QStringLiteral("\n");
-    if(bluetoothManager->device()->deviceType() == BLUETOOTH_TYPE::TREADMILL) {
-        textMessage += QStringLiteral("Running Stress Score: ") + QString::number(((treadmill*)bluetoothManager->device())->runningStressScore(), 'f', 0) +
-                       QStringLiteral("\n");
-    }
-    double peak = metric::powerPeak(&Session, 5);
-    double weightKg = settings.value(QZSettings::weight, QZSettings::default_weight).toFloat();
-    textMessage += QStringLiteral("5 Seconds Power: ") + QString::number(peak, 'f', 0) +
-                   QStringLiteral("W ") + QString::number(peak/weightKg, 'f', 1) + QStringLiteral("W/Kg\n");
-    peak = metric::powerPeak(&Session, 60);
-    textMessage += QStringLiteral("1 Minute Power: ") + QString::number(peak, 'f', 0) +
-                   QStringLiteral("W ") + QString::number(peak/weightKg, 'f', 1) + QStringLiteral("W/Kg\n");
-    peak = metric::powerPeak(&Session, 5 * 60);
-    textMessage += QStringLiteral("5 Minutes Power: ") + QString::number(peak, 'f', 0) +
-                   QStringLiteral("W ") + QString::number(peak/weightKg, 'f', 1) + QStringLiteral("W/Kg\n");    
-
-    // FTP
-    double ftpSetting = settings.value(QZSettings::ftp, QZSettings::default_ftp).toDouble();
-    peak = (metric::powerPeak(&Session, 20 * 60) * 0.95) * 0.95;
-    textMessage += QStringLiteral("Estimated FTP: ") + QString::number(peak, 'f', 0) +
-                   QStringLiteral("W ");
-    if(peak > ftpSetting) {
-        textMessage += QStringLiteral(" FTP IMPROVED +") + QString::number(peak - ftpSetting, 'f', 0) +
-                       QStringLiteral("W!");
-    }
-    textMessage += QStringLiteral("\n");
-
-    if (bluetoothManager->device()->deviceType() == BIKE) {
-        textMessage += QStringLiteral("Average Cadence: ") +
-                       QString::number(((bike *)bluetoothManager->device())->currentCadence().average(), 'f', 0) +
-                       QStringLiteral("\n");
-        textMessage += QStringLiteral("Max Cadence: ") +
-                       QString::number(((bike *)bluetoothManager->device())->currentCadence().max(), 'f', 0) +
-                       QStringLiteral("\n");
-        textMessage += QStringLiteral("Average Resistance: ") +
-                       QString::number(((bike *)bluetoothManager->device())->currentResistance().average(), 'f', 0) +
-                       QStringLiteral("\n");
-        textMessage += QStringLiteral("Max Resistance: ") +
-                       QString::number(((bike *)bluetoothManager->device())->currentResistance().max(), 'f', 0) +
-                       QStringLiteral("\n");
-        textMessage += QStringLiteral("Average Peloton Resistance: ") +
-                       QString::number(((bike *)bluetoothManager->device())->pelotonResistance().average(), 'f', 0) +
-                       QStringLiteral("\n");
-        textMessage += QStringLiteral("Max Peloton Resistance: ") +
-                       QString::number(((bike *)bluetoothManager->device())->pelotonResistance().max(), 'f', 0) +
-                       QStringLiteral("\n");
-    } else if (bluetoothManager->device()->deviceType() == ROWING) {
-        textMessage += QStringLiteral("Average Cadence: ") +
-                       QString::number(((rower *)bluetoothManager->device())->currentCadence().average(), 'f', 0) +
-                       QStringLiteral("\n");
-        textMessage += QStringLiteral("Max Cadence: ") +
-                       QString::number(((rower *)bluetoothManager->device())->currentCadence().max(), 'f', 0) +
-                       QStringLiteral("\n");
-        textMessage += QStringLiteral("Average Resistance: ") +
-                       QString::number(((rower *)bluetoothManager->device())->currentResistance().average(), 'f', 0) +
-                       QStringLiteral("\n");
-        textMessage += QStringLiteral("Max Resistance: ") +
-                       QString::number(((rower *)bluetoothManager->device())->currentResistance().max(), 'f', 0) +
-                       QStringLiteral("\n");
-        textMessage += QStringLiteral("Average Peloton Resistance: ") +
-                       QString::number(((rower *)bluetoothManager->device())->pelotonResistance().average(), 'f', 0) +
-                       QStringLiteral("\n");
-        textMessage += QStringLiteral("Max Peloton Resistance: ") +
-                       QString::number(((rower *)bluetoothManager->device())->pelotonResistance().max(), 'f', 0) +
-                       QStringLiteral("\n");
-        textMessage += QStringLiteral("Average Pace: ") +
-                       ((rower *)bluetoothManager->device())->averagePace().toString(QStringLiteral("m:ss")) +
-                       QStringLiteral("\n");
-        textMessage += QStringLiteral("Max Pace: ") +
-                       ((rower *)bluetoothManager->device())->maxPace().toString(QStringLiteral("m:ss")) +
-                       QStringLiteral("\n");
-        textMessage +=
-            QStringLiteral("Average Stroke Length: ") +
-            QString::number(((rower *)bluetoothManager->device())->currentStrokesLength().average(), 'f', 1) + "\n";
-    } else if (bluetoothManager->device()->deviceType() == TREADMILL || bluetoothManager->device()->deviceType() == ELLIPTICAL) {
-        textMessage += QStringLiteral("Average Pace: ") +
-                       (bluetoothManager->device())->averagePace().toString(QStringLiteral("m:ss")) +
-                       QStringLiteral("\n");
-        textMessage += QStringLiteral("Max Pace: ") +
-                       (bluetoothManager->device())->maxPace().toString(QStringLiteral("m:ss")) +
-                       QStringLiteral("\n");
-        // for stryd and similars
-        if (bluetoothManager->device()->currentCadence().average() > 0) {
-            textMessage += QStringLiteral("Average Cadence: ") +
-                           QString::number((bluetoothManager->device())->currentCadence().average(), 'f', 0) +
-                           QStringLiteral("\n");
-            textMessage += QStringLiteral("Max Cadence: ") +
-                           QString::number((bluetoothManager->device())->currentCadence().max(), 'f', 0) +
-                           QStringLiteral("\n");
-        }
-    }
-    textMessage += QStringLiteral("\n\nQZ version: ") + QApplication::applicationVersion();
-#ifdef Q_OS_ANDROID
-    textMessage += " - Android";
-#endif
-#ifdef Q_OS_IOS
-    textMessage += " - iOS";
-#endif
-    if (bluetoothManager) {
-        textMessage += QStringLiteral("\nDevice: ") + bluetoothManager->device()->bluetoothDevice.name();
-
-        if (bluetoothManager->heartRateDevice()) {
-            textMessage +=
-                QStringLiteral("\nHR Device: ") + bluetoothManager->heartRateDevice()->bluetoothDevice.name();
-        }
-    }
-
-#ifdef SMTP_SERVER
-#define _STR(x) #x
-#define STRINGIFY(x) _STR(x)
-    textMessage += QStringLiteral("\n\nSMTP server: ") + QString(STRINGIFY(SMTP_SERVER));
-#endif
-
-    QStringList temporaryFilesForMail;
-    QString compressedDebugLogForMail;
-    QString debugLogMailNote;
-    constexpr qint64 maxDebugLogAttachmentBytes = 10 * 1024 * 1024;
-    const QStringList logCandidates =
-        QDir(getWritableAppDir()).entryList(QStringList() << QStringLiteral("debug-*.log"), QDir::Files, QDir::Time);
-    const QString logfilename = logCandidates.isEmpty() ? QString() : logCandidates.first();
-    if (settings.value(QZSettings::log_debug).toBool() && !logfilename.isEmpty() &&
-        QFile::exists(getWritableAppDir() + logfilename)) {
-        const QString debugLogFileName = getWritableAppDir() + logfilename;
-        QFile debugLogFile(debugLogFileName);
-        if (debugLogFile.open(QIODevice::ReadOnly)) {
-            bool gzipOk = false;
-            const QByteArray compressedDebugLog = gzipCompress(debugLogFile.readAll(), &gzipOk);
-            debugLogFile.close();
-
-            const QString compressedDebugLogFileName =
-                getWritableAppDir() + QUuid::createUuid().toString(QUuid::WithoutBraces) + QStringLiteral("_") +
-                QFileInfo(debugLogFileName).fileName() + QStringLiteral(".gz");
-            QFile compressedDebugLogFile(compressedDebugLogFileName);
-            if (!gzipOk) {
-                debugLogMailNote = QStringLiteral("\nDebug log not attached: unable to gzip log file.");
-            } else if (compressedDebugLogFile.open(QIODevice::WriteOnly)) {
-                compressedDebugLogFile.write(compressedDebugLog);
-                compressedDebugLogFile.close();
-
-                const qint64 compressedDebugLogSize = QFileInfo(compressedDebugLogFileName).size();
-                if (compressedDebugLogSize <= maxDebugLogAttachmentBytes) {
-                    compressedDebugLogForMail = compressedDebugLogFileName;
-                    temporaryFilesForMail.append(compressedDebugLogFileName);
-                    debugLogMailNote =
-                        QStringLiteral("\nDebug log attached: ") + QFileInfo(compressedDebugLogFileName).fileName() +
-                        QStringLiteral(" (") + QString::number(compressedDebugLogSize / 1024.0 / 1024.0, 'f', 1) +
-                        QStringLiteral(" MB gzip compressed)");
-                } else {
-                    QFile::remove(compressedDebugLogFileName);
-                    debugLogMailNote =
-                        QStringLiteral("\nDebug log not attached: compressed file is ") +
-                        QString::number(compressedDebugLogSize / 1024.0 / 1024.0, 'f', 1) +
-                        QStringLiteral(" MB, above the 10.0 MB mail limit.");
-                }
-            } else {
-                debugLogMailNote = QStringLiteral("\nDebug log not attached: unable to write compressed log file.");
-            }
-        } else {
-            debugLogMailNote = QStringLiteral("\nDebug log not attached: unable to read log file.");
-        }
-    }
-    textMessage += debugLogMailNote;
-
-    text->setText(textMessage);
-    message->addPart(text);
-
-    QList<QString> chartImagesFilenamesForMail;
-    for (const QString &f : qAsConst(chartImagesFilenames)) {
-        const QString tempChartImage = getWritableAppDir() + QUuid::createUuid().toString(QUuid::WithoutBraces) +
-                                       QStringLiteral("_mail.jpg");
-        if (QFile::copy(f, tempChartImage)) {
-            chartImagesFilenamesForMail.append(tempChartImage);
-        }
-    }
-
-    for (const QString &f : qAsConst(chartImagesFilenamesForMail)) {
-
-        // Create a MimeInlineFile object for each image
-        MimeInlineFile *image = new MimeInlineFile((new QFile(f)));
-
-        // An unique content id must be setted
-        image->setContentId(f);
-        image->setContentType(QStringLiteral("image/jpg"));
-        message->addPart(image);
-    }
-
-    if (!lastFitFileSaved.isEmpty()) {
-
-        // Create a MimeInlineFile object for each image
-        MimeInlineFile *fit = new MimeInlineFile((new QFile(lastFitFileSaved)));
-
-        // An unique content id must be setted
-        fit->setContentId(lastFitFileSaved);
-        fit->setContentType(QStringLiteral("application/octet-stream"));
-        message->addPart(fit);
-    }
-
-    if (!lastTrainProgramFileSaved.isEmpty()) {
-
-        // Create a MimeInlineFile object for each image
-        MimeInlineFile *xml = new MimeInlineFile((new QFile(lastTrainProgramFileSaved)));
-
-        // An unique content id must be setted
-        xml->setContentId(lastTrainProgramFileSaved);
-        xml->setContentType(QStringLiteral("application/octet-stream"));
-        message->addPart(xml);
-        lastTrainProgramFileSaved = "";
-    }
-
-    // The class artwork used to be attached here; nothing downloads an image any
-    // more, so the mail thread gets an empty name and skips the cleanup.
-    const QString filenameJPG;
-
-    if (!compressedDebugLogForMail.isEmpty()) {
-        MimeAttachment *log = new MimeAttachment(new QFile(compressedDebugLogForMail));
-        log->setContentId(compressedDebugLogForMail);
-        log->setContentType(QStringLiteral("application/gzip"));
-        message->addPart(log);
-    }
-
-    MailSenderThread *mailThread = new MailSenderThread(message, filenameJPG, chartImagesFilenamesForMail, temporaryFilesForMail, this);
-    QObject::connect(mailThread, &QThread::finished, mailThread, &QObject::deleteLater);
-    mailThread->start();
 }
 
 #if defined(Q_OS_ANDROID)

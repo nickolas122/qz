@@ -37,9 +37,7 @@ SOURCES += \
         Devices/devicetestdataindex.cpp \
         Erg/ergtabletestsuite.cpp \
         TrainingProgram/trainprogramtestsuite.cpp \
-        ToolTests/qfittestsuite.cpp \
         ToolTests/testsettingstestsuite.cpp \
-        ToolTests/testtrainingloadtestsuite.cpp \
         ToolTests/zwiftworkouttestsuite.cpp \
         Tools/testsettings.cpp \
         Tools/typeidgenerator.cpp \
@@ -86,7 +84,7 @@ win32:LIBS += -lbthprops
 # cannot drift from the app's again. The -L comes from the build's vcpkg path.
 win32:!mingw:lessThan(QT_MAJOR_VERSION, 6): LIBS += -llibprotobuf -llibprotoc -labseil_dll -llibprotobuf-lite -ldbghelp
 
-INCLUDEPATH += $$PWD/../src $$PWD/../src/devices $$PWD/../src/fit-sdk
+INCLUDEPATH += $$PWD/../src $$PWD/../src/devices
 DEPENDPATH += $$PWD/../src $$PWD/../src/devices
 
 win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../src/release/libqdomyos-zwift.a
@@ -123,9 +121,7 @@ HEADERS += \
     Erg/TestErgTableSelection.h \
     Erg/TestErgAutoMode.h \
     TrainingProgram/trainprogramtestsuite.h \
-    ToolTests/qfittestsuite.h \
     ToolTests/testsettingstestsuite.h \
-    ToolTests/testtrainingloadtestsuite.h \
     ToolTests/zwiftworkouttestsuite.h \
     Tools/devicetypeid.h \
     Tools/testsettings.h \

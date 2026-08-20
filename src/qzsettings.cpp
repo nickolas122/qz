@@ -32,7 +32,6 @@ const QString QZSettings::elite_sterzo_smart_lastdevice_name = QStringLiteral("e
 const QString QZSettings::default_elite_sterzo_smart_lastdevice_name = QStringLiteral("");
 const QString QZSettings::elite_sterzo_smart_address = QStringLiteral("elite_sterzo_smart_address");
 const QString QZSettings::default_elite_sterzo_smart_address = QStringLiteral("");
-const QString QZSettings::rpe_feel_popup_enabled = QStringLiteral("rpe_feel_popup_enabled");
 const QString QZSettings::code = QStringLiteral("code");
 const QString QZSettings::default_code = QStringLiteral("");
 //--------------------------------------------------------------------------------------------
@@ -590,8 +589,6 @@ const QString QZSettings::default_kettler_usb_serialport = QStringLiteral("");
 const QString QZSettings::kettler_usb_baudrate = QStringLiteral("kettler_usb_baudrate");
 const QString QZSettings::freebeat_serialport = QStringLiteral("freebeat_serialport");
 const QString QZSettings::default_freebeat_serialport = QStringLiteral("");
-const QString QZSettings::strava_virtual_activity = QStringLiteral("strava_virtual_activity");
-const QString QZSettings::powr_sensor_running_cadence_half_on_strava =
     QStringLiteral("powr_sensor_running_cadence_half_on_strava");
 const QString QZSettings::nordictrack_ifit_adb_remote = QStringLiteral("nordictrack_ifit_adb_remote");
 const QString QZSettings::floating_height = QStringLiteral("floating_height");
@@ -670,7 +667,6 @@ const QString QZSettings::bh_spada_2_watt = QStringLiteral("bh_spada_2_watt");
 const QString QZSettings::tacx_neo2_peloton = QStringLiteral("tacx_neo2_peloton");
 const QString QZSettings::sole_treadmill_inclination_fast = QStringLiteral("sole_treadmill_inclination_fast");
 const QString QZSettings::zwift_ocr = QStringLiteral("zwift_ocr");
-const QString QZSettings::fit_file_saved_on_quit = QStringLiteral("fit_file_saved_on_quit");
 const QString QZSettings::gem_module_inclination = QStringLiteral("gem_module_inclination");
 const QString QZSettings::treadmill_simulate_inclination_with_speed =
     QStringLiteral("treadmill_simulate_inclination_with_speed");
@@ -852,7 +848,6 @@ const QString QZSettings::nordictrack_gx_44_pro = QStringLiteral("nordictrack_gx
 const QString QZSettings::OSC_ip = QStringLiteral("osc_ip");
 const QString QZSettings::default_OSC_ip = QStringLiteral("");
 const QString QZSettings::OSC_port = QStringLiteral("osc_port");
-const QString QZSettings::strava_treadmill = QStringLiteral("strava_treadmill");
 const QString QZSettings::iconsole_rower = QStringLiteral("iconsole_rower");
 const QString QZSettings::proform_treadmill_1500_pro = QStringLiteral("proform_treadmill_1500_pro");
 const QString QZSettings::proform_505_cst_80_44 = QStringLiteral("proform_505_cst_80_44");
@@ -860,9 +855,6 @@ const QString QZSettings::proform_trainer_8_0 = QStringLiteral("proform_trainer_
 const QString QZSettings::proform_trainer_8_0_pftl59721_int_0 = QStringLiteral("proform_trainer_8_0_pftl59721_int_0");
 const QString QZSettings::tile_biggears_swap = QStringLiteral("tile_biggears_swap");
 const QString QZSettings::treadmill_follow_wattage = QStringLiteral("treadmill_follow_wattage");
-const QString QZSettings::fit_file_garmin_device_training_effect = QStringLiteral("fit_file_garmin_device_training_effect");
-const QString QZSettings::fit_file_garmin_device_training_effect_device = QStringLiteral("fit_file_garmin_device_training_effect_device");
-const QString QZSettings::garmin_device_serial = QStringLiteral("garmin_device_serial");
 const QString QZSettings::proform_treadmill_705_cst_V80_44 = QStringLiteral("proform_treadmill_705_cst_V80_44");
 const QString QZSettings::nordictrack_treadmill_1750_adb = QStringLiteral("nordictrack_treadmill_1750_adb");
 const QString QZSettings::proform_trainer_9_0 = QStringLiteral("proform_trainer_9_0");
@@ -1007,7 +999,6 @@ const QString QZSettings::tile_negative_inclination_enabled = QStringLiteral("ti
 const QString QZSettings::tile_negative_inclination_order = QStringLiteral("tile_negative_inclination_order");
 const QString QZSettings::tile_hrv_enabled = QStringLiteral("tile_hrv_enabled");
 const QString QZSettings::tile_hrv_order = QStringLiteral("tile_hrv_order");
-const QString QZSettings::chart_display_mode = QStringLiteral("chart_display_mode");
 const QString QZSettings::ios_live_activity_compact_leading_metric =
     QStringLiteral("ios_live_activity_compact_leading_metric");
 const QString QZSettings::default_ios_live_activity_compact_leading_metric = QStringLiteral("Heart Rate");
@@ -1210,7 +1201,7 @@ const QString QZSettings::simulated_bike = QStringLiteral("simulated_bike");
 const QString QZSettings::simulated_bike_ride = QStringLiteral("simulated_bike_ride");
 const QString QZSettings::default_simulated_bike_ride = QLatin1String("");
 
-const uint32_t allSettingsCount = 961;
+const uint32_t allSettingsCount = 952;
 
 QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::cryptoKeySettingsProfiles, QZSettings::default_cryptoKeySettingsProfiles},
@@ -1230,7 +1221,6 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::elite_rizer_address, QZSettings::default_elite_rizer_address},
     {QZSettings::elite_sterzo_smart_lastdevice_name, QZSettings::default_elite_sterzo_smart_lastdevice_name},
     {QZSettings::elite_sterzo_smart_address, QZSettings::default_elite_sterzo_smart_address},
-    {QZSettings::rpe_feel_popup_enabled, QZSettings::default_rpe_feel_popup_enabled},
     {QZSettings::ui_zoom, QZSettings::default_ui_zoom},
     {QZSettings::app_language, QZSettings::default_app_language},
     {QZSettings::bike_heartrate_service, QZSettings::default_bike_heartrate_service},
@@ -1705,8 +1695,6 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::computrainer_serialport, QZSettings::default_computrainer_serialport},
     {QZSettings::kettler_usb_serialport, QZSettings::default_kettler_usb_serialport},
     {QZSettings::kettler_usb_baudrate, QZSettings::default_kettler_usb_baudrate},
-    {QZSettings::strava_virtual_activity, QZSettings::default_strava_virtual_activity},
-    {QZSettings::powr_sensor_running_cadence_half_on_strava,
      QZSettings::default_powr_sensor_running_cadence_half_on_strava},
     {QZSettings::nordictrack_ifit_adb_remote, QZSettings::default_nordictrack_ifit_adb_remote},
     {QZSettings::floating_height, QZSettings::default_floating_height},
@@ -1782,7 +1770,6 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::tacx_neo2_peloton, QZSettings::default_tacx_neo2_peloton},
     {QZSettings::sole_treadmill_inclination_fast, QZSettings::default_sole_treadmill_inclination_fast},
     {QZSettings::zwift_ocr, QZSettings::default_zwift_ocr},
-    {QZSettings::fit_file_saved_on_quit, QZSettings::default_fit_file_saved_on_quit},
     {QZSettings::gem_module_inclination, QZSettings::default_gem_module_inclination},
     {QZSettings::treadmill_simulate_inclination_with_speed,
      QZSettings::default_treadmill_simulate_inclination_with_speed},
@@ -1940,7 +1927,6 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::nordictrack_gx_44_pro, QZSettings::default_nordictrack_gx_44_pro},
     {QZSettings::OSC_ip, QZSettings::default_OSC_ip},
     {QZSettings::OSC_port, QZSettings::default_OSC_port},
-    {QZSettings::strava_treadmill, QZSettings::default_strava_treadmill},
     {QZSettings::iconsole_rower, QZSettings::default_iconsole_rower},
     {QZSettings::proform_treadmill_1500_pro, QZSettings::default_proform_treadmill_1500_pro},
     {QZSettings::proform_505_cst_80_44, QZSettings::default_proform_505_cst_80_44},
@@ -1948,9 +1934,6 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::proform_trainer_8_0_pftl59721_int_0, QZSettings::default_proform_trainer_8_0_pftl59721_int_0},
     {QZSettings::tile_biggears_swap, QZSettings::default_tile_biggears_swap},
     {QZSettings::treadmill_follow_wattage, QZSettings::default_treadmill_follow_wattage},
-    {QZSettings::fit_file_garmin_device_training_effect, QZSettings::default_fit_file_garmin_device_training_effect},
-    {QZSettings::fit_file_garmin_device_training_effect_device, QZSettings::default_fit_file_garmin_device_training_effect_device},
-    {QZSettings::garmin_device_serial, QZSettings::default_garmin_device_serial},
     {QZSettings::proform_treadmill_705_cst_V80_44, QZSettings::default_proform_treadmill_705_cst_V80_44},
     {QZSettings::nordictrack_treadmill_1750_adb, QZSettings::default_nordictrack_treadmill_1750_adb},
     {QZSettings::proform_trainer_9_0, QZSettings::default_proform_trainer_9_0},
@@ -2068,7 +2051,6 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::tile_negative_inclination_order, QZSettings::default_tile_negative_inclination_order},
     {QZSettings::tile_hrv_enabled, QZSettings::default_tile_hrv_enabled},
     {QZSettings::tile_hrv_order, QZSettings::default_tile_hrv_order},
-    {QZSettings::chart_display_mode, QZSettings::default_chart_display_mode},
     {QZSettings::ios_live_activity_compact_leading_metric,
      QZSettings::default_ios_live_activity_compact_leading_metric},
     {QZSettings::ios_live_activity_compact_trailing_metric,

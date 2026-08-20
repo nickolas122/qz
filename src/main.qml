@@ -101,13 +101,11 @@ ApplicationWindow {
     signal gpxpreview_open_clicked(url name)
     signal profile_open_clicked(url name)
     signal trainprogram_open_clicked(url name)
-    signal fitfile_preview_clicked(url name)
     signal trainprogram_open_other_folder(url name)
     signal gpx_open_other_folder(url name)
     signal trainprogram_preview(url name)
     signal trainprogram_zwo_loaded(string s)
     signal trainprogram_autostart_requested()
-    signal fitfile_preview(string s)
     signal gpx_save_clicked()
     signal fit_save_clicked()
     signal refresh_bluetooth_devices_clicked()
@@ -873,7 +871,7 @@ ApplicationWindow {
             id: toolButtonMaps
             icon.source: ( "icons/icons/maps-icon-16.png" )
             onClicked: { loadMaps(); }
-            anchors.right: toolButtonChart.left
+            anchors.right: toolButtonLockTiles.left
             visible: rootItem.mapsVisible
         }      
 
@@ -892,14 +890,6 @@ ApplicationWindow {
             onClicked: { loadVideo(); }
             anchors.right: toolButtonMaps.left
             visible: rootItem.videoIconVisible
-        }
-
-        ToolButton {
-            id: toolButtonChart
-            icon.source: ( "icons/icons/chart.png" )
-            onClicked: { rootItem.chartFooterVisible = !rootItem.chartFooterVisible }
-            anchors.right: toolButtonLockTiles.left
-            visible: rootItem.chartIconVisible
         }
 
         ToolButton {
@@ -968,15 +958,6 @@ ApplicationWindow {
                     }
                 }
 
-            ItemDelegate {
-                text: qsTr("Workouts History")
-                width: parent.width
-                onClicked: {
-                    stackView.push("WorkoutsHistory.qml")
-                    stackView.currentItem.fitfile_preview_clicked.connect(fitfile_preview_clicked)
-                    drawer.close()
-                }
-            }
                 ItemDelegate {
                     text: qsTr("Swag Bag")
                     width: parent.width
@@ -986,18 +967,6 @@ ApplicationWindow {
                     }
                 }
 
-                ItemDelegate {
-                    text: qsTr("Charts")
-                    width: parent.width
-                    onClicked: {
-                        console.log(CHARTJS)
-                        if(CHARTJS)
-                            stackView.push("ChartJsTest.qml")
-                        else
-                            stackView.push("ChartsEndWorkout.qml")
-                        drawer.close()
-                    }
-                }
                 ItemDelegate {
                     id: gpx_open
                     text: qsTr("Open GPX")

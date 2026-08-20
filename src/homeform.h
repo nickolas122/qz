@@ -4,8 +4,6 @@
 #include "PathController.h"
 #include "qtchartscompat.h"
 #include "bluetooth.h"
-#include "fit_profile.hpp"
-#include "fitdatabaseprocessor.h"
 #include "gpx.h"
 #include "rtssosd.h"
 #include "qmdnsengine/browser.h"
@@ -13,13 +11,10 @@
 #include "qmdnsengine/resolver.h"
 #include "screencapture.h"
 #include "sessionline.h"
-#include "smtpclient/src/SmtpMime"
 #include "trainprogram.h"
 // autoInclinationEnabled() below casts VirtualDevice() to virtualtreadmill. The
 // declaration used to arrive transitively through a concrete device header.
 #include "virtualdevices/virtualtreadmill.h"
-#include "workoutmodel.h"
-#include "fitbackupwriter.h"
 #include <QChart>
 #include <QColor>
 #include <QGraphicsScene>
@@ -156,10 +151,7 @@ class homeform : public QObject {
     Q_PROPERTY(bool mapsVisible READ mapsVisible NOTIFY mapsVisibleChanged WRITE setMapsVisible)
     Q_PROPERTY(bool videoIconVisible READ videoIconVisible NOTIFY videoIconVisibleChanged WRITE setVideoIconVisible)
     Q_PROPERTY(bool videoVisible READ videoVisible NOTIFY videoVisibleChanged WRITE setVideoVisible)
-    Q_PROPERTY(bool chartIconVisible READ chartIconVisible NOTIFY chartIconVisibleChanged WRITE setChartIconVisible)
     Q_PROPERTY(
-        bool chartFooterVisible READ chartFooterVisible NOTIFY chartFooterVisibleChanged WRITE setChartFooterVisible)
-    Q_PROPERTY(bool chartTreadmillMode READ chartTreadmillMode NOTIFY chartTreadmillModeChanged WRITE
                    setChartTreadmillMode)
     Q_PROPERTY(QUrl videoPath READ videoPath NOTIFY videoPathChanged)
     Q_PROPERTY(int videoPosition READ videoPosition NOTIFY videoPositionChanged WRITE setVideoPosition)
@@ -169,12 +161,6 @@ class homeform : public QObject {
     Q_PROPERTY(QString workoutStartDate READ workoutStartDate)
     Q_PROPERTY(QString workoutName READ workoutName)
     Q_PROPERTY(QString instructorName READ instructorName)
-    Q_PROPERTY(int workout_sample_points READ workout_sample_points)
-    Q_PROPERTY(QList<double> workout_watt_points READ workout_watt_points)
-    Q_PROPERTY(QList<double> workout_heart_points READ workout_heart_points)
-    Q_PROPERTY(QList<double> workout_cadence_points READ workout_cadence_points)
-    Q_PROPERTY(QList<double> workout_peloton_resistance_points READ workout_peloton_resistance_points)
-    Q_PROPERTY(QList<double> workout_resistance_points READ workout_resistance_points)
     Q_PROPERTY(double wattMaxChart READ wattMaxChart)
     Q_PROPERTY(bool autoResistance READ autoResistance NOTIFY autoResistanceChanged WRITE setAutoResistance)
     Q_PROPERTY(bool stopRequested READ stopRequested NOTIFY stopRequestedChanged WRITE setStopRequestedChanged)
@@ -218,26 +204,6 @@ class homeform : public QObject {
         QObject *stack = rootObject;
         screenCapture s(reinterpret_cast<QQuickView *>(stack));
         s.capture(filenameScreenshot);
-        chartImagesFilenames.append(filenameScreenshot);
-    }
-
-    Q_INVOKABLE void save_screenshot_chart(QQuickItem *item, QString filename) {
-        if (!stopped) {
-            return;
-        }
-
-        QString path = getWritableAppDir();
-
-        QString filenameScreenshot =
-            path + QDateTime::currentDateTime().toString().replace(QStringLiteral(":"), QStringLiteral("_")) +
-            QStringLiteral("_") + filename.replace(QStringLiteral(":"), QStringLiteral("_")) + QStringLiteral(".jpg");
-        QSharedPointer<const QQuickItemGrabResult> grabResult = item->grabToImage();
-
-        connect(grabResult.data(), &QQuickItemGrabResult::ready, [=]() { // NOTE: clazy-connect-3arg-lambda
-            grabResult->saveToFile(filenameScreenshot);
-            // chartImages.append(grabResult->image());
-            chartImagesFilenames.append(filenameScreenshot);
-        });
     }
 
     Q_INVOKABLE void update_chart_power(QQuickItem *item) {
@@ -273,72 +239,6 @@ class homeform : public QObject {
                     plotAreaGradient.setColorAt((maxWatt - (ftpSetting * 1.20)) / maxWatt, QColor("darkorange"));
                     plotAreaGradient.setColorAt((maxWatt - (ftpSetting * 1.5)) / maxWatt, QColor("orangered"));
                     plotAreaGradient.setColorAt(0.0, QColor("red"));
-                    plotAreaGradient.setCoordinateMode(QGradient::ObjectBoundingMode);
-                    chart->setPlotAreaBackgroundBrush(plotAreaGradient);
-                    chart->setPlotAreaBackgroundVisible(true);
-                }
-            }
-        }
-    }
-    Q_INVOKABLE void update_chart_heart(QQuickItem *item) {
-        if (QGraphicsScene *scene = item->findChild<QGraphicsScene *>()) {
-            auto items_list = scene->items();
-            for (QGraphicsItem *it : qAsConst(items_list)) {
-                if (QChart *chart = dynamic_cast<QChart *>(it)) {
-                    // Customize chart background
-                    QLinearGradient backgroundGradient;
-                    QSettings settings;
-                    double maxHeartRate = heartRateMax();
-                    /*backgroundGradient.setStart(QPointF(0, 0));
-                    backgroundGradient.setFinalStop(QPointF(0, 1));
-                    backgroundGradient.setColorAt((220 - (maxHeartRate *
-                    settings.value(QZSettings::heart_rate_zone1, QZSettings::default_heart_rate_zone1).toDouble() /
-                    100)) / 220, QColor("lightsteelblue")); backgroundGradient.setColorAt((220 - (maxHeartRate *
-                    settings.value(QZSettings::heart_rate_zone2, QZSettings::default_heart_rate_zone2).toDouble() /
-                    100)) / 220, QColor("green")); backgroundGradient.setColorAt((220 - (maxHeartRate *
-                    settings.value(QZSettings::heart_rate_zone3, QZSettings::default_heart_rate_zone3).toDouble() /
-                    100)) / 220, QColor("yellow")); backgroundGradient.setColorAt((220 - (maxHeartRate *
-                    settings.value(QZSettings::heart_rate_zone4, QZSettings::default_heart_rate_zone4).toDouble() /
-                    100)) / 220, QColor("orange")); backgroundGradient.setColorAt(0.0, QColor("red")); */
-
-                    // backgroundGradient.setCoordinateMode(QGradient::ObjectBoundingMode);
-                    // chart->setBackgroundBrush(backgroundGradient);
-                    // Customize plot area background
-                    QLinearGradient plotAreaGradient;
-                    plotAreaGradient.setStart(QPointF(0, 0));
-                    plotAreaGradient.setFinalStop(QPointF(0, 1));
-                    const double heartChartBottom = maxHeartRate * 0.5;
-                    const double heartChartTop = maxHeartRate;
-                    const double heartChartRange = heartChartTop - heartChartBottom;
-                    auto heartGradientStop = [&](double zonePercent) {
-                        double stop = (heartChartTop - ((maxHeartRate * zonePercent) / 100.0)) / heartChartRange;
-                        if (stop < 0.0)
-                            return 0.0;
-                        if (stop > 1.0)
-                            return 1.0;
-                        return stop;
-                    };
-                    plotAreaGradient.setColorAt(
-                        heartGradientStop(
-                            settings.value(QZSettings::heart_rate_zone1, QZSettings::default_heart_rate_zone1)
-                                .toDouble()),
-                        QColor(QStringLiteral("lightsteelblue")));
-                    plotAreaGradient.setColorAt(
-                        heartGradientStop(
-                            settings.value(QZSettings::heart_rate_zone2, QZSettings::default_heart_rate_zone2)
-                                .toDouble()),
-                        QColor(QStringLiteral("green")));
-                    plotAreaGradient.setColorAt(
-                        heartGradientStop(
-                            settings.value(QZSettings::heart_rate_zone3, QZSettings::default_heart_rate_zone3)
-                                .toDouble()),
-                        QColor(QStringLiteral("yellow")));
-                    plotAreaGradient.setColorAt(
-                        heartGradientStop(
-                            settings.value(QZSettings::heart_rate_zone4, QZSettings::default_heart_rate_zone4)
-                                .toDouble()),
-                        QColor(QStringLiteral("orange")));
-                    plotAreaGradient.setColorAt(0.0, QColor(QStringLiteral("red")));
                     plotAreaGradient.setCoordinateMode(QGradient::ObjectBoundingMode);
                     chart->setPlotAreaBackgroundBrush(plotAreaGradient);
                     chart->setPlotAreaBackgroundVisible(true);
@@ -416,19 +316,6 @@ class homeform : public QObject {
         return settings.value(QZSettings::confirm_stop_workout, QZSettings::default_confirm_stop_workout).toBool();
     }
 
-    Q_INVOKABLE bool rpeFeelPopupEnabled() {
-        QSettings settings;
-        return settings.value(QZSettings::rpe_feel_popup_enabled, QZSettings::default_rpe_feel_popup_enabled).toBool();
-    }
-
-    // Called from QML once the post-workout RPE/feel popup is dismissed (Save or Skip, rpe/feel -1 if skipped).
-    // Stop() defers fit_save_clicked() until this is called when the popup is enabled.
-    Q_INVOKABLE void finalizeFitSave(int rpe, int feel) {
-        m_workoutRpe = rpe;
-        m_workoutFeel = feel;
-        fit_save_clicked();
-    }
-
     Q_INVOKABLE bool locationServices() {
         return m_locationServices;
     }
@@ -486,9 +373,6 @@ class homeform : public QObject {
     bool mapsVisible();
     bool videoIconVisible();
     bool videoVisible() { return m_VideoVisible; }
-    bool chartIconVisible();
-    bool chartFooterVisible() { return m_ChartFooterVisible; }
-    bool chartTreadmillMode() { return m_ChartTreadmillMode; }
     int videoPosition();
     double videoRate();
     double currentSpeed() {
@@ -520,18 +404,9 @@ class homeform : public QObject {
     }
     void setLicensePopupVisible(bool value);
     void setVideoIconVisible(bool value);
-    void setChartIconVisible(bool value);
     void setVideoVisible(bool value) {
         m_VideoVisible = value;
         emit videoVisibleChanged(m_VideoVisible);
-    }
-    void setChartFooterVisible(bool value) {
-        m_ChartFooterVisible = value;
-        emit chartFooterVisibleChanged(m_ChartFooterVisible);
-    }
-    void setChartTreadmillMode(bool value) {
-        m_ChartTreadmillMode = value;
-        emit chartTreadmillModeChanged(m_ChartTreadmillMode);
     }
     void setVideoPosition(int position); // on startup
     void videoSeekPosition(int ms);      // in realtime
@@ -569,7 +444,6 @@ private:
 
 public:
     void setGeneralPopupVisible(bool value);
-    int workout_sample_points() { return Session.count(); }
     int preview_workout_points();
 
 #if defined(Q_OS_ANDROID)
@@ -593,9 +467,6 @@ public:
             return settings.value(QZSettings::ftp, QZSettings::default_ftp).toDouble() * 2;
         }
     }
-
-    Q_INVOKABLE void sendMail();
-
     Q_INVOKABLE void keyboardStartStop() { StartRequested(); }
     Q_INVOKABLE void keyboardStop() { StopRequested(); }
     Q_INVOKABLE void keyboardLap() { Lap(); }
@@ -610,47 +481,6 @@ public:
     Q_INVOKABLE void sortTiles();
     Q_INVOKABLE void moveTile(QString name, int newIndex, int oldIndex);
     DataObject *tileFromName(QString name);
-
-    QList<double> workout_watt_points() {
-        QList<double> l;
-        l.reserve(Session.size() + 1);
-        for (const SessionLine &s : qAsConst(Session)) {
-            l.append(s.watt);
-        }
-        return l;
-    }
-    QList<double> workout_heart_points() {
-        QList<double> l;
-        l.reserve(Session.size() + 1);
-        for (const SessionLine &s : qAsConst(Session)) {
-            l.append(s.heart);
-        }
-        return l;
-    }
-    QList<double> workout_cadence_points() {
-        QList<double> l;
-        l.reserve(Session.size() + 1);
-        for (const SessionLine &s : qAsConst(Session)) {
-            l.append(s.cadence);
-        }
-        return l;
-    }
-    QList<double> workout_resistance_points() {
-        QList<double> l;
-        l.reserve(Session.size() + 1);
-        for (const SessionLine &s : qAsConst(Session)) {
-            l.append(s.resistance);
-        }
-        return l;
-    }
-    QList<double> workout_peloton_resistance_points() {
-        QList<double> l;
-        l.reserve(Session.size() + 1);
-        for (const SessionLine &s : qAsConst(Session)) {
-            l.append(s.peloton_resistance);
-        }
-        return l;
-    }
 
     QList<double> preview_workout_watt() {
         QList<double> l;
@@ -866,7 +696,6 @@ public:
     QQmlApplicationEngine *engine;
     trainprogram *trainProgram = nullptr;
     trainprogram *previewTrainProgram = nullptr;
-    QString backupFitFileName =
         QStringLiteral("QZ-backup-") +
         QDateTime::currentDateTime().toString().replace(QStringLiteral(":"), QStringLiteral("_")) +
         QStringLiteral(".fit");
@@ -879,9 +708,6 @@ public:
     bool m_MapsVisible = false;
     bool m_VideoIconVisible = false;
     bool m_VideoVisible = false;
-    bool m_ChartFooterVisible = false;
-    bool m_ChartIconVisible = false;
-    bool m_ChartTreadmillMode = false;
     int m_VideoPosition = 0;
     double m_VideoRate = 1;
 
@@ -905,25 +731,14 @@ public:
     QString m_clipboardWorkoutPromptFile = QStringLiteral("");
     QString m_activeClipboardWorkoutFile = QStringLiteral("");
     QByteArray m_lastClipboardWorkoutHash;
-    FitDatabaseProcessor *fitProcessor = nullptr;
-    WorkoutModel *workoutModel = nullptr;
     int m_zwiftLoginState = -1;
     QString stravaPelotonActivityName;
     QString stravaPelotonInstructorName;
     QString stravaWorkoutName = "";
     QUrl movieFileName;
-    FIT_SPORT stravaPelotonWorkoutType = FIT_SPORT_INVALID;
     QString activityDescription;
 
-    QString lastFitFileSaved = QLatin1String("");
     QString lastTrainProgramFileSaved = QLatin1String("");
-
-    // Perceived exertion (RPE, 0-10) and feel (0-100) entered in the post-workout popup; -1 means not set
-    int m_workoutRpe = -1;
-    int m_workoutFeel = -1;
-
-    QList<QString> chartImagesFilenames;
-    bool mailSent = false;
 
     bool m_autoresistance = true;
     bool m_stopRequested = false;
@@ -932,16 +747,11 @@ public:
     bool m_nativeShortcutCaptureSuspended = false;
 
     QTimer *timer;
-    QTimer *backupTimer;
     QTimer *automaticShiftingTimer;
     QTimer *clipboardWorkoutTimer = nullptr;
 
     // HR PID controller state - tracks when training program changes speed to prevent race conditions
     QDateTime lastTrainingProgramSpeedChange = QDateTime::fromMSecsSinceEpoch(0);
-
-    // FIT backup threading
-    QThread *fitBackupThread;
-    FitBackupWriter *fitBackupWriter;
 
 
 
@@ -957,7 +767,6 @@ public:
     void ten_hz();
     void checkClipboardForWorkout();
     double heartRateMax();
-    void backup();
     bool getDevice();
     bool getLap();
     void Start_inner(bool send_event_to_device);
@@ -1039,19 +848,15 @@ public:
     void profile_open_clicked(const QUrl &fileName);
     void trainprogram_preview(const QUrl &fileName);
     void gpxpreview_open_clicked(const QUrl &fileName);
-    void fitfile_preview_clicked(const QUrl &fileName);
     void trainprogram_zwo_loaded(const QString &comp);
     void gpx_open_clicked(const QUrl &fileName);
     void gpx_save_clicked();
-    void fit_save_clicked();
     void saveSessionAsTrainingProgram();
     void trainProgramSignals();
     void onTrainingProgramSpeedChanged(double speed);
     void refresh_bluetooth_devices_clicked();
     void zwiftLoginState(bool ok);
-    void smtpError(SmtpClient::SmtpError e);
     void setActivityDescription(QString newdesc);
-    void chartSaved(QString fileName);
     void sortTilesTimeout();
     void gearUp();
     void gearDown();
@@ -1106,9 +911,6 @@ public:
     void videoPositionChanged(int value);
     void videoPathChanged(QUrl value);
     void videoRateChanged(double value);
-    void chartIconVisibleChanged(bool value);
-    void chartFooterVisibleChanged(bool value);
-    void chartTreadmillModeChanged(bool value);
     void manualCscBikeResistanceAdjusted(resistance_t resistance);
     void currentSpeedChanged(double value);
     void mapsVisibleChanged(bool value);
@@ -1125,8 +927,6 @@ public:
     void previewWorkoutPointsChanged(int value);
     void previewWorkoutDescriptionChanged(QString value);
     void previewWorkoutTagsChanged(QString value);
-
-    void previewFitFile(const QString &filename, const QString &result, const QString &workoutName);
 
 
 

@@ -74,12 +74,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout submodule repo
-        uses: actions/checkout@v4
-        with:
-          repository: bluetiger9/SmtpClient-for-Qt
-          path: "src/smtpclient/"
-          ref: 863843c34e03b50d41b8ae8ab6af00e9351693ca   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:
@@ -445,13 +439,6 @@ jobs:
 #
 #    steps:
 #      - uses: actions/checkout@v2
-#      - name: Checkout submodule repo
-#        uses: actions/checkout@v2
-#        with:
-#          repository: bluetiger9/SmtpClient-for-Qt
-#          path: "src/smtpclient/"
-#          ref: 863843c34e03b50d41b8ae8ab6af00e9351693ca   # v2.0: the first SmtpClient with Qt 6 support
-#
 #
 #      - uses: msys2/setup-msys2@v2
 #        with:
@@ -532,12 +519,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout smtpclient
-        uses: actions/checkout@v4
-        with:
-          repository: bluetiger9/SmtpClient-for-Qt
-          path: "src/smtpclient/"
-          ref: 863843c34e03b50d41b8ae8ab6af00e9351693ca   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:
@@ -724,12 +705,6 @@ jobs:
 
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
-      - name: Checkout submodule repo
-        uses: actions/checkout@v4
-        with:
-          repository: bluetiger9/SmtpClient-for-Qt
-          path: "src/smtpclient/"
-          ref: 863843c34e03b50d41b8ae8ab6af00e9351693ca   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:
@@ -796,15 +771,6 @@ jobs:
         with:
           name: test_results_xml
           path: tst/test-results/**/*.xml
-
-      - name: Upload test FIT files and database
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: test_fit_files_and_db
-          path: |
-            tst/test-artifacts/*.fit
-            tst/test-artifacts/*.sqlite
 
 #      - uses: actions/checkout@v2
 #        with:
@@ -1315,12 +1281,6 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
-      - name: Checkout submodule repo
-        uses: actions/checkout@v4
-        with:
-          repository: bluetiger9/SmtpClient-for-Qt
-          path: "src/smtpclient/"
-          ref: 863843c34e03b50d41b8ae8ab6af00e9351693ca   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:
@@ -1405,12 +1365,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout submodule repo
-        uses: actions/checkout@v4
-        with:
-          repository: bluetiger9/SmtpClient-for-Qt
-          path: "src/smtpclient/"
-          ref: 863843c34e03b50d41b8ae8ab6af00e9351693ca   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:
@@ -1631,12 +1585,6 @@ jobs:
     if: false
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout submodule repo
-        uses: actions/checkout@v4
-        with:
-          repository: bluetiger9/SmtpClient-for-Qt
-          path: "src/smtpclient/"
-          ref: 863843c34e03b50d41b8ae8ab6af00e9351693ca   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:

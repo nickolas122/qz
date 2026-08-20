@@ -629,7 +629,7 @@ Existing suites, and their fate:
 | `ergtabletestsuite`, `TestErgTableSelection`, `TestErgAutoMode` | ERG tables | Keep unless `ergtable` is cut |
 | `TestZwiftRideController` | Zwift Play/Click | **Keep** — open question 6 resolved kept |
 | ~~`garminconnecttestsuite`~~ | Garmin | **Deleted**, Phase 1 |
-| `qfittestsuite`, `testtrainingloadtestsuite` | FIT writing, training load | **Delete** with Phase 2 |
+| ~~`qfittestsuite`, `testtrainingloadtestsuite`~~ | FIT writing, training load | **Deleted**, Phase 2 |
 | `trainprogramtestsuite`, `zwiftworkouttestsuite` | training programs, ZWO | **Delete** with Phase 3 |
 | `testsettingstestsuite` | settings plumbing | **Keep and extend** (§11.5) |
 
@@ -818,6 +818,44 @@ paper over its Qt 5/6 signature change.
 *Tests:* as Phase 1. Confirm the app starts and rides with no session storage — the
 absence of a writer must not fault the metric pipeline.
 *Hardware:* **none.**
+*Status:* **done 2026-08-20.** 340 files deleted, ~93,600 lines — the largest single
+deletion the strip will make, and almost all of it vendored: `fit-sdk/` is 314 files and
+84,900 lines on its own, and `smtpclient/` was a submodule checked out by six separate CI
+steps that are now gone too.
+
+Settings: `allSettingsCount` 961 → 952, catalog 931 → 923. Only nine keys, which is the
+surprise of the phase — recording was enormous in code and nearly free in configuration.
+
+**`Session` stays.** §7 lists the writers and the viewers, not the in-memory ride, and the
+distinction turned out to be load-bearing: `metric::calculateVO2Max()` and
+`metric::powerPeak()` take a `QList<SessionLine>*`, both live in the kept `metric.*`, and
+both feed tiles. `sessionline` is confirmed kept for the same reason — one of §6's
+"verify before assuming kept" entries now settled.
+
+Four things came out that §7 does not name, each because its only caller was in the group:
+
+- The **RPE/feel popup**. It existed to embed two numbers in the FIT file before writing
+  it. With no file to write, `finalizeFitSave()`, `rpe_feel_popup_enabled` and the popup
+  itself are pointless. `Stop()` no longer defers anything.
+- The **gzip helpers** (`crc32ForGzip`, `appendLittleEndian32`, `gzipCompress`). They
+  compressed the debug log for the e-mail attachment. File-static, so leaving them would
+  have started warning.
+- `TemplateInfoSenderBuilder::previewSessionOnChart()`, which had no caller left once
+  `homeform::fitfile_preview_clicked()` went, and which was the last thing outside the
+  group holding an `#include "fit_profile.hpp"`.
+- `mainwindow.cpp`'s Charts window, and `main.cpp`'s `-fit-file-saved-on-quit`.
+
+**Qt Charts stays**, which is worth stating because it looks like it should have gone.
+`TrainingProgramsList.qml` draws the workout *preview* with it, so `update_chart_power()`,
+`wattMaxChart()` and `qtchartscompat.h` survive to Group C. `update_chart_heart()` and
+`save_screenshot_chart()` had no caller outside the deleted end-of-workout screen and went.
+
+Two settings that read as Group A residue are gone here instead, because `qfit` was their
+only reader: `strava_virtual_activity`, `strava_treadmill` and the half-cadence switch
+decided how the FIT file was *written*, not where it was uploaded. Same for
+`fit_file_garmin_device_training_effect*` and `garmin_device_serial`, which wrote a Garmin
+product ID into the file. `powr_sensor_running_cadence_double` is **not** one of these —
+`characteristicnotifier2ad2` reads it, so it is bridge and it stays.
 
 **Phase 3 — training programs**
 *Criteria:* `trainprogram`, ZWO, GPX, KML, video and maps gone; `trainprogramtestsuite` and

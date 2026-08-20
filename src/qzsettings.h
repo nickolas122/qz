@@ -2,7 +2,6 @@
 #define QZSETTINGS_H
 
 #include <QString>
-#include "fit-sdk/fit_profile.hpp"
 
 class QZSettings {
   private:
@@ -69,9 +68,6 @@ class QZSettings {
 
     static const QString elite_sterzo_smart_address;
     static const QString default_elite_sterzo_smart_address;
-
-    static const QString rpe_feel_popup_enabled;
-    static constexpr bool default_rpe_feel_popup_enabled = false;
 
     static const QString code;
     static const QString default_code;
@@ -1716,12 +1712,6 @@ class QZSettings {
     static const QString freebeat_serialport;
     static const QString default_freebeat_serialport;
 
-    static const QString strava_virtual_activity;
-    static constexpr bool default_strava_virtual_activity = true;
-
-    static const QString powr_sensor_running_cadence_half_on_strava;
-    static constexpr bool default_powr_sensor_running_cadence_half_on_strava = false;
-
     static const QString nordictrack_ifit_adb_remote;
     static constexpr bool default_nordictrack_ifit_adb_remote = false;
 
@@ -1911,9 +1901,6 @@ class QZSettings {
 
     static const QString zwift_ocr;
     static constexpr bool default_zwift_ocr = false;
-
-    static const QString fit_file_saved_on_quit;
-    static constexpr bool default_fit_file_saved_on_quit = false;
 
     static const QString gem_module_inclination;
     static constexpr bool default_gem_module_inclination = false;
@@ -2390,9 +2377,6 @@ class QZSettings {
     static const QString OSC_port;
     static constexpr int default_OSC_port = 9000;
 
-    static const QString strava_treadmill;
-    static constexpr bool default_strava_treadmill = true;
-
     static const QString iconsole_rower;
     static constexpr bool default_iconsole_rower = false;
 
@@ -2412,15 +2396,6 @@ class QZSettings {
 
     static const QString treadmill_follow_wattage;
     static constexpr bool default_treadmill_follow_wattage = false;
-
-    static const QString fit_file_garmin_device_training_effect;
-    static constexpr bool default_fit_file_garmin_device_training_effect = false;
-
-    static const QString fit_file_garmin_device_training_effect_device;
-    static constexpr int default_fit_file_garmin_device_training_effect_device = FIT_GARMIN_PRODUCT_EDGE_830;
-
-    static const QString garmin_device_serial;
-    static constexpr uint32_t default_garmin_device_serial = 3313379353;
 
     static const QString proform_treadmill_705_cst_V80_44;
     static constexpr bool default_proform_treadmill_705_cst_V80_44 = false;
@@ -2807,12 +2782,6 @@ class QZSettings {
      */
     static const QString tile_hrv_order;
     static constexpr int default_tile_hrv_order = 78;
-
-    /**
-     * @brief Chart display mode: 0 = both charts, 1 = heart rate only, 2 = power only
-     */
-    static const QString chart_display_mode;
-    static constexpr int default_chart_display_mode = 0;
 
     /**
      * @brief Metric shown on the leading side of the iOS Dynamic Island compact Live Activity.

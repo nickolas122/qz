@@ -1,5 +1,4 @@
 #include "mainwindow.h"
-#include "charts.h"
 #include "gpx.h"
 #include "virtualdevices/virtualtreadmill.h"
 #include "ui_mainwindow.h"
@@ -8,7 +7,6 @@
 
 using namespace std::chrono_literals;
 
-charts *Charts = nullptr;
 
 void MainWindow::load(bluetooth *b) {
     ui->setupUi(this);
@@ -193,39 +191,11 @@ void MainWindow::update() {
 
         Session.append(s);
 
-        if (ui->chart->isChecked()) {
-            if (!Charts) {
-
-                Charts = new charts(this);
-                Charts->show();
-            }
-            Charts->update();
-        }
     } else {
 
         ui->connectionToTreadmill->setEnabled(false);
         ui->connectionToZwift->setEnabled(false);
 
-        /*
-         * DEBUG CHARTS
-         *
-
-        if(!Charts)
-        {
-            Charts = new charts(this);
-            Charts->show();
-        }
-
-        SessionLine s(
-                      (double)QRandomGenerator::global()->bounded(22),
-                      QRandomGenerator::global()->bounded(15),
-                      (double)QRandomGenerator::global()->bounded(15),
-                      QRandomGenerator::global()->bounded(150),
-                      0,
-                      QRandomGenerator::global()->bounded(180));
-
-        Session.append(s);
-        Charts->update();*/
     }
 }
 

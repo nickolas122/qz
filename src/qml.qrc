@@ -12,8 +12,6 @@
         <file>AccordionCheckElement.qml</file>
         <file>icons/arrow-collapse-vertical.png</file>
         <file>icons/arrow-expand-vertical.png</file>
-        <file>ChartsEndWorkout.qml</file>
-        <file>ChartsEndWorkoutForm.ui.qml</file>
         <file>TemplateTcpClient.qml</file>
         <file>TemplateWebServer.qml</file>
         <file>templates/vlc-TcpClient.qzt</file>
@@ -28,7 +26,6 @@
         <file>TrainingProgramsListJS.qml</file>
         <file>WorkoutEditor.qml</file>
         <file>SettingsList.qml</file>
-        <file>ChartJsTest.qml</file>
         <file>inner_templates/chartjs/.eslintrc.js</file>
         <file>inner_templates/chartjs/.jshintrc</file>
         <file>inner_templates/chartjs/chart.htm</file>
@@ -87,8 +84,6 @@
         <file>gpx/Richmond Park.gpx</file>
         <file>gpx/St Andrews to Pittenweem.gpx</file>
         <file>GPXList.qml</file>
-        <file>WorkoutsHistory.qml</file>
-        <file>WorkoutTypeTag.qml</file>
         <file>inner_templates/previewchart/ajax-loader.gif</file>
         <file>inner_templates/previewchart/chart.htm</file>
         <file>inner_templates/previewchart/dochart.js</file>
@@ -122,9 +117,6 @@
         <file>inner_templates/workouteditor/workout-editor-app.js</file>
         <file>inner_templates/workoutpreview/preview.html</file>
         <file>inner_templates/trainingbrowser/browser.html</file>
-        <file>ChartFooter.qml</file>
-        <file>ChartFooterInnerJS.qml</file>
-        <file>ChartFooterInnerNoJS.qml</file>
         <file>inner_templates/chartjs/dochartliveheart.js</file>
         <file>Wizard.qml</file>
         <file>gears.qml</file>
@@ -133,7 +125,6 @@
         <file>StaticAccordionElement.qml</file>
         <file>inner_templates/chartjs/dotreadmillchartlive.js</file>
         <file>inner_templates/chartjs/treadmillchartlive.htm</file>
-        <file>PreviewChart.qml</file>
         <file>inner_templates/floating/hfloating.htm</file>
     </qresource>
 </RCC>

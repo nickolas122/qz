@@ -204,7 +204,6 @@
     <ClCompile Include="bike.cpp" />
     <ClCompile Include="bluetooth.cpp" />
     <ClCompile Include="bluetoothdevice.cpp" />
-    <ClCompile Include="charts.cpp" />
     <ClCompile Include="domyosbike.cpp" />
     <ClCompile Include="domyostreadmill.cpp" />
     <ClCompile Include="gpx.cpp" />
@@ -223,8 +222,6 @@
     <QtMoc Include="bluetooth.h">
     </QtMoc>
     <QtMoc Include="bluetoothdevice.h">
-    </QtMoc>
-    <QtMoc Include="charts.h">
     </QtMoc>
     <QtMoc Include="domyosbike.h">
     </QtMoc>
@@ -266,8 +263,6 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <QtUic Include="charts.ui">
-    </QtUic>
     <QtUic Include="mainwindow.ui">
     </QtUic>
   </ItemGroup>
