@@ -13,9 +13,10 @@ Everything that is not that job is removed from the tree.
 
 ### Non-goals
 
-- Supporting anyone else's *trainer*, or anyone else's workflow. Accessories that hang
-  off this rider's own setup — fans, shifters, body sensors — are kept; see §7 Group E for
-  where that line falls and why it is not the same line.
+- Supporting anyone else's *trainer*, or anyone else's workflow. Accessories that hang off
+  this rider's own bike — fans, shifters, steering, a core-temperature sensor — are kept;
+  see §7 Group E for where that line falls and why it is not the same line. Running
+  accessories are not kept: this is a bike.
 - Staying mergeable with upstream (see §3.1).
 - Replacing what the training apps already do well: route selection, workout structure,
   activity recording, social features.
@@ -73,6 +74,11 @@ Decided 2026-08-16. `virtualdevices/*.cpp` are in the unconditional `SOURCES` li
 stack already compiles into the Windows build. **It stays.** Android and the future Pi
 need those exact files, so this costs nothing — it follows from §3.4 rather than being a
 separate concession.
+
+One exception, added 2026-08-20: this protects the peripheral role, not every file that
+implements it. `virtualtreadmill` publishes a *treadmill*, which nothing in this fork is,
+and it comes out with Group E. `virtualbike` — the file the argument above is actually
+about — is untouched.
 
 What it is *not* is a working Windows fallback. Under Qt the controller never advertises.
 The code is present, compiled and inert.
@@ -190,7 +196,7 @@ GPLv3, unchanged. Attribution to Roberto Viola stays regardless of how much is d
 | `homeform.cpp` | 10,688 lines |
 | Settings keys (`allSettingsCount`) | 1,010 |
 | …of which tile plumbing | **471** (91 tiles × visible/order + defaults) |
-| Device drivers | 18 (already cut from upstream's 132); 16 after §7 Group E, or 15 if `cscbike` goes with them |
+| Device drivers | 18 (already cut from upstream's 132); 14 after §7 Group E, or 13 if `cscbike` goes with them |
 | QML files in `src/` | 50 |
 
 ### 4.1 Coupling, measured
@@ -248,7 +254,8 @@ Proposed. Anything not listed is a deletion candidate in §7.
 
 **Bridge:** `devices/bluetooth.*`, `devices/bike.*`, `devices/bluetoothdevice.*`,
 `devices/ftmsbike/`, `devices/heartratebelt/`, `devices/dircon/`,
-`virtualdevices/` (**all platforms including Windows** — §3.2.1),
+`virtualdevices/` minus `virtualtreadmill` (**all platforms including Windows** — §3.2.1,
+and §7 Group E for the exception),
 `qmdnsengine/`, `qtbluetoothcompat`, `windowsblebond`, `definitions`, `metric`,
 `inclinationresistancetable`, `wheelcircumference`, `localipaddress`.
 
@@ -262,7 +269,8 @@ Proposed. Anything not listed is a deletion candidate in §7.
 `elitesquarecontroller`, `elitesterzosmart`, `eliterizer`; and the body sensors
 `coresensor`, `moxy5sensor`, `strydrunpowersensor`.
 
-**Fork features:** `gamepadcontroller`, `rtssosd`, `customgears.qml`, `gears.qml`.
+**Fork features:** `gamepadcontroller`, `rtssosd`, `customgears.qml`, `gears.qml`,
+`zwift_play/` and `zwift-api/` (decided 2026-08-20 — §12 q6).
 
 **Verify before assuming kept:** `ergtable`, `treadmillErgTable`, `sessionline`,
 `simplecrypt`, `handleurl`, `filedownloader`, `mywhooshlink`, `cscbike` (see §4.1).
@@ -307,35 +315,38 @@ its size.
 *Verify first:* the template system is how some overlays get data. Confirm the RTSS path
 does not route through it before deleting.
 
-### Group E — rival trainers only
+### Group E — rival trainers, and anything that is not for this bike
 
 **Revised 2026-08-20.** This group used to cut the device layer down to `ftmsbike` +
 `heartratebelt` + `dircon` and take everything else with it. That was drawn from the file
-list rather than from what the files do, and it was wrong: it swept up twelve drivers that
+list rather than from what the files do, and it was wrong: it swept up a dozen drivers that
 are not trainers at all.
 
-The line is **what the driver competes with**, not where it lives:
+A driver goes if **either** test fires, and only then:
 
-- A driver that derives from `bike` and *is* the thing being ridden is a rival trainer.
-  Nobody rides two, so a second one is dead weight the moment the FTMS trainer is the
-  only supported machine.
-- A driver for something that hangs off the rider's own setup — a fan, a shifter, a
-  steering plate, a body sensor — coexists with the trainer rather than replacing it.
-  Deleting one removes a capability from *this* rider; deleting a rival trainer removes
-  support for somebody else's.
+1. **It competes with the trainer.** Anything that derives from `bike` and *is* the thing
+   being ridden. Nobody rides two, so a second one is dead weight the moment the FTMS
+   trainer is the only supported machine. Deleting it removes support for somebody else's
+   hardware, which §1 already declares a non-goal.
+2. **It is for a different sport.** A running pod or a sensor whose readings only mean
+   something off the bike. QZ is a bike bridge; a treadmill accessory is somebody else's
+   workflow even when the rider owns one.
 
-Only the first kind goes.
+Everything left over — a fan, a shifter, a steering plate, a sensor worn while riding —
+coexists with the trainer rather than replacing it. Deleting one of those removes a
+capability from *this* rider and buys nothing.
 
-**Deleted:** `smartspin2k` (676 lines) and `stagesbike` (875). Both derive from `bike`
-and both are trainers this fork does not own.
+**Deleted:** `smartspin2k` (676 lines) and `stagesbike` (875), both rival trainers deriving
+from `bike`; plus `moxy5sensor` (320) and `strydrunpowersensor` (912), which are accessories
+but are for running rather than for this bike (decided 2026-08-20).
 
-**Kept** — 5,377 lines across twelve drivers, in three families:
+**Kept** — 4,145 lines across ten drivers, in three families:
 
 | Family | Drivers | What it is |
 | --- | --- | --- |
 | Fans | `eliteariafan`, `fitmetria_fanfit`, `wahookickrheadwind` | cooling, driven from the ride's power or heart rate |
-| Shifters and steering | `sramAXSController`, `cycplusbc2controller`, `thinkridercontroller`, `elitesquarecontroller`, `elitesterzosmart`, `eliterizer` | gear and grade input, the same category as the kept `gamepadcontroller` |
-| Body sensors | `coresensor`, `moxy5sensor`, `strydrunpowersensor` | core temperature, muscle oxygen, running power |
+| Shifters and steering | `sramAXSController`, `cycplusbc2controller`, `thinkridercontroller`, `elitesquarecontroller`, `elitesterzosmart`, `eliterizer` | gear and grade input, the same category as the kept `gamepadcontroller` and the kept Zwift Play/Click (§12 q6) |
+| Body sensors | `coresensor` | core temperature, worn on the bike |
 
 `elitesterzosmart` and `eliterizer` derive from `bike` despite being accessories; that is
 an implementation convenience, not a claim to be the machine, and it is why the base class
@@ -343,12 +354,21 @@ cannot be the test on its own.
 
 *Blocked on:* the `cscbike` dependency in `ftmsbike.cpp` (§4.1).
 
-**Consequence for Group G, and it is not small.** `moxy5sensor` and `strydrunpowersensor`
-both derive from `treadmill`. Keeping them means **`treadmill.*` and `virtualtreadmill`
-stay**, and Group G shrinks to `rower`, `elliptical`, `stairclimber` and `jumprope`. A
-treadmill class kept alive by two sensors that are not treadmills is worth revisiting when
-Phase 8 arrives — the honest fix is to reparent them onto `bluetoothdevice` — but that is
-new construction, not deletion, and it does not belong here.
+**`virtualtreadmill` goes with them** (890 lines). It is the one member of `virtualdevices/`
+that §3.2.1 does not protect: that section keeps the peripheral stack because Android and
+the Pi need it to publish a *bike*, and nothing publishes a treadmill any more. It is
+contained — `dirconmanager.h`'s only mention is a comment, so the DIRCON path is untouched,
+and the real callers are `main.cpp`'s `-only-virtualtreadmill` mode, `mainwindow.cpp`, an
+`autoInclinationEnabled()` cast in `homeform.h`, and the iOS lockscreen. None of those is
+the bridge.
+
+**`treadmill.*` still cannot go, and not for the reason the last revision gave.** Removing
+`moxy5sensor` and `strydrunpowersensor` unpins it from them, but `heartratebelt` — one of
+the three drivers this whole strip is built around — is declared
+`class heartratebelt : public treadmill` (`heartratebelt.h:31`). Until the HR belt is
+reparented onto `bluetoothdevice`, `treadmill.*` is load-bearing for a *kept* driver. That
+is a two-line change in principle and a behaviour change in practice, so it is named here
+and left to Group G to decide.
 
 ### Group F — the UI itself
 
@@ -363,13 +383,19 @@ even knowable.
 ### Group G — other machine types
 
 `rower.*`, `elliptical.*`, `stairclimber.*`, `jumprope.*` and their virtual counterparts,
-once no kept driver refers to them.
+once no kept driver refers to them. `virtualtreadmill` comes out earlier, with Group E.
 
-**`treadmill.*` is no longer in this group** (2026-08-20). `moxy5sensor` and
-`strydrunpowersensor` derive from it and both are kept, so the class and
-`virtualtreadmill` stay — see §7 Group E.
+**`treadmill.*` is the interesting one.** It is in this group, but only after
+`heartratebelt` stops deriving from it (§7 Group E). Reparenting the HR belt onto
+`bluetoothdevice` is the precondition, and it is not free: the belt currently inherits a
+treadmill's speed and inclination metrics, and whatever reads those has to be checked
+before the base class changes underneath it.
 
-*Verify:* `bluetooth.cpp` may switch on these types generically.
+*Verify:* `bluetooth.cpp` may switch on these types generically, and the FTMS/DIRCON
+characteristic writers (`characteristicwriteprocessor2ad9.cpp` and friends) branch on
+`TREADMILL` and `ELLIPTICAL`. Those branches become unreachable rather than wrong, so
+removing them is tidying — but it is tidying inside the DIRCON path, which §5 says to
+treat as a warning sign. Do it last, or not at all.
 
 ## 8. Settings plan
 
@@ -388,14 +414,16 @@ The surviving settings should be reorganised around the four things a rider chan
 **bike, gears, training-app connection, display** — not around vendors.
 
 The device-panel row moved from ~200 to ~180 when Group E was revised (2026-08-20).
-Measured, not estimated: the twelve kept accessories account for **19 keys** —
-`elite_rizer_*` (4), `elite_sterzo_smart_*` (3), `fitmetria_fanfit_*` (4), `stryd_*` (3),
+Measured, not estimated: the ten kept accessories account for **16 keys** —
+`elite_rizer_*` (4), `elite_sterzo_smart_*` (3), `fitmetria_fanfit_*` (4),
 `shortcut_fan_±` (2), and one apiece for `cycplus_bc2_controller`, `sram_axs_controller`
-and `thinkrider_controller` — plus four tile keys that belong to Group F either way. So
-the under-150 target survives the revision with room to spare, which is the answer to the
-obvious worry about keeping twelve more drivers.
+and `thinkrider_controller` — plus `zwift_play`, `zwift_click` and `zwift_play_vibration`,
+and two `tile_coretemperature_*` keys that belong to Group F either way. Dropping
+`strydrunpowersensor` took `stryd_*` (3) with it. So the under-150 target survives the
+revision comfortably, which is the answer to the obvious worry about keeping ten more
+drivers.
 
-Those 19 do not fit the four groups above. A fifth, **Accessories**, is the honest
+Those keys do not fit the four groups above. A fifth, **Accessories**, is the honest
 answer at Phase 6 rather than forcing a fan into "display".
 
 ## 9. UI specification
@@ -550,7 +578,7 @@ with Rouvy is still the final word, but it is no longer the only evidence availa
 | 2 | Group B — recording | low | **covered** |
 | 3 | Group C — training programs | medium (homeform surgery) | **none** |
 | 4 | Group D — telemetry | medium (verify RTSS first) | **covered** |
-| 5 | Group E — the two rival trainers | low, once cscbike is resolved | **covered** |
+| 5 | Group E — rival trainers, running sensors, `virtualtreadmill` | low, once cscbike is resolved | **covered** |
 | 6 | Settings consolidation | medium (§3.6 runtime failures) | **covered** |
 | 7a | `RideState` object + `ui_next` flag + new tree under `src/ui/` | medium | **none** |
 | 7b | Ride on the new UI with Rouvy and Zwift; flip the default | low, but needs calendar time | **none** |
@@ -599,7 +627,7 @@ Existing suites, and their fate:
 | `TestServiceSubscriptionPlan` | GATT service subscription | **Keep** — core |
 | `bluetoothdevicetestsuite` + `devicetestdataindex` | data-driven device discovery | **Keep**; prune the two rival-trainer rows (Phase 5) |
 | `ergtabletestsuite`, `TestErgTableSelection`, `TestErgAutoMode` | ERG tables | Keep unless `ergtable` is cut |
-| `TestZwiftRideController` | Zwift Play/Click | Follows open question 6 |
+| `TestZwiftRideController` | Zwift Play/Click | **Keep** — open question 6 resolved kept |
 | ~~`garminconnecttestsuite`~~ | Garmin | **Deleted**, Phase 1 |
 | `qfittestsuite`, `testtrainingloadtestsuite` | FIT writing, training load | **Delete** with Phase 2 |
 | `trainprogramtestsuite`, `zwiftworkouttestsuite` | training programs, ZWO | **Delete** with Phase 3 |
@@ -809,20 +837,28 @@ system. If it does, the overlay is re-pointed before anything is deleted.
 Windows desktop without the bike, by running QZ and watching the overlay.
 *Hardware:* **none.**
 
-**Phase 5 — the two rival trainers**
-*Criteria:* `smartspin2k` and `stagesbike` gone; the `cscbike` dependency in `ftmsbike.cpp`
-resolved (open question 5); the twelve accessories of §7 Group E untouched and still
-discovered; `bluetoothdevicetestsuite` data pruned of the two removed rows and still green.
+**Phase 5 — the rival trainers and the running sensors**
+*Criteria:* `smartspin2k`, `stagesbike`, `moxy5sensor`, `strydrunpowersensor` and
+`virtualtreadmill` gone, with `-only-virtualtreadmill` and `homeform`'s
+`autoInclinationEnabled()` cast gone with them; the `cscbike` dependency in `ftmsbike.cpp`
+resolved (open question 5); the ten accessories of §7 Group E untouched and still
+discovered; `bluetoothdevicetestsuite` data pruned of the removed rows and still green.
+`treadmill.*` **stays** — `heartratebelt` derives from it.
 *Tests:* device-discovery suite green against the reduced set; FTMS handshake and slew
 limiter suites unchanged and green.
 *Hardware:* **yes — H1.** This is the first phase that edits the device layer. One session:
 trainer connects, gears shift 1–15, resistance tracks the table.
 
-The revision of Group E made this phase much smaller — two drivers rather than fourteen —
+The revision of Group E made this phase much smaller — four drivers rather than fourteen —
 but it did **not** make it safe to skip H1. `bluetooth.cpp` decides which driver to build
 from a name-matching cascade, and removing a branch from the middle of that cascade is
 exactly the change that can hand the trainer to the wrong class. The hardware session is
 justified by the cascade, not by the line count.
+
+`virtualtreadmill` is the one item here that touches `virtualdevices/`, which §3.2.1
+otherwise protects wholesale. Worth a second look at the Android build in particular: the
+peripheral stack is compiled unconditionally, and this is the first time anything is taken
+*out* of it.
 
 **Phase 6 — settings consolidation**
 *Criteria:* key count at or under target; the four groups of §9.6 hold; no QML binds a
@@ -890,12 +926,15 @@ Separately pending, and unrelated to the strip: the startup-gear fix and the
    is unaffected, and the deferred WinRT peripheral work (§3.2.1) stays buried.
 4. **Heart rate:** is the HR belt used, or does the training app read it directly?
 5. **`cscbike`** — what does `ftmsbike.cpp` actually use it for?
-6. **Zwift Play / Click** controllers (`zwift_play/`, `zwift-api/`) — kept or cut? They
-   are a shifting input, which overlaps with the gamepad work.
-   **Leaning kept as of 2026-08-20**, and not on their own merits: the Group E revision
-   settled that shifting inputs survive the cull, and `sramAXSController`,
-   `cycplusbc2controller` and `thinkridercontroller` are kept on exactly that basis. Cutting
-   Zwift Play while keeping those three would need an argument that does not exist yet.
-   Left open rather than closed because it was not the question being answered, and because
-   `zwift-api/` may carry more than the controller does — that wants measuring first.
-   `TestZwiftRideController` (§11.1) follows whatever this decides.
+6. ~~**Zwift Play / Click** controllers — kept or cut?~~ **Resolved 2026-08-20: kept.**
+   They are a shifting input, and Group E settled that shifting inputs survive the cull;
+   cutting these while keeping `sramAXSController`, `cycplusbc2controller` and
+   `thinkridercontroller` would have needed an argument nobody made.
+   `TestZwiftRideController` (§11.1) is therefore a keeper.
+
+   One thing to measure before Phase 5 rather than after: `zwift_play/` is 1,945 lines and
+   self-contained, but `zwift-api/` is 7,084 — mostly `zwift_messages.pb.*`, generated
+   protobuf, which is also what drags the protobuf dependency into the Windows link
+   (see the `-llibprotobuf` line in `tst/qdomyos-zwift-tests.pro`). If the controllers only
+   need part of that, the rest is still a deletion candidate; keeping the *feature* does not
+   commit the fork to keeping all 7,084 lines. That is a measurement, not an open decision.
