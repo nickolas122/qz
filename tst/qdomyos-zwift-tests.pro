@@ -36,7 +36,6 @@ SOURCES += \
         Devices/devicenamepatterngroup.cpp \
         Devices/devicetestdataindex.cpp \
         Erg/ergtabletestsuite.cpp \
-        GarminConnect/garminconnecttestsuite.cpp \
         TrainingProgram/trainprogramtestsuite.cpp \
         ToolTests/qfittestsuite.cpp \
         ToolTests/testsettingstestsuite.cpp \
@@ -123,7 +122,6 @@ HEADERS += \
     Erg/ergtabletestsuite.h \
     Erg/TestErgTableSelection.h \
     Erg/TestErgAutoMode.h \
-    GarminConnect/garminconnecttestsuite.h \
     TrainingProgram/trainprogramtestsuite.h \
     ToolTests/qfittestsuite.h \
     ToolTests/testsettingstestsuite.h \

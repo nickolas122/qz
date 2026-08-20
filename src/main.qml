@@ -775,26 +775,6 @@ ApplicationWindow {
     }
 
     MessageDialog {
-        text: qsTr("Garmin Workout Planned")
-        informativeText: qsTr("Workout found:\n") + rootItem.garminWorkoutPromptName +
-                         (rootItem.garminWorkoutPromptDate.length > 0 ? qsTr("\nDate: ") + rootItem.garminWorkoutPromptDate : "") +
-                         qsTr("\n\nDo you want to start it now?")
-        buttons: (MessageDialog.Yes | MessageDialog.No)
-        onYesClicked: { rootItem.garmin_start_downloaded_workout(); }
-        onNoClicked: { rootItem.garmin_dismiss_downloaded_workout_prompt(); }
-        visible: rootItem.garminWorkoutPromptRequested
-    }
-
-    MessageDialog {
-        text: "Garmin FTP Update"
-        informativeText: rootItem.garminFtpPromptMessage
-        buttons: (MessageDialog.Yes | MessageDialog.No)
-        onYesClicked: { rootItem.garmin_accept_ftp_update(); }
-        onNoClicked: { rootItem.garmin_dismiss_ftp_update(); }
-        visible: rootItem.garminFtpPromptRequested
-    }
-
-    MessageDialog {
         text: "Clipboard Workout"
         informativeText: "Workout found in clipboard:\n" + rootItem.clipboardWorkoutPromptName +
                          "\n\nDo you want to open the workout preview?"
@@ -1339,35 +1319,6 @@ ApplicationWindow {
                             peloton_connect_clicked()
                             drawer.close()
                         }
-                    }
-                }
-
-                ItemDelegate {
-                    Image {
-                        anchors.left: parent.left;
-                        anchors.verticalCenter: parent.verticalCenter
-                        source: "icons/icons/garmin-connect-badge.png"
-                        fillMode: Image.PreserveAspectFit
-                        visible: true
-                        width: parent.width
-                        height: 48
-                    }
-                    width: parent.width
-                    onClicked: {
-                        toolButtonLoadSettings.visible = true;
-                        toolButtonSaveSettings.visible = true;
-                        stackView.push("settings.qml")
-                        if (stackView.currentItem) {
-                            if (stackView.currentItem.openGarminSection) {
-                                stackView.currentItem.openGarminSection()
-                            }
-                            if (stackView.currentItem.peloton_connect_clicked) {
-                                stackView.currentItem.peloton_connect_clicked.connect(function() {
-                                    peloton_connect_clicked()
-                                });
-                            }
-                        }
-                        drawer.close()
                     }
                 }
 

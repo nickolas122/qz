@@ -82,53 +82,8 @@ class QZSettings {
     static const QString strava_expires;
     static const QString default_strava_expires;
 
-    static const QString garmin_email;
-    static const QString default_garmin_email;
-
-    static const QString garmin_password;
-    static const QString default_garmin_password;
-
-    static const QString garmin_upload_enabled;
-    static constexpr bool default_garmin_upload_enabled = false;
-
     static const QString rpe_feel_popup_enabled;
     static constexpr bool default_rpe_feel_popup_enabled = false;
-
-    static const QString garmin_download_workouts_on_start;
-    static constexpr bool default_garmin_download_workouts_on_start = true;
-
-    static const QString garmin_access_token;
-    static const QString default_garmin_access_token;
-
-    static const QString garmin_refresh_token;
-    static const QString default_garmin_refresh_token;
-
-    static const QString garmin_token_type;
-    static const QString default_garmin_token_type;
-
-    static const QString garmin_expires_at;
-    static constexpr qint64 default_garmin_expires_at = 0;
-
-    static const QString garmin_refresh_token_expires_at;
-    static constexpr qint64 default_garmin_refresh_token_expires_at = 0;
-
-    static const QString garmin_oauth1_token;
-    static const QString default_garmin_oauth1_token;
-
-    static const QString garmin_oauth1_token_secret;
-    static const QString default_garmin_oauth1_token_secret;
-
-    static const QString garmin_domain;
-    static const QString default_garmin_domain;
-
-    static const QString garmin_last_refresh;
-    static const QString default_garmin_last_refresh;
-
-    static const QString garmin_last_seen_cycling_ftp_create_time;
-    static const QString default_garmin_last_seen_cycling_ftp_create_time;
-
-    static const QString garmin_last_seen_running_ftp_create_time;
-    static const QString default_garmin_last_seen_running_ftp_create_time;
 
     static const QString intervalsicu_accesstoken;
     static const QString default_intervalsicu_accesstoken;
@@ -2393,7 +2348,6 @@ class QZSettings {
 
     static const QString proform_rower_ip;
     static const QString default_proform_rower_ip;
-
 
     static const QString antbike;
     static constexpr bool default_antbike = false;

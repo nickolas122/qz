@@ -738,7 +738,7 @@ int main(int argc, char *argv[]) {
     qDebug() << QStringLiteral("QZ build") << QStringLiteral(QZ_GIT_SHA) << QStringLiteral("Qt")
              << qVersion() << QStringLiteral("on") << QSysInfo::prettyProductName();
     foreach (QString s, settings.allKeys()) {
-        if (!s.contains(QStringLiteral("password")) && !s.contains("user_email") && !s.contains("username") && !s.contains("token") && !s.contains("garmin_device_serial") && !s.contains("garmin_email")) {
+        if (!s.contains(QStringLiteral("password")) && !s.contains("user_email") && !s.contains("username") && !s.contains("token") && !s.contains("garmin_device_serial")) {
 
             qDebug() << s << settings.value(s);
         }

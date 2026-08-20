@@ -10,7 +10,6 @@
 #include "OAuth2.h"
 #include "peloton.h"
 #include "rtssosd.h"
-#include "garminconnect.h"
 #include "qmdnsengine/browser.h"
 #include "qmdnsengine/cache.h"
 #include "qmdnsengine/resolver.h"
@@ -198,12 +197,6 @@ class homeform : public QObject {
     Q_PROPERTY(bool startRequested READ startRequested NOTIFY startRequestedChanged WRITE setStartRequestedChanged)
     Q_PROPERTY(QString toastRequested READ toastRequested NOTIFY toastRequestedChanged WRITE setToastRequested)
     Q_PROPERTY(bool stravaUploadRequested READ stravaUploadRequested NOTIFY stravaUploadRequestedChanged WRITE setStravaUploadRequested)
-    Q_PROPERTY(bool garminMfaRequested READ garminMfaRequested NOTIFY garminMfaRequestedChanged WRITE setGarminMfaRequested)
-    Q_PROPERTY(bool garminWorkoutPromptRequested READ garminWorkoutPromptRequested NOTIFY garminWorkoutPromptRequestedChanged WRITE setGarminWorkoutPromptRequested)
-    Q_PROPERTY(QString garminWorkoutPromptName READ garminWorkoutPromptName NOTIFY garminWorkoutPromptNameChanged)
-    Q_PROPERTY(QString garminWorkoutPromptDate READ garminWorkoutPromptDate NOTIFY garminWorkoutPromptDateChanged)
-    Q_PROPERTY(bool garminFtpPromptRequested READ garminFtpPromptRequested NOTIFY garminFtpPromptRequestedChanged WRITE setGarminFtpPromptRequested)
-    Q_PROPERTY(QString garminFtpPromptMessage READ garminFtpPromptMessage NOTIFY garminFtpPromptMessageChanged)
     Q_PROPERTY(bool clipboardWorkoutPromptRequested READ clipboardWorkoutPromptRequested NOTIFY clipboardWorkoutPromptRequestedChanged WRITE setClipboardWorkoutPromptRequested)
     Q_PROPERTY(QString clipboardWorkoutPromptName READ clipboardWorkoutPromptName NOTIFY clipboardWorkoutPromptNameChanged)
     Q_PROPERTY(bool clipboardWorkoutDeletePromptRequested READ clipboardWorkoutDeletePromptRequested NOTIFY clipboardWorkoutDeletePromptRequestedChanged WRITE setClipboardWorkoutDeletePromptRequested)
@@ -521,12 +514,6 @@ class homeform : public QObject {
     QString pelotonProvider() { return m_pelotonProvider; }
     QString toastRequested() { return m_toastRequested; }
     bool stravaUploadRequested() { return m_stravaUploadRequested; }
-    bool garminMfaRequested() { return m_garminMfaRequested; }
-    bool garminWorkoutPromptRequested() { return m_garminWorkoutPromptRequested; }
-    QString garminWorkoutPromptName() { return m_garminWorkoutPromptName; }
-    QString garminWorkoutPromptDate() { return m_garminWorkoutPromptDate; }
-    bool garminFtpPromptRequested() { return m_garminFtpPromptRequested; }
-    QString garminFtpPromptMessage() { return m_garminFtpPromptMessage; }
     void setPelotonProvider(const QString &value) { m_pelotonProvider = value; }
     bool generalPopupVisible();
     bool pelotonPopupVisible();
@@ -589,24 +576,6 @@ class homeform : public QObject {
     void setStravaUploadRequested(bool value) {
         m_stravaUploadRequested = value;
     }
-    void setGarminMfaRequested(bool value) {
-        m_garminMfaRequested = value;
-        emit garminMfaRequestedChanged(value);
-    }
-    void setGarminWorkoutPromptRequested(bool value) {
-        if (m_garminWorkoutPromptRequested == value) {
-            return;
-        }
-        m_garminWorkoutPromptRequested = value;
-        emit garminWorkoutPromptRequestedChanged(value);
-    }
-    void setGarminFtpPromptRequested(bool value) {
-        if (m_garminFtpPromptRequested == value) {
-            return;
-        }
-        m_garminFtpPromptRequested = value;
-        emit garminFtpPromptRequestedChanged(value);
-    }
     bool clipboardWorkoutPromptRequested() const { return m_clipboardWorkoutPromptRequested; }
     QString clipboardWorkoutPromptName() const { return m_clipboardWorkoutPromptName; }
     void setClipboardWorkoutPromptRequested(bool value) {
@@ -624,13 +593,6 @@ class homeform : public QObject {
         m_clipboardWorkoutDeletePromptRequested = value;
         emit clipboardWorkoutDeletePromptRequestedChanged(value);
     }
-    Q_INVOKABLE void garmin_connect_login();
-    Q_INVOKABLE void garmin_submit_mfa_code(const QString &mfaCode);
-    Q_INVOKABLE void garmin_connect_logout();
-    Q_INVOKABLE void garmin_start_downloaded_workout();
-    Q_INVOKABLE void garmin_dismiss_downloaded_workout_prompt();
-    Q_INVOKABLE void garmin_accept_ftp_update();
-    Q_INVOKABLE void garmin_dismiss_ftp_update();
     Q_INVOKABLE QUrl clipboard_workout_url() const { return QUrl::fromLocalFile(m_clipboardWorkoutPromptFile); }
     Q_INVOKABLE void clipboard_accept_workout_prompt();
     Q_INVOKABLE void clipboard_dismiss_workout_prompt();
@@ -640,10 +602,8 @@ class homeform : public QObject {
     Q_INVOKABLE bool isStravaLoggedIn();
     Q_INVOKABLE bool isPelotonLoggedIn();
     Q_INVOKABLE bool isIntervalsICULoggedIn();
-    Q_INVOKABLE bool isGarminUploadConfigured();
     Q_INVOKABLE bool isIntervalsICUUploadConfigured();
     Q_INVOKABLE void uploadHistoricalWorkoutToStrava(const QString &filePath);
-    Q_INVOKABLE void uploadHistoricalWorkoutToGarmin(const QString &filePath);
     Q_INVOKABLE void uploadHistoricalWorkoutToIntervalsICU(const QString &filePath);
     Q_INVOKABLE void strava_logout();
     Q_INVOKABLE void peloton_logout();
@@ -654,10 +614,6 @@ class homeform : public QObject {
 
 private:
     void clearWebViewCache();
-    void handleGarminFtpValues(int cyclingFtp, const QString &cyclingCreateTime,
-                               int runningFtp, const QString &runningCreateTime);
-    void markPendingGarminFtpSeen();
-    void showNextGarminWorkoutPrompt();
 
 public:
     void setGeneralPopupVisible(bool value);
@@ -983,7 +939,6 @@ public:
     QOAuth2AuthorizationCodeFlow *strava = nullptr;
     QNetworkAccessManager *manager = nullptr;
     QOAuthHttpServerReplyHandler *stravaReplyHandler = nullptr;
-    GarminConnect *garminConnect = nullptr;
 
     // Intervals.icu OAuth and upload
     QOAuth2AuthorizationCodeFlow *intervalsicu = nullptr;
@@ -1010,26 +965,12 @@ public:
     QString m_pelotonProvider = "";
     QString m_toastRequested = "";
     bool m_stravaUploadRequested = false;
-    bool m_garminMfaRequested = false;
-    bool m_garminWorkoutPromptRequested = false;
-    bool m_garminFtpPromptRequested = false;
     bool m_clipboardWorkoutPromptRequested = false;
     bool m_clipboardWorkoutDeletePromptRequested = false;
-    QString m_garminWorkoutPromptName = QStringLiteral("");
-    QString m_garminWorkoutPromptDate = QStringLiteral("");
-    QString m_garminWorkoutPromptFile = QStringLiteral("");
-    QString m_garminFtpPromptMessage = QStringLiteral("");
-    int m_pendingGarminCyclingFtp = 0;
-    int m_pendingGarminRunningFtp = 0;
-    QString m_pendingGarminCyclingFtpCreateTime = QStringLiteral("");
-    QString m_pendingGarminRunningFtpCreateTime = QStringLiteral("");
     QString m_clipboardWorkoutPromptName = QStringLiteral("");
     QString m_clipboardWorkoutPromptFile = QStringLiteral("");
     QString m_activeClipboardWorkoutFile = QStringLiteral("");
     QByteArray m_lastClipboardWorkoutHash;
-    QStringList m_pendingGarminWorkoutPromptFiles;
-    QStringList m_pendingGarminWorkoutPromptNames;
-    QStringList m_pendingGarminWorkoutPromptDates;
     FitDatabaseProcessor *fitProcessor = nullptr;
     WorkoutModel *workoutModel = nullptr;
     int m_pelotonLoginState = -1;
@@ -1243,8 +1184,6 @@ public:
     void onToastRequested(QString message);
     void onTrainingProgramIntervalTransition();
     void strava_upload_file_prepare();
-    void garmin_upload_file_prepare();
-    void garmin_download_todays_workout();
     void StartFromDevice();  // Called when physical start button pressed on hardware
     void PauseFromDevice();  // Called when physical pause button pressed on hardware
     void StopFromDevice();   // Called when physical stop button pressed on hardware
@@ -1277,12 +1216,6 @@ public:
     void changePelotonProvider(QString value);
     void toastRequestedChanged(QString value);
     void stravaUploadRequestedChanged(bool value);
-    void garminMfaRequestedChanged(bool value);
-    void garminWorkoutPromptRequestedChanged(bool value);
-    void garminWorkoutPromptNameChanged(QString value);
-    void garminWorkoutPromptDateChanged(QString value);
-    void garminFtpPromptRequestedChanged(bool value);
-    void garminFtpPromptMessageChanged(QString value);
     void clipboardWorkoutPromptRequestedChanged(bool value);
     void clipboardWorkoutPromptNameChanged(QString value);
     void clipboardWorkoutDeletePromptRequestedChanged(bool value);

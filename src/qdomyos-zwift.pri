@@ -223,7 +223,6 @@ devices/heartratebelt/heartratebelt.cpp \
 homefitnessbuddy.cpp \
 homeform.cpp \
 mywhooshlink.cpp \
-garminconnect.cpp \
 keepawakehelper.cpp \
 main.cpp \
 metric.cpp \
@@ -637,7 +636,6 @@ devices/ftmsbike/speedracex_defaults.h \
 devices/heartratebelt/heartratebelt.h \
 homeform.h \
 mywhooshlink.h \
-garminconnect.h \
 ios/lockscreen.h \
 keepawakehelper.h \
 macos/lockscreen.h \

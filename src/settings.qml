@@ -53,11 +53,6 @@ import AndroidStatusBar 1.0
             filteredSettings = []
         }
 
-        function openGarminSection() {
-            garminOptionsAccordion.isOpen = true
-            scrollTimer.start()
-        }
-
         // Strip the RSSI proximity suffix (e.g. " (75%)") before saving device names
         function stripRssi(deviceName) {
             return deviceName.replace(/ \(\d+%\)$/, "")
@@ -1545,22 +1540,7 @@ import AndroidStatusBar 1.0
             property bool tile_avg_pace_enabled: false
             property int  tile_avg_pace_order: 76
 
-            // Garmin connect
-            property string garmin_email: ""
-            property string garmin_password: ""
-            property bool garmin_upload_enabled: false
-            property string garmin_access_token: ""
-            property string garmin_refresh_token: ""
-            property string garmin_token_type: ""
-            property var garmin_expires_at: 0
-            property var garmin_refresh_token_expires_at: 0
-            property string garmin_domain: "garmin.com"
-            property string garmin_last_refresh: ""
-
             property bool power_sensor_cadence_instead_treadmill: false
-
-            property string garmin_oauth1_token: ""
-            property string garmin_oauth1_token_secret: ""
 
 			property bool domyos_treadmill_sync_start: false
 			property string garmin_device_serial: "3313379353"
@@ -1690,13 +1670,10 @@ import AndroidStatusBar 1.0
             property string shortcut_preset_powerzone_7: ""
             property string shortcut_lap: ""
             property string shortcut_start_stop: ""
-            property string garmin_last_seen_cycling_ftp_create_time: ""
-            property string garmin_last_seen_running_ftp_create_time: ""
             property bool horizon_treadmill_omega_z: false
 
             property string app_language: "auto"
 
-            property bool garmin_download_workouts_on_start: true
             property bool trainprogram_clipboard_workout_enabled: false
             property string shortcut_stop: ""
             property real trainprogram_warmup_speed: 420
@@ -8152,41 +8129,6 @@ import AndroidStatusBar 1.0
                         color: Material.color(Material.Lime)
                     }
 
-                    Label {
-                        id: garminConnectLabel
-                        text: "Garmin Connect"
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    IndicatorOnlySwitch {
-                        text: qsTr("Enable Garmin Upload")
-                        spacing: 0
-                        bottomPadding: 0
-                        topPadding: 0
-                        rightPadding: 0
-                        leftPadding: 0
-                        clip: false
-                        checked: settings.garmin_upload_enabled
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        onClicked: { settings.garmin_upload_enabled = checked; }
-                    }
-
-                    Label {
-                        text: qsTr("Enable automatic upload of FIT files to Garmin Connect after workouts.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
                     IndicatorOnlySwitch {
                         text: qsTr("Ask RPE / Feeling after workout")
                         spacing: 0
@@ -8202,218 +8144,7 @@ import AndroidStatusBar 1.0
                     }
 
                     Label {
-                        text: qsTr("Show a popup after Stop to rate perceived exertion (RPE) and how you felt; the values are saved into the FIT file and shown in Garmin Connect.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    IndicatorOnlySwitch {
-                        text: qsTr("Fetch Garmin Workouts on Startup")
-                        spacing: 0
-                        bottomPadding: 0
-                        topPadding: 0
-                        rightPadding: 0
-                        leftPadding: 0
-                        clip: false
-                        checked: settings.garmin_download_workouts_on_start
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        onClicked: { settings.garmin_download_workouts_on_start = checked; }
-                    }
-
-                    Label {
-                        text: qsTr("Enable automatic download of today's Garmin workout when QZ starts. Default: enabled.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            text: qsTr("Garmin Email:")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: garminEmailTextField
-                            text: settings.garmin_email
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onAccepted: settings.garmin_email = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: {
-                                rootItem.garmin_connect_logout();
-                                settings.garmin_email = garminEmailTextField.text;
-                                toast.show(qsTr("Setting saved!"));
-                            }
-                        }
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            text: "Garmin Password:"
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: garminPasswordTextField
-                            text: settings.garmin_password
-                            echoMode: TextInput.Password
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onAccepted: settings.garmin_password = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: {
-                                rootItem.garmin_connect_logout();
-                                settings.garmin_password = garminPasswordTextField.text;
-                                toast.show(qsTr("Setting saved!"));
-                            }
-                        }
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            text: "Garmin Server:"
-                            Layout.fillWidth: true
-                        }
-                        ComboBox {
-                            id: garminServerComboBox
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            model: ["Global (garmin.com)", "China (garmin.cn)"]
-                            currentIndex: settings.garmin_domain === "garmin.cn" ? 1 : 0
-                            onCurrentIndexChanged: {
-                                var newDomain = currentIndex === 1 ? "garmin.cn" : "garmin.com";
-                                if (newDomain !== settings.garmin_domain) {
-                                    rootItem.garmin_connect_logout();
-                                    settings.garmin_domain = newDomain;
-                                    window.settings_restart_to_apply = true;
-                                }
-                            }
-                        }
-                    }
-
-                    Button {
-                        text: qsTr("Test Garmin Login")
-                        Layout.alignment: Qt.AlignHCenter
-                        onClicked: { rootItem.garmin_connect_login(); }
-                    }
-
-                    // MFA Dialog
-                    Popup {
-                        id: garminMfaDialog
-                        modal: true
-                        focus: true
-                        closePolicy: Popup.CloseOnEscape
-                        anchors.centerIn: Overlay.overlay
-                        width: Math.min(parent.width * 0.9, 400)
-
-                        visible: rootItem.garminMfaRequested
-
-                        ColumnLayout {
-                            anchors.fill: parent
-                            spacing: 20
-
-                            Label {
-                                text: qsTr("Garmin MFA Required")
-                                font.pixelSize: 18
-                                font.bold: true
-                                Layout.fillWidth: true
-                                horizontalAlignment: Text.AlignHCenter
-                            }
-
-                            Label {
-                                text: qsTr("Garmin has sent a verification code to your email.\nPlease enter it below:")
-                                wrapMode: Text.WordWrap
-                                Layout.fillWidth: true
-                                horizontalAlignment: Text.AlignHCenter
-                            }
-
-                            Label {
-                                text: qsTr("If you don't receive the code, please enable 2FA in your Garmin profile privacy settings.")
-                                wrapMode: Text.WordWrap
-                                Layout.fillWidth: true
-                                horizontalAlignment: Text.AlignHCenter
-                                font.pixelSize: 12
-                                font.italic: true
-                                color: Material.color(Material.Grey)
-                            }
-
-                            TextField {
-                                id: mfaCodeTextField
-                                placeholderText: qsTr("Enter MFA code")
-                                horizontalAlignment: Text.AlignHCenter
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: 40
-                                font.pixelSize: 16
-
-                                onAccepted: {
-                                    if (text.length > 0) {
-                                        rootItem.garmin_submit_mfa_code(text);
-                                        text = "";
-                                    }
-                                }
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: 10
-
-                                Button {
-                                    text: qsTr("Cancel")
-                                    Layout.fillWidth: true
-                                    onClicked: {
-                                        mfaCodeTextField.text = "";
-                                        rootItem.garminMfaRequested = false;
-                                    }
-                                }
-
-                                Button {
-                                    text: qsTr("Submit")
-                                    Layout.fillWidth: true
-                                    highlighted: true
-                                    enabled: mfaCodeTextField.text.length > 0
-                                    onClicked: {
-                                        rootItem.garmin_submit_mfa_code(mfaCodeTextField.text);
-                                        mfaCodeTextField.text = "";
-                                    }
-                                }
-                            }
-                        }
-
-                        onVisibleChanged: {
-                            if (visible) {
-                                mfaCodeTextField.forceActiveFocus();
-                            }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("Enter your Garmin Connect credentials to enable automatic upload. Your password is stored locally and securely.")
+                        text: qsTr("Show a popup after Stop to rate perceived exertion (RPE) and how you felt; the values are saved into the FIT file.")
                         font.bold: true
                         font.italic: true
                         font.pixelSize: Qt.application.font.pixelSize - 2
@@ -16648,21 +16379,6 @@ import AndroidStatusBar 1.0
                     }
                 }
             }
-            }
-        }
-
-        Timer {
-            id: scrollTimer
-            interval: 200
-            repeat: false
-            onTriggered: {
-                if (garminOptionsAccordion && garminOptionsAccordion.y !== undefined) {
-                    var yPos = garminOptionsAccordion.y - 20
-                    if (yPos < 0) yPos = 0
-                    if (settingsPane.contentItem) {
-                        settingsPane.contentItem.contentY = yPos
-                    }
-                }
             }
         }
     }

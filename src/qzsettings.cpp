@@ -40,33 +40,7 @@ const QString QZSettings::strava_lastrefresh = QStringLiteral("strava_lastrefres
 const QString QZSettings::default_strava_lastrefresh = QStringLiteral("");
 const QString QZSettings::strava_expires = QStringLiteral("strava_expires");
 const QString QZSettings::default_strava_expires = QStringLiteral("");
-const QString QZSettings::garmin_email = QStringLiteral("garmin_email");
-const QString QZSettings::default_garmin_email = QStringLiteral("");
-const QString QZSettings::garmin_password = QStringLiteral("garmin_password");
-const QString QZSettings::default_garmin_password = QStringLiteral("");
-const QString QZSettings::garmin_upload_enabled = QStringLiteral("garmin_upload_enabled");
 const QString QZSettings::rpe_feel_popup_enabled = QStringLiteral("rpe_feel_popup_enabled");
-const QString QZSettings::garmin_download_workouts_on_start = QStringLiteral("garmin_download_workouts_on_start");
-const QString QZSettings::garmin_access_token = QStringLiteral("garmin_access_token");
-const QString QZSettings::default_garmin_access_token = QStringLiteral("");
-const QString QZSettings::garmin_refresh_token = QStringLiteral("garmin_refresh_token");
-const QString QZSettings::default_garmin_refresh_token = QStringLiteral("");
-const QString QZSettings::garmin_token_type = QStringLiteral("garmin_token_type");
-const QString QZSettings::default_garmin_token_type = QStringLiteral("");
-const QString QZSettings::garmin_expires_at = QStringLiteral("garmin_expires_at");
-const QString QZSettings::garmin_refresh_token_expires_at = QStringLiteral("garmin_refresh_token_expires_at");
-const QString QZSettings::garmin_oauth1_token = QStringLiteral("garmin_oauth1_token");
-const QString QZSettings::default_garmin_oauth1_token = QStringLiteral("");
-const QString QZSettings::garmin_oauth1_token_secret = QStringLiteral("garmin_oauth1_token_secret");
-const QString QZSettings::default_garmin_oauth1_token_secret = QStringLiteral("");
-const QString QZSettings::garmin_domain = QStringLiteral("garmin_domain");
-const QString QZSettings::default_garmin_domain = QStringLiteral("garmin.com");
-const QString QZSettings::garmin_last_refresh = QStringLiteral("garmin_last_refresh");
-const QString QZSettings::default_garmin_last_refresh = QStringLiteral("");
-const QString QZSettings::garmin_last_seen_cycling_ftp_create_time = QStringLiteral("garmin_last_seen_cycling_ftp_create_time");
-const QString QZSettings::default_garmin_last_seen_cycling_ftp_create_time = QStringLiteral("");
-const QString QZSettings::garmin_last_seen_running_ftp_create_time = QStringLiteral("garmin_last_seen_running_ftp_create_time");
-const QString QZSettings::default_garmin_last_seen_running_ftp_create_time = QStringLiteral("");
 const QString QZSettings::intervalsicu_accesstoken = QStringLiteral("intervalsicu_accesstoken");
 const QString QZSettings::default_intervalsicu_accesstoken = QStringLiteral("");
 const QString QZSettings::intervalsicu_refreshtoken = QStringLiteral("intervalsicu_refreshtoken");
@@ -1295,7 +1269,7 @@ const QString QZSettings::simulated_bike = QStringLiteral("simulated_bike");
 const QString QZSettings::simulated_bike_ride = QStringLiteral("simulated_bike_ride");
 const QString QZSettings::default_simulated_bike_ride = QLatin1String("");
 
-const uint32_t allSettingsCount = 1012;
+const uint32_t allSettingsCount = 997;
 
 QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::cryptoKeySettingsProfiles, QZSettings::default_cryptoKeySettingsProfiles},
@@ -1319,20 +1293,7 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::strava_refreshtoken, QZSettings::default_strava_refreshtoken},
     {QZSettings::strava_lastrefresh, QZSettings::default_strava_lastrefresh},
     {QZSettings::strava_expires, QZSettings::default_strava_expires},
-    {QZSettings::garmin_email, QZSettings::default_garmin_email},
-    {QZSettings::garmin_password, QZSettings::default_garmin_password},
-    {QZSettings::garmin_upload_enabled, QZSettings::default_garmin_upload_enabled},
     {QZSettings::rpe_feel_popup_enabled, QZSettings::default_rpe_feel_popup_enabled},
-    {QZSettings::garmin_download_workouts_on_start, QZSettings::default_garmin_download_workouts_on_start},
-    {QZSettings::garmin_access_token, QZSettings::default_garmin_access_token},
-    {QZSettings::garmin_refresh_token, QZSettings::default_garmin_refresh_token},
-    {QZSettings::garmin_token_type, QZSettings::default_garmin_token_type},
-    {QZSettings::garmin_expires_at, QZSettings::default_garmin_expires_at},
-    {QZSettings::garmin_refresh_token_expires_at, QZSettings::default_garmin_refresh_token_expires_at},
-    {QZSettings::garmin_domain, QZSettings::default_garmin_domain},
-    {QZSettings::garmin_last_refresh, QZSettings::default_garmin_last_refresh},
-    {QZSettings::garmin_last_seen_cycling_ftp_create_time, QZSettings::default_garmin_last_seen_cycling_ftp_create_time},
-    {QZSettings::garmin_last_seen_running_ftp_create_time, QZSettings::default_garmin_last_seen_running_ftp_create_time},
     {QZSettings::intervalsicu_accesstoken, QZSettings::default_intervalsicu_accesstoken},
     {QZSettings::intervalsicu_refreshtoken, QZSettings::default_intervalsicu_refreshtoken},
     {QZSettings::intervalsicu_athlete_id, QZSettings::default_intervalsicu_athlete_id},
@@ -2220,8 +2181,6 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::kingsmith_r2_enable_hw_buttons, QZSettings::default_kingsmith_r2_enable_hw_buttons},
     {QZSettings::toorxtreadmill_discovery_completed, QZSettings::default_toorxtreadmill_discovery_completed},
     {QZSettings::proform_treadmill_sport_3_0, QZSettings::default_proform_treadmill_sport_3_0},
-    {QZSettings::garmin_oauth1_token, QZSettings::default_garmin_oauth1_token},
-    {QZSettings::garmin_oauth1_token_secret, QZSettings::default_garmin_oauth1_token_secret},
     {QZSettings::mywhoosh_link_enabled, QZSettings::default_mywhoosh_link_enabled},
     {QZSettings::mywhoosh_link_override_gears, QZSettings::default_mywhoosh_link_override_gears},
     {QZSettings::mywhoosh_link_left_up, QZSettings::default_mywhoosh_link_left_up},
