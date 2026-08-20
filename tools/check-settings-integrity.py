@@ -52,6 +52,35 @@ ROW_OPEN = re.compile(r"^\s*\{QZSettings::\w+\s*,\s*$")
 ROW_CLOSE = re.compile(r"^\s*QZSettings::\w+\}\s*,\s*$")
 
 
+def malformed_definitions():
+    """Statements in qzsettings.cpp's definition region that do not start a definition.
+
+    Every key is defined as `const <type> QZSettings::<name> = <expr>;`, sometimes
+    wrapped over two lines. Deleting a key means deleting the whole statement; a
+    line-oriented edit that takes only the first line leaves the initialiser behind
+    as a statement of its own, which the compiler reports against whatever it can
+    make sense of next.
+    """
+    lines = (SRC / "qzsettings.cpp").read_text(encoding="utf-8", errors="replace").split("\n")
+    try:
+        end = next(i for i, l in enumerate(lines) if "allSettings[" in l)
+    except StopIteration:
+        return ["could not find allSettings[] in qzsettings.cpp"]
+
+    problems = []
+    in_statement = False
+    for i, line in enumerate(lines[:end]):
+        stripped = line.strip()
+        if not stripped or stripped.startswith(("#", "//", "/*", "*")):
+            continue
+        if not in_statement and not stripped.startswith("const"):
+            problems.append(
+                f"qzsettings.cpp:{i + 1}: statement does not start a definition: {stripped[:70]}"
+            )
+        in_statement = not stripped.endswith(";")
+    return problems
+
+
 def malformed_rows():
     """Lines inside allSettings[] that are neither a whole row nor half of a wrapped one.
 
@@ -145,7 +174,10 @@ def main():
             f"qzsettings.cpp registers {len(unknown)} name(s) not declared in qzsettings.h: {', '.join(unknown[:8])}"
         )
 
-    # 2b. allSettings[] must still be syntactically a list of rows.
+    # 2b. The definitions and allSettings[] must still be syntactically whole. Both
+    #     are edited by script when settings are deleted in bulk, and both fail in a
+    #     way that blames the wrong line.
+    problems.extend(malformed_definitions())
     problems.extend(malformed_rows())
 
     # 3. settings-catalog.json: the count field must match the array.

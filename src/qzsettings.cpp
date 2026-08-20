@@ -589,7 +589,6 @@ const QString QZSettings::default_kettler_usb_serialport = QStringLiteral("");
 const QString QZSettings::kettler_usb_baudrate = QStringLiteral("kettler_usb_baudrate");
 const QString QZSettings::freebeat_serialport = QStringLiteral("freebeat_serialport");
 const QString QZSettings::default_freebeat_serialport = QStringLiteral("");
-    QStringLiteral("powr_sensor_running_cadence_half_on_strava");
 const QString QZSettings::nordictrack_ifit_adb_remote = QStringLiteral("nordictrack_ifit_adb_remote");
 const QString QZSettings::floating_height = QStringLiteral("floating_height");
 const QString QZSettings::floating_width = QStringLiteral("floating_width");
