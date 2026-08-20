@@ -45,6 +45,44 @@ def registered_in_source():
     return declared, entries
 
 
+# A row in allSettings[] is either one line, or two when clang-format wraps a long
+# name. Nothing else is legal.
+ROW_ONE_LINE = re.compile(r"^\s*\{QZSettings::\w+\s*,\s*QZSettings::\w+\}\s*,\s*$")
+ROW_OPEN = re.compile(r"^\s*\{QZSettings::\w+\s*,\s*$")
+ROW_CLOSE = re.compile(r"^\s*QZSettings::\w+\}\s*,\s*$")
+
+
+def malformed_rows():
+    """Lines inside allSettings[] that are neither a whole row nor half of a wrapped one.
+
+    Deleting a setting means deleting a *row*, and a row is sometimes two lines. A
+    script that assumes one line leaves the second half behind, which is a syntax
+    error several hundred lines further down where the initialiser finally gives up -
+    so the compiler blames a setting that has nothing wrong with it. Cheap to check
+    here, expensive to read in a build log.
+    """
+    lines = (SRC / "qzsettings.cpp").read_text(encoding="utf-8", errors="replace").split("\n")
+    try:
+        start = next(i for i, l in enumerate(lines) if "allSettings[" in l)
+        end = next(i for i in range(start, len(lines)) if lines[i].strip() == "};")
+    except StopIteration:
+        return ["could not find the bounds of allSettings[] in qzsettings.cpp"]
+
+    problems = []
+    i = start + 1
+    while i < end:
+        line = lines[i]
+        if not line.strip() or ROW_ONE_LINE.match(line):
+            i += 1
+            continue
+        if ROW_OPEN.match(line) and i + 1 < end and ROW_CLOSE.match(lines[i + 1]):
+            i += 2
+            continue
+        problems.append(f"qzsettings.cpp:{i + 1}: not a well-formed allSettings[] row: {line.strip()[:70]}")
+        i += 1
+    return problems
+
+
 def catalog():
     """(settingCount field, actual array length, keys) from settings-catalog.json.
 
@@ -106,6 +144,9 @@ def main():
         problems.append(
             f"qzsettings.cpp registers {len(unknown)} name(s) not declared in qzsettings.h: {', '.join(unknown[:8])}"
         )
+
+    # 2b. allSettings[] must still be syntactically a list of rows.
+    problems.extend(malformed_rows())
 
     # 3. settings-catalog.json: the count field must match the array.
     catalog_count, catalog_len, catalog_keys = catalog()

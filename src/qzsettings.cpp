@@ -1695,7 +1695,6 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::computrainer_serialport, QZSettings::default_computrainer_serialport},
     {QZSettings::kettler_usb_serialport, QZSettings::default_kettler_usb_serialport},
     {QZSettings::kettler_usb_baudrate, QZSettings::default_kettler_usb_baudrate},
-     QZSettings::default_powr_sensor_running_cadence_half_on_strava},
     {QZSettings::nordictrack_ifit_adb_remote, QZSettings::default_nordictrack_ifit_adb_remote},
     {QZSettings::floating_height, QZSettings::default_floating_height},
     {QZSettings::floating_width, QZSettings::default_floating_width},
