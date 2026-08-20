@@ -23,8 +23,6 @@ import AndroidStatusBar 1.0
         id: settingsPane
 
         signal peloton_connect_clicked()
-        signal intervalsicu_connect_clicked()
-        signal intervalsicu_download_todays_workout_clicked()
 
         property var settingsCatalog: ({ "settings": [], "virtualSettings": [], "pages": [] })
         property var searchableSettings: []
@@ -1525,13 +1523,6 @@ import AndroidStatusBar 1.0
             property bool nordictrack_se7i: false
             property real treadmill_speed_max: 100
 
-            // Intervals.icu settings
-            property string intervalsicu_accesstoken: ""
-            property string intervalsicu_refreshtoken: ""
-            property string intervalsicu_athlete_id: ""
-            property bool intervalsicu_upload_enabled: true
-            property string intervalsicu_suffix: "#QZ"
-            property bool intervalsicu_date_prefix: false            
 
             property bool proform_treadmill_sport_3_0: false
             property bool rouvy_compatibility: false

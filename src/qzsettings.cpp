@@ -41,12 +41,6 @@ const QString QZSettings::default_strava_lastrefresh = QStringLiteral("");
 const QString QZSettings::strava_expires = QStringLiteral("strava_expires");
 const QString QZSettings::default_strava_expires = QStringLiteral("");
 const QString QZSettings::rpe_feel_popup_enabled = QStringLiteral("rpe_feel_popup_enabled");
-const QString QZSettings::intervalsicu_accesstoken = QStringLiteral("intervalsicu_accesstoken");
-const QString QZSettings::default_intervalsicu_accesstoken = QStringLiteral("");
-const QString QZSettings::intervalsicu_refreshtoken = QStringLiteral("intervalsicu_refreshtoken");
-const QString QZSettings::default_intervalsicu_refreshtoken = QStringLiteral("");
-const QString QZSettings::intervalsicu_athlete_id = QStringLiteral("intervalsicu_athlete_id");
-const QString QZSettings::default_intervalsicu_athlete_id = QStringLiteral("");
 const QString QZSettings::code = QStringLiteral("code");
 const QString QZSettings::default_code = QStringLiteral("");
 //--------------------------------------------------------------------------------------------
@@ -306,10 +300,6 @@ const QString QZSettings::filter_device = QStringLiteral("filter_device");
 const QString QZSettings::default_filter_device = QStringLiteral("Disabled");
 const QString QZSettings::strava_suffix = QStringLiteral("strava_suffix");
 const QString QZSettings::default_strava_suffix = QStringLiteral("#QZ");
-const QString QZSettings::intervalsicu_upload_enabled = QStringLiteral("intervalsicu_upload_enabled");
-const QString QZSettings::intervalsicu_suffix = QStringLiteral("intervalsicu_suffix");
-const QString QZSettings::default_intervalsicu_suffix = QStringLiteral("#QZ");
-const QString QZSettings::intervalsicu_date_prefix = QStringLiteral("intervalsicu_date_prefix");
 const QString QZSettings::cadence_sensor_name = QStringLiteral("cadence_sensor_name");
 const QString QZSettings::default_cadence_sensor_name = QStringLiteral("Disabled");
 const QString QZSettings::cadence_sensor_as_bike = QStringLiteral("cadence_sensor_as_bike");
@@ -1269,7 +1259,7 @@ const QString QZSettings::simulated_bike = QStringLiteral("simulated_bike");
 const QString QZSettings::simulated_bike_ride = QStringLiteral("simulated_bike_ride");
 const QString QZSettings::default_simulated_bike_ride = QLatin1String("");
 
-const uint32_t allSettingsCount = 997;
+const uint32_t allSettingsCount = 991;
 
 QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::cryptoKeySettingsProfiles, QZSettings::default_cryptoKeySettingsProfiles},
@@ -1294,12 +1284,6 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::strava_lastrefresh, QZSettings::default_strava_lastrefresh},
     {QZSettings::strava_expires, QZSettings::default_strava_expires},
     {QZSettings::rpe_feel_popup_enabled, QZSettings::default_rpe_feel_popup_enabled},
-    {QZSettings::intervalsicu_accesstoken, QZSettings::default_intervalsicu_accesstoken},
-    {QZSettings::intervalsicu_refreshtoken, QZSettings::default_intervalsicu_refreshtoken},
-    {QZSettings::intervalsicu_athlete_id, QZSettings::default_intervalsicu_athlete_id},
-    {QZSettings::intervalsicu_upload_enabled, QZSettings::default_intervalsicu_upload_enabled},
-    {QZSettings::intervalsicu_suffix, QZSettings::default_intervalsicu_suffix},
-    {QZSettings::intervalsicu_date_prefix, QZSettings::default_intervalsicu_date_prefix},
     {QZSettings::ui_zoom, QZSettings::default_ui_zoom},
     {QZSettings::app_language, QZSettings::default_app_language},
     {QZSettings::bike_heartrate_service, QZSettings::default_bike_heartrate_service},
