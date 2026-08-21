@@ -89,8 +89,17 @@ class simulatedFtmsBike : public ftmsbike {
      * *choosing* a level has nothing to observe. These are the SpeedRaceX defaults - measured
      * points, 9 cadences x 32 levels - which is a resistance-level bike of the same shape as
      * the YPBM.
+     *
+     * The reset() is not belt and braces. `~ergTable()` writes the table back to QSettings and
+     * the constructor reads it, so points collected by an earlier test in the same run - or on
+     * this machine last week, since QSettings is the real registry on Windows - arrive here
+     * ahead of the defaults, and `loadDefaultData()` skips whenever anything is already there.
+     * One junk point is enough to make every answer level 1.
      */
-    void seedErgTable() { _ergTable.loadDefaultData(kSpeedRaceXDefaultErgData); }
+    void seedErgTable() {
+        _ergTable.reset();
+        _ergTable.loadDefaultData(kSpeedRaceXDefaultErgData);
+    }
 
     /** @brief Every payload `ftmsbike` has tried to write, in order. */
     const QList<QByteArray> &writes() const { return m_writes; }

@@ -87,6 +87,10 @@ class ErgSimConflict : public ::testing::Test {
         // ride, the interval is the honest way to stop it: the timer is private.
         testSettings.qsettings.setValue(QZSettings::poll_device_time, 60000);
 
+        // The ERG table persists itself on destruction, so without this each test inherits
+        // whatever the last one rode. See simulatedFtmsBike::seedErgTable().
+        testSettings.qsettings.setValue(QZSettings::ergDataPoints, "");
+
         bike.reset(new simulatedFtmsBike());
         app.reset(new CharacteristicWriteProcessor2AD9(1.0, 4, bike.get(), nullptr));
 

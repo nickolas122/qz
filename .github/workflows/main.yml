@@ -531,7 +531,13 @@ jobs:
         with:
           version: '6.8.2'
           host: 'windows'
-          modules: 'qtconnectivity qtpositioning qtnetworkauth qtwebsockets qtspeech qtlocation qtmultimedia qtcharts qthttpserver qtshadertools qtimageformats'
+          # qt5compat carries Qt5Compat.GraphicalEffects, which is where QtGraphicalEffects'
+          # types went in Qt 6 and what tools/qt6-qml-imports.py rewrites every
+          # `import QtGraphicalEffects` to. Without it installed, windeployqt has nothing to
+          # deploy for that import and says so only in passing, so the build stayed green and
+          # the artifact could not load main.qml at all - no window, and a log that stops after
+          # "QQmlApplicationEngine failed to load component".
+          modules: 'qtconnectivity qtpositioning qtnetworkauth qtwebsockets qtspeech qtlocation qtmultimedia qtcharts qthttpserver qtshadertools qtimageformats qt5compat'
           target: "desktop"
           arch: win64_msvc2022_64
           dir: "${{github.workspace}}/qt/"
@@ -639,6 +645,12 @@ jobs:
             cd output
             windeployqt --qmldir ../../ qdomyos-zwift.exe
             if ($LASTEXITCODE -ne 0) { throw "windeployqt failed: $LASTEXITCODE" }
+            # windeployqt exits 0 when it cannot find a QML module: it notes the import and
+            # moves on. That is how a green build shipped a binary whose first act was to fail
+            # to load main.qml. Name the modules the QML actually needs and check they arrived.
+            foreach ($module in @("Qt5Compat\GraphicalEffects", "QtQuick\Controls", "QtQuick\Dialogs", "QtMultimedia", "QtCharts")) {
+                if (-not (Test-Path "qml\$module\qmldir")) { throw "windeployqt did not deploy qml\$module - the artifact cannot load its UI" }
+            }
             cp ../../../icons/iOS/iTunesArtwork@2x.png .
             cp ../../AppxManifest.xml .
             # Both halves, debug last so it wins the names they share. This is
