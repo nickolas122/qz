@@ -12,7 +12,7 @@
 ; One profile per app, picked automatically from whichever window is active, so
 ; the same script covers both without editing anything between rides.
 ;
-; See README.md for the alternative routes (QZ WebSocket / MQTT bridge).
+; See README.md for the alternative routes (QZ WebSocket bridge / QZ reads the pad).
 ; ---------------------------------------------------------------------------
 
 ; ------------------------------- config ------------------------------------

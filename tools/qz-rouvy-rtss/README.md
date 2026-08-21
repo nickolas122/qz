@@ -41,6 +41,10 @@ Route A is the better one, and `Start-QzRouvy.ps1` automates it end to end.
   seconds (`src/qmdnsengine/src/src/hostname.cpp`).
 * `Settings > Template Settings > user_QZWS` — set to Enabled. This is the
   WebSocket these scripts read; it is off by default.
+
+  To check the socket without RTSS or a browser, `python tools/qzws_smoke.py` connects
+  to it and asserts the three things these scripts depend on: the broadcast carries
+  gears and resistance, `getsettings` answers, and a shift sent back moves the gear.
 * Pair QZ in Rouvy as Power + Cadence + Controllable.
 
 ## Route A — RTSS

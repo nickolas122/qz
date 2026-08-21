@@ -89,15 +89,19 @@ void WebServerInfoSender::innerStop() {
 bool WebServerInfoSender::init() {
     bool ok;
     folders = settings.value(QStringLiteral("template_") + templateId + QStringLiteral("_folders")).toStringList();
+    port = settings.value(QStringLiteral("template_") + templateId + QStringLiteral("_port"), 6666).toInt(&ok);
+    if (!ok)
+        port = 6666;
+    if (!httpServer)
+        httpServer = new QHttpServer(this);
+    relative2Absolute.clear();
+    // The folder routes are the HTTP half, and they are optional: the inner endpoint has
+    // pages to serve, the user endpoint has none. The WebSocket is what both exist for, so
+    // listening must not depend on the folder scan having found something - it is the only
+    // way a PC reads the ride. See STRIP-SPEC.md, section 7 Group D.
     if (!folders.isEmpty()) {
         QString relative;
         int idx;
-        port = settings.value(QStringLiteral("template_") + templateId + QStringLiteral("_port"), 6666).toInt(&ok);
-        if (!ok)
-            port = 6666;
-        if (!httpServer)
-            httpServer = new QHttpServer(this);
-        relative2Absolute.clear();
         for (auto fld : folders) {
             idx = fld.lastIndexOf('/');
             qDebug() << QStringLiteral("Folder") << fld;
@@ -124,15 +128,14 @@ bool WebServerInfoSender::init() {
                                   });
             }
         }
-        if (listen()) {
-            qDebug() << QStringLiteral("WebServer listening on port") << port << QStringLiteral(" ")
-                     << relative2Absolute;
-            connect(httpServer, SIGNAL(newWebSocketConnection()), this, SLOT(onNewConnection()));
-            return true;
-        } else {
-            reinit();
-        }
     }
+    if (listen()) {
+        qDebug() << QStringLiteral("WebServer listening on port") << port << QStringLiteral(" ")
+                 << relative2Absolute;
+        connect(httpServer, SIGNAL(newWebSocketConnection()), this, SLOT(onNewConnection()));
+        return true;
+    }
+    reinit();
     return false;
 }
 

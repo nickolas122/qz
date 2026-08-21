@@ -22,7 +22,6 @@
 #include "webserverinfosender.h"
 #endif
 #include "homeform.h"
-#include "tcpclientinfosender.h"
 #include "trainprogram.h"
 #include "zwiftworkout.h"
 #include "qzsettings.h"
@@ -162,59 +161,17 @@ TemplateInfoSenderBuilder *TemplateInfoSenderBuilder::getInstance(const QString 
     }
 }
 
-bool TemplateInfoSenderBuilder::validFileTemplateType(const QString &tp) const { return tp == TEMPLATE_TYPE_TCPCLIENT; }
-
-void TemplateInfoSenderBuilder::createTemplatesFromFolder(const QString &idInfo, const QString &folder,
-                                                          QStringList &dirTemplates) {
-    QSettings settings;
+void TemplateInfoSenderBuilder::collectTemplateFolders(const QString &folder, QStringList &dirTemplates) {
     QDirIterator it(folder);
-    QString content, templateId;
-    // QString tempType; // NOTE: clazy-unused-non-triviak-variable
-    QString fileName, filePath;
-    QFileInfo fileInfo;
     while (it.hasNext()) {
-        filePath = it.next();
-        fileInfo = it.fileInfo();
-        if (fileInfo.isFile() && fileInfo.completeSuffix() == QStringLiteral("qzt") &&
-            (fileName = it.fileName()).length() > 4) {
-            qDebug() << QStringLiteral("Template File Found") << filePath;
-            QFile f(filePath);
-            if (!f.open(QFile::ReadOnly | QFile::Text)) {
-                continue;
-            }
-            QTextStream in(&f);
-            if (f.size() && !(content = in.readAll()).isEmpty()) {
-                templateId = fileName.left(fileName.length() - 4);
-                int idx = templateId.lastIndexOf(QStringLiteral("-"));
-                if (idx > 0) {
-                    QString tempType = templateId.mid(idx + 1);
-                    templateId = templateId.mid(0, idx);
-                    templateId = idInfo + "_" + templateId;
-                    qDebug() << QStringLiteral("Template type") << tempType << QStringLiteral(" id") << templateId;
-                    templateFilesList.insert(templateId, filePath);
-                    QString savedType =
-                        settings.value(QStringLiteral("template_") + templateId + QStringLiteral("_type"), QString())
-                            .toString();
-                    if (savedType != tempType && validFileTemplateType(tempType)) {
-                        settings.setValue(QStringLiteral("template_") + templateId + QStringLiteral("_enabled"), false);
-                        settings.setValue(QStringLiteral("template_") + templateId + QStringLiteral("_type"), tempType);
-                    } else if (settings
-                                   .value(QStringLiteral("template_") + templateId + QStringLiteral("_enabled"), false)
-                                   .toBool()) {
-                        newTemplate(templateId, tempType, content);
-                    } else {
-                        qDebug() << QStringLiteral("Template") << templateId
-                                 << QStringLiteral(" is disabled: not created");
-                    }
-                }
-            }
-        } else if (fileInfo.isDir()) {
-            int idx = filePath.lastIndexOf('/');
-            QString pathEl = idx < 0 ? filePath : filePath.mid(idx + 1);
-            if (pathEl != QStringLiteral(".") && pathEl != QStringLiteral("..") && !dirTemplates.contains(pathEl)) {
-                qDebug() << QStringLiteral("Template Dir Found") << filePath;
-                dirTemplates += pathEl;
-            }
+        const QString filePath = it.next();
+        if (!it.fileInfo().isDir())
+            continue;
+        const int idx = filePath.lastIndexOf('/');
+        const QString pathEl = idx < 0 ? filePath : filePath.mid(idx + 1);
+        if (pathEl != QStringLiteral(".") && pathEl != QStringLiteral("..") && !dirTemplates.contains(pathEl)) {
+            qDebug() << QStringLiteral("Template Dir Found") << filePath;
+            dirTemplates += pathEl;
         }
     }
 }
@@ -231,38 +188,38 @@ void TemplateInfoSenderBuilder::load(const QString &idInfo, const QStringList &f
     for (auto &tdir : folders) {
         qDebug() << QStringLiteral("Load start from") << tdir;
         startIdIndex = globalIdList.size();
-        createTemplatesFromFolder(idInfo, tdir, globalIdList);
+        collectTemplateFolders(tdir, globalIdList);
         for (int i = startIdIndex; i < globalIdList.size(); i++)
             globalFolderList.append(tdir + "/" + globalIdList.at(i));
     }
-    if (!globalFolderList.isEmpty()) {
-        QStringList addressList;
-        qDebug() << QStringLiteral("Folder List") << globalFolderList;
-        const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
-        for (auto &address : QNetworkInterface::allAddresses()) {
-            if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost) {
-                addressList += address.toString();
-            }
+    QStringList addressList;
+    const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
+    for (auto &address : QNetworkInterface::allAddresses()) {
+        if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost) {
+            addressList += address.toString();
         }
-        qDebug() << QStringLiteral("addressList ") << addressList;
-        QString templateId = idInfo + "_" + QStringLiteral(TEMPLATE_PRIVATE_WEBSERVER_ID);
-        settings.setValue(QStringLiteral("template_") + templateId + QStringLiteral("_ips"), addressList);
-        templateFilesList.insert(templateId, TEMPLATE_TYPE_WEBSERVER);
-        QString temptype =
-            settings.value(QStringLiteral("template_") + templateId + QStringLiteral("_type"), QString()).toString();
-        settings.setValue(QStringLiteral("template_") + templateId + QStringLiteral("_folders"), globalFolderList);
-        settings.setValue(QStringLiteral("template_") + templateId + QStringLiteral("_ips"), addressList);
-        if (temptype != TEMPLATE_TYPE_WEBSERVER) {
-            settings.setValue(QStringLiteral("template_") + templateId + QStringLiteral("_type"),
-                              QString(TEMPLATE_TYPE_WEBSERVER));
-            settings.setValue(QStringLiteral("template_") + templateId + QStringLiteral("_enabled"), false);
-        } else if (settings.value(QStringLiteral("template_") + templateId + QStringLiteral("_enabled"), false)
-                       .toBool()) {
-            newTemplate(templateId, TEMPLATE_TYPE_WEBSERVER,
-                        QStringLiteral("JSON.stringify({msg: \"workout\", content: this.workout})"));
-        } else {
-            qDebug() << QStringLiteral("Template") << templateId << QStringLiteral(" is disabled: not created");
-        }
+    }
+    qDebug() << QStringLiteral("Folder List") << globalFolderList << QStringLiteral("addressList") << addressList;
+
+    // The endpoint is created whether or not the folder scan found anything. This used to sit
+    // inside an "if (!globalFolderList.isEmpty())", which meant the example/ and debug/
+    // subdirectories shipped in :/templates/ were the only reason user_QZWS existed - and the
+    // two bridge tools in tools/ read the ride through it. See STRIP-SPEC.md, section 7 Group D.
+    const QString templateId = idInfo + "_" + QStringLiteral(TEMPLATE_PRIVATE_WEBSERVER_ID);
+    templateFilesList.insert(templateId, TEMPLATE_TYPE_WEBSERVER);
+    settings.setValue(QStringLiteral("template_") + templateId + QStringLiteral("_folders"), globalFolderList);
+    settings.setValue(QStringLiteral("template_") + templateId + QStringLiteral("_ips"), addressList);
+    const QString temptype =
+        settings.value(QStringLiteral("template_") + templateId + QStringLiteral("_type"), QString()).toString();
+    if (temptype != TEMPLATE_TYPE_WEBSERVER) {
+        settings.setValue(QStringLiteral("template_") + templateId + QStringLiteral("_type"),
+                          QString(TEMPLATE_TYPE_WEBSERVER));
+        settings.setValue(QStringLiteral("template_") + templateId + QStringLiteral("_enabled"), false);
+    } else if (settings.value(QStringLiteral("template_") + templateId + QStringLiteral("_enabled"), false).toBool()) {
+        newTemplate(templateId, TEMPLATE_TYPE_WEBSERVER,
+                    QStringLiteral("JSON.stringify({msg: \"workout\", content: this.workout})"));
+    } else {
+        qDebug() << QStringLiteral("Template") << templateId << QStringLiteral(" is disabled: not created");
     }
     qDebug() << QStringLiteral("Setting template_ids") << templateFilesList.keys();
     settings.setValue(QStringLiteral("template_") + idInfo + QStringLiteral("_ids"),
@@ -275,11 +232,8 @@ TemplateInfoSender *TemplateInfoSenderBuilder::newTemplate(const QString &id, co
 #ifdef Q_HTTPSERVER
     if (tp == TEMPLATE_TYPE_WEBSERVER) {
         tempInfo = new WebServerInfoSender(id, this);
-    } else
-#endif
-        if (tp == TEMPLATE_TYPE_TCPCLIENT) {
-        tempInfo = new TcpClientInfoSender(id, this);
     }
+#endif
     if (tempInfo) {
         TemplateInfoSender *old;
         if ((old = templateInfoMap.value(id, 0))) {
@@ -1413,15 +1367,6 @@ void TemplateInfoSenderBuilder::onResistanceMinus(const QJsonValue &msgContent, 
     tempSender->send(out.toJson());
 }
 
-void TemplateInfoSenderBuilder::onFloatingClose(const QJsonValue &msgContent, TemplateInfoSender *tempSender) {
-    Q_UNUSED(msgContent);
-    QJsonObject main, outObj;
-    emit floatingClose();
-    main[QStringLiteral("msg")] = QStringLiteral("R_floating_close");
-    QJsonDocument out(main);
-    tempSender->send(out.toJson());
-}
-
 void TemplateInfoSenderBuilder::onAutoresistance(const QJsonValue &msgContent, TemplateInfoSender *tempSender) {
     Q_UNUSED(msgContent);
     QJsonObject main, outObj;
@@ -1579,8 +1524,6 @@ void TemplateInfoSenderBuilder::onDataReceived(const QByteArray &data) {
                 } else if (msg == QStringLiteral("resistance_minus")) {
                     onResistanceMinus(jsonObject[QStringLiteral("content")], sender);
                     return;
-                } else if (msg == QStringLiteral("floating_close")) {
-                    onFloatingClose(jsonObject[QStringLiteral("content")], sender);
                     return;
                 } else if (msg == QStringLiteral("autoresistance")) {
                     onAutoresistance(jsonObject[QStringLiteral("content")], sender);
@@ -1841,7 +1784,7 @@ void TemplateInfoSenderBuilder::buildContext(bool forceReinit) {
             obj.setProperty(QStringLiteral("cadence_lapavg"), dep.lapAverage());
             obj.setProperty(QStringLiteral("cadence_lapmax"), dep.lapMax());
 
-            // use to preserve compatibility to dochart.js and floating.htm
+            // use to preserve compatibility to dochart.js
             obj.setProperty(QStringLiteral("req_cadence"), (dep = ((rower *)device)->lastRequestedCadence()).value());
             obj.setProperty(QStringLiteral("target_cadence"), (dep = ((rower *)device)->lastRequestedCadence()).value());
             

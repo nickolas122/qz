@@ -98,7 +98,6 @@
                     </intent-filter>
                 </service>
 				<service android:name=".ChannelService"></service>
-				<service android:name=".FloatingWindowGFG" android:enabled="true" android:exported="true"/>
 
             <service android:name="com.cgutman.androidremotedebugger.service.ShellService"
 				    android:enabled="true"

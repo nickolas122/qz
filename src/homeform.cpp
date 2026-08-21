@@ -273,8 +273,8 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
     QString sKey = QStringLiteral("template_") + innerId + QStringLiteral("_" TEMPLATE_PRIVATE_WEBSERVER_ID "_");
 
     QString path = homeform::getWritableAppDir() + QStringLiteral("QZTemplates");
-    this->userTemplateManager = TemplateInfoSenderBuilder::getInstance(
-        QStringLiteral("user"), QStringList({path, QStringLiteral(":/templates/")}), this);
+    this->userTemplateManager =
+        TemplateInfoSenderBuilder::getInstance(QStringLiteral("user"), QStringList({path}), this);
 
     settings.setValue(sKey + QStringLiteral("enabled"), true);
     settings.setValue(sKey + QStringLiteral("type"), TEMPLATE_TYPE_WEBSERVER);
@@ -641,46 +641,34 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
     connect(bluetoothManager, &bluetooth::deviceFound, this, &homeform::deviceFound);
     connect(bluetoothManager, &bluetooth::deviceConnected, this, &homeform::deviceConnected);
     connect(bluetoothManager, &bluetooth::deviceConnected, this, &homeform::trainProgramSignals);
-    connect(this, &homeform::workoutNameChanged, this->userTemplateManager,
-            &TemplateInfoSenderBuilder::onWorkoutNameChanged);
-    connect(this, &homeform::workoutStartDateChanged, this->userTemplateManager,
-            &TemplateInfoSenderBuilder::onWorkoutStartDate);
-    connect(this, &homeform::instructorNameChanged, this->userTemplateManager,
-            &TemplateInfoSenderBuilder::onInstructorName);
-    connect(this, &homeform::workoutEventStateChanged, this->userTemplateManager,
-            &TemplateInfoSenderBuilder::workoutEventStateChanged);
-    connect(this->userTemplateManager, &TemplateInfoSenderBuilder::activityDescriptionChanged, this,
-            &homeform::setActivityDescription);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::lap, this, &homeform::Lap);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::floatingClose, this, &homeform::floatingOpen);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::autoResistance, this,
-            &homeform::toggleAutoResistance);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::pelotonOffset_Plus, this,
-            &homeform::pelotonOffset_Plus);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::pelotonOffset_Minus, this,
-            &homeform::pelotonOffset_Minus);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::gears_Plus, this, &homeform::gearUp);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::gears_Minus, this, &homeform::gearDown);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::speed_Plus, this, &homeform::speedPlus);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::speed_Minus, this, &homeform::speedMinus);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::inclination_Plus, this, &homeform::inclinationPlus);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::inclination_Minus, this, &homeform::inclinationMinus);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::resistance_Plus, this, [this]() { Plus(QStringLiteral("resistance")); });
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::resistance_Minus, this, [this]() { Minus(QStringLiteral("resistance")); });
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::pelotonOffset, this, &homeform::pelotonOffset);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::Start, this, &homeform::StartRequested);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::Pause, this, &homeform::Start);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::Stop, this, &homeform::StopRequested);
-    connect(this, &homeform::workoutNameChanged, this->innerTemplateManager,
-            &TemplateInfoSenderBuilder::onWorkoutNameChanged);
-    connect(this, &homeform::workoutStartDateChanged, this->innerTemplateManager,
-            &TemplateInfoSenderBuilder::onWorkoutStartDate);
-    connect(this, &homeform::instructorNameChanged, this->innerTemplateManager,
-            &TemplateInfoSenderBuilder::onInstructorName);
-    connect(this, &homeform::workoutEventStateChanged, this->innerTemplateManager,
-            &TemplateInfoSenderBuilder::workoutEventStateChanged);
-    connect(this->innerTemplateManager, &TemplateInfoSenderBuilder::activityDescriptionChanged, this,
-            &homeform::setActivityDescription);
+    // Both endpoints speak the same vocabulary, and both are driven from outside the app:
+    // inner_QZWS backs the pages QZ serves itself, and user_QZWS is what tools/qz-rouvy-rtss
+    // and tools/xbox-mywhoosh-gears connect to from a PC. The control half used to be wired
+    // from the inner manager alone, so a gears_plus arriving on the documented port 6666 was
+    // parsed, dispatched, emitted and then dropped on the floor. See STRIP-SPEC.md, 7 Group D.
+    for (TemplateInfoSenderBuilder *tm : {this->userTemplateManager, this->innerTemplateManager}) {
+        connect(this, &homeform::workoutNameChanged, tm, &TemplateInfoSenderBuilder::onWorkoutNameChanged);
+        connect(this, &homeform::workoutStartDateChanged, tm, &TemplateInfoSenderBuilder::onWorkoutStartDate);
+        connect(this, &homeform::instructorNameChanged, tm, &TemplateInfoSenderBuilder::onInstructorName);
+        connect(this, &homeform::workoutEventStateChanged, tm, &TemplateInfoSenderBuilder::workoutEventStateChanged);
+        connect(tm, &TemplateInfoSenderBuilder::activityDescriptionChanged, this, &homeform::setActivityDescription);
+        connect(tm, &TemplateInfoSenderBuilder::lap, this, &homeform::Lap);
+        connect(tm, &TemplateInfoSenderBuilder::autoResistance, this, &homeform::toggleAutoResistance);
+        connect(tm, &TemplateInfoSenderBuilder::pelotonOffset_Plus, this, &homeform::pelotonOffset_Plus);
+        connect(tm, &TemplateInfoSenderBuilder::pelotonOffset_Minus, this, &homeform::pelotonOffset_Minus);
+        connect(tm, &TemplateInfoSenderBuilder::pelotonOffset, this, &homeform::pelotonOffset);
+        connect(tm, &TemplateInfoSenderBuilder::gears_Plus, this, &homeform::gearUp);
+        connect(tm, &TemplateInfoSenderBuilder::gears_Minus, this, &homeform::gearDown);
+        connect(tm, &TemplateInfoSenderBuilder::speed_Plus, this, &homeform::speedPlus);
+        connect(tm, &TemplateInfoSenderBuilder::speed_Minus, this, &homeform::speedMinus);
+        connect(tm, &TemplateInfoSenderBuilder::inclination_Plus, this, &homeform::inclinationPlus);
+        connect(tm, &TemplateInfoSenderBuilder::inclination_Minus, this, &homeform::inclinationMinus);
+        connect(tm, &TemplateInfoSenderBuilder::resistance_Plus, this, [this]() { Plus(QStringLiteral("resistance")); });
+        connect(tm, &TemplateInfoSenderBuilder::resistance_Minus, this, [this]() { Minus(QStringLiteral("resistance")); });
+        connect(tm, &TemplateInfoSenderBuilder::Start, this, &homeform::StartRequested);
+        connect(tm, &TemplateInfoSenderBuilder::Pause, this, &homeform::Start);
+        connect(tm, &TemplateInfoSenderBuilder::Stop, this, &homeform::StopRequested);
+    }
     engine->rootContext()->setContextProperty(QStringLiteral("rootItem"), (QObject *)this);
 
     this->trainProgram = new trainprogram(QList<trainrow>(), bl);
@@ -736,8 +724,6 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
     QObject::connect(stack, SIGNAL(volumeDown()), this, SLOT(volumeDown()));
     QObject::connect(stack, SIGNAL(keyMediaPrevious()), this, SLOT(keyMediaPrevious()));
     QObject::connect(stack, SIGNAL(keyMediaNext()), this, SLOT(keyMediaNext()));
-    QObject::connect(stack, SIGNAL(floatingOpen()), this, SLOT(floatingOpen()));
-    QObject::connect(stack, SIGNAL(openFloatingWindowBrowser()), this, SLOT(openFloatingWindowBrowser()));
 
     qDebug() << "homeform constructor events linked";
 
@@ -1053,56 +1039,6 @@ void homeform::volumeDown() {
     }
 }
 
-void homeform::floatingOpen() {
-#ifdef Q_OS_ANDROID
-    if (!floating_open) {
-
-        QSettings settings;
-        // Get the floating window type setting (0 = classic, 1 = horizontal)
-        int floatingWindowType = settings.value(QZSettings::floatingwindow_type, QZSettings::default_floatingwindow_type).toInt();
-        
-        // Determine which HTML file to use based on the setting
-        QString htmlFile = (floatingWindowType == 0) ? "floating.htm" : "hfloating.htm";
-        
-        QAndroidJniObject javaHtmlFile = QAndroidJniObject::fromString(htmlFile);
-        
-        QAndroidJniObject::callStaticMethod<void>(
-            "org/cagnulen/qdomyoszwift/FloatingHandler", "show", "(Landroid/content/Context;IIIILjava/lang/String;)V",
-            QtAndroid::androidContext().object(), 
-            settings.value("template_inner_QZWS_port", 6666).toInt(),
-            settings.value(QZSettings::floating_width, QZSettings::default_floating_width).toInt(),
-            settings.value(QZSettings::floating_height, QZSettings::default_floating_height).toInt(),
-            settings.value(QZSettings::floating_transparency, QZSettings::default_floating_transparency).toInt(),
-            javaHtmlFile.object<jstring>());
-    } else {
-        QAndroidJniObject::callStaticMethod<void>("org/cagnulen/qdomyoszwift/FloatingHandler", "hide", "()V");
-    }
-    floating_open = !floating_open;
-#endif
-}
-
-void homeform::openFloatingWindowBrowser() {
-    QSettings settings;
-    QHostAddress a;
-    foreach (QNetworkInterface netInterface, QNetworkInterface::allInterfaces()) {
-        // Return only the first non-loopback MAC Address
-        QString addr = netInterface.hardwareAddress();
-        if (!(netInterface.flags() & QNetworkInterface::IsLoopBack) && !addr.isEmpty()) {
-            const auto entries = netInterface.addressEntries();
-            for (const QNetworkAddressEntry &newEntry : entries) {
-                qDebug() << newEntry.ip().toIPv4Address();
-                if (!newEntry.ip().isLoopback()) {
-                    a = newEntry.ip();
-                    break;
-                }
-            }
-        }
-    }
-    QString url = "http://" + localipaddress::getIP(a).toString() + ":" +
-                  QString::number(settings.value("template_inner_QZWS_port", 6666).toInt()) + "/floating/floating.htm";
-    QDesktopServices::openUrl(url);
-}
-
 void homeform::zwiftLoginState(bool ok) {
 
     m_zwiftLoginState = (ok ? 1 : 0);
@@ -1270,9 +1206,6 @@ void homeform::aboutToQuit() {
     qDebug() << "homeform::aboutToQuit()";
 
 #ifdef Q_OS_ANDROID
-    // closing floating window
-    if (floating_open)
-        floatingOpen();
     QAndroidJniObject::callStaticMethod<void>("org/cagnulen/qdomyoszwift/NotificationClient", "hide", "()V");
 #endif
 
@@ -4014,10 +3947,6 @@ void homeform::deviceConnected(QBluetoothDeviceInfo b) {
     emit instructorNameChanged(instructorName());
 
 #ifdef Q_OS_ANDROID
-    if (settings.value(QZSettings::floating_startup, QZSettings::default_floating_startup).toBool()) {
-        floatingOpen();
-    }
-
     if (!settings.value(QZSettings::heart_rate_belt_name, QZSettings::default_heart_rate_belt_name)
              .toString()
              .compare(QZSettings::default_heart_rate_belt_name) &&

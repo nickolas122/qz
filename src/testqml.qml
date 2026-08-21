@@ -46,8 +46,6 @@ ApplicationWindow {
     signal volumeDown()
     signal keyMediaPrevious()
     signal keyMediaNext()
-    signal floatingOpen()
-    signal openFloatingWindowBrowser();
 
     property bool lockTiles: false
     property bool settings_restart_to_apply: false

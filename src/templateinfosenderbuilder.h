@@ -7,7 +7,6 @@
 #include <QJsonArray>
 #include <QSettings>
 
-#define TEMPLATE_TYPE_TCPCLIENT QStringLiteral("TcpClient")
 #define TEMPLATE_TYPE_WEBSERVER QStringLiteral("WebServer")
 #define TEMPLATE_PRIVATE_WEBSERVER_ID "QZWS"
 
@@ -26,7 +25,6 @@ class TemplateInfoSenderBuilder : public QObject {
     void activityDescriptionChanged(QString newDescription);
     void chartSaved(QString filename);
     void lap();
-    void floatingClose();
     void pelotonOffset_Plus();
     void pelotonOffset_Minus();
     void gears_Plus();
@@ -47,10 +45,9 @@ class TemplateInfoSenderBuilder : public QObject {
     void autoResistance();
 
   private:
-    bool validFileTemplateType(const QString &tp) const;
     void buildContext(bool forceReinit = false);
     QString activityDescription;
-    void createTemplatesFromFolder(const QString &idInfo, const QString &folder, QStringList &dirTemplates);
+    void collectTemplateFolders(const QString &folder, QStringList &dirTemplates);
     void clearSessionArray();
     void clearPreviewSessionArray();
     bluetoothdevice *device = nullptr;
@@ -90,7 +87,6 @@ class TemplateInfoSenderBuilder : public QObject {
     void onResistanceMinus(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
     void onPelotonStartWorkout(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
     void onPelotonAbortWorkout(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
-    void onFloatingClose(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
     void onAutoresistance(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
     void onSaveTrainingProgram(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
     void onPasteTrainingProgramFromClipboard(const QJsonValue &msgContent, TemplateInfoSender *tempSender);

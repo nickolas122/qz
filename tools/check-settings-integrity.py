@@ -134,8 +134,8 @@ def catalog():
 # Shrinking it is welcome and the script says so.
 KNOWN_QML_ONLY = {
     "appLanguageOptions", "crrGain", "cwGain", "entry", "filteredSettings",
-    "gears_current_value_f", "initialized", "nordictrack_fs5i_treadmill", "osc_ip",
-    "osc_port", "searchableSettings", "settingsCatalog", "settingsCatalogError",
+    "gears_current_value_f", "initialized", "nordictrack_fs5i_treadmill",
+    "searchableSettings", "settingsCatalog", "settingsCatalogError",
     "settingsCatalogLoaded", "settingsCatalogLoading", "settingsSearchActive",
     "settingsSearchPending", "settingsSearchVisible", "theme_background_color",
     "theme_status_bar_background_color", "theme_tile_background_color",

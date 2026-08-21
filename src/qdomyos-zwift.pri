@@ -123,20 +123,6 @@ SOURCES += \
     $$PWD/devices/stairclimber.cpp \
     $$PWD/logwriter.cpp \
     $$PWD/filesearcher.cpp \
-    $$PWD/mqtt/qmqttauthenticationproperties.cpp \
-    $$PWD/mqtt/qmqttclient.cpp \
-    $$PWD/mqtt/qmqttconnection.cpp \
-    $$PWD/mqtt/qmqttconnectionproperties.cpp \
-    $$PWD/mqtt/qmqttcontrolpacket.cpp \
-    $$PWD/mqtt/qmqttmessage.cpp \
-    $$PWD/mqtt/qmqttpublishproperties.cpp \
-    $$PWD/mqtt/qmqttsubscription.cpp \
-    $$PWD/mqtt/qmqttsubscriptionproperties.cpp \
-    $$PWD/mqtt/qmqtttopicfilter.cpp \
-    $$PWD/mqtt/qmqtttopicname.cpp \
-    $$PWD/mqtt/qmqtttype.cpp \
-    $$PWD/osc.cpp \
-QTelnet.cpp \
 devices/eliteariafan/eliteariafan.cpp \
 virtualdevices/virtualdevice.cpp \
 androidactivityresultreceiver.cpp \
@@ -205,7 +191,6 @@ simplecrypt.cpp \
 devices/simulatedbike/ridescenario.cpp \
 devices/simulatedbike/simulatedbike.cpp \
 devices/stagesbike/stagesbike.cpp \
-tcpclientinfosender.cpp \
 templateinfosender.cpp \
 templateinfosenderbuilder.cpp \
 webtranslation.cpp \
@@ -248,37 +233,8 @@ HEADERS += \
     $$PWD/inclinationresistancetable.h \
     $$PWD/logwriter.h \
     $$PWD/filesearcher.h \
-    $$PWD/osc.h \
-    $$PWD/oscpp/client.hpp \
-    $$PWD/oscpp/detail/endian.hpp \
-    $$PWD/oscpp/detail/host.hpp \
-    $$PWD/oscpp/detail/stream.hpp \
-    $$PWD/oscpp/error.hpp \
-    $$PWD/oscpp/print.hpp \
-    $$PWD/oscpp/server.hpp \
-    $$PWD/oscpp/types.hpp \
-    $$PWD/oscpp/util.hpp \
-    $$PWD/mqtt/qmqttauthenticationproperties.h \
-    $$PWD/mqtt/qmqttclient.h \
-    $$PWD/mqtt/qmqttclient_p.h \
-    $$PWD/mqtt/qmqttconnection_p.h \
-    $$PWD/mqtt/qmqttconnectionproperties.h \
-    $$PWD/mqtt/qmqttconnectionproperties_p.h \
-    $$PWD/mqtt/qmqttcontrolpacket_p.h \
-    $$PWD/mqtt/qmqttglobal.h \
-    $$PWD/mqtt/qmqttmessage.h \
-    $$PWD/mqtt/qmqttmessage_p.h \
-    $$PWD/mqtt/qmqttpublishproperties.h \
-    $$PWD/mqtt/qmqttpublishproperties_p.h \
-    $$PWD/mqtt/qmqttsubscription.h \
-    $$PWD/mqtt/qmqttsubscription_p.h \
-    $$PWD/mqtt/qmqttsubscriptionproperties.h \
-    $$PWD/mqtt/qmqtttopicfilter.h \
-    $$PWD/mqtt/qmqtttopicname.h \
-    $$PWD/mqtt/qmqtttype.h \
     $$PWD/treadmillErgTable.h \
     $$PWD/wheelcircumference.h \
-QTelnet.h \
 devices/eliteariafan/eliteariafan.h \
 windows_zwift_workout_paddleocr_thread.h \
 zwift-api/PlayerStateWrapper.h \
@@ -376,7 +332,6 @@ simplecrypt.h \
 devices/simulatedbike/ridescenario.h \
 devices/simulatedbike/simulatedbike.h \
 devices/stagesbike/stagesbike.h \
-tcpclientinfosender.h \
 templateinfosender.h \
 templateinfosenderbuilder.h \
 webtranslation.h \
@@ -507,12 +462,9 @@ DISTFILES += \
 	android/gradle/wrapper/gradle-wrapper.properties \
 	android/gradlew \
 	android/gradlew.bat \
-   android/res/layout/floating_layout.xml \
 	android/res/values/libs.xml \
 	android/src/Ant.java \
 	android/src/ChannelService.java \
-   android/src/FloatingHandler.java \
-   android/src/FloatingWindowGFG.java \
    android/src/ForegroundService.java \
    android/src/NotificationClient.java \
    android/src/QZAdbRemote.java \
@@ -587,12 +539,10 @@ ios {
 }
 
 HEADERS += \
-    mqttpublisher.h \
     androidstatusbar.h \
     fontmanager.h
 
 SOURCES += \
-    mqttpublisher.cpp \
     androidstatusbar.cpp \
     fontmanager.cpp
 
