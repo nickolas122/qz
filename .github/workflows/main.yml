@@ -59,6 +59,12 @@ jobs:
       - name: Check settings declarations agree
         run: python tools/check-settings-integrity.py
 
+      # Bulk deletion is line-oriented; several Qt constructs wrap onto a second line.
+      # Half of one is often still brace- and paren-balanced, so it reaches moc rather
+      # than any structural check, and moc blames a line that is not the problem.
+      - name: Check for half-deleted constructs
+        run: python tools/check-source-shape.py
+
   window-build:
     runs-on: windows-2022
     strategy:
