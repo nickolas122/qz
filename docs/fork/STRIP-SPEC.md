@@ -594,7 +594,7 @@ with Rouvy is still the final word, but it is no longer the only evidence availa
 | 2 | Group B — recording | low | **covered** |
 | 3 | Group C — training programs | medium (homeform surgery) | **none** |
 | 4 | Group D — telemetry | medium (verify RTSS first) | **covered** |
-| 5 | Group E — rival trainers, running sensors, `virtualtreadmill` | low, once cscbike is resolved | **covered** |  ← code landed 2026-08-20; H1 outstanding
+| 5 | Group E — rival trainers, running sensors, `virtualtreadmill` | low, once cscbike is resolved | **covered** |  ← landed 2026-08-20, H1 passed 2026-08-21
 | 6 | Settings consolidation | medium (§3.6 runtime failures) | **covered** |
 | 7a | `RideState` object + `ui_next` flag + new tree under `src/ui/` | medium | **none** |
 | 7b | Ride on the new UI with Rouvy and Zwift; flip the default | low, but needs calendar time | **none** |
@@ -908,8 +908,16 @@ for the same reason. Both are inert — the sensors that fed them are gone — a
 one line each to remove with the file that reads them.
 *Tests:* device-discovery suite green against the reduced set; FTMS handshake and slew
 limiter suites unchanged and green.
-*Hardware:* **yes — H1.** This is the first phase that edits the device layer. One session:
-trainer connects, gears shift 1–15, resistance tracks the table.
+*Hardware:* **yes — H1. Done 2026-08-21, and it passed.** ELITE AVANTI (`YPBM001264`)
+connected over the Qt 6 Windows build, gears exercised 1 through 16, resistance tracked
+10 through 26 across 20 commands, 38 frames of Indoor Bike Data in 59 seconds. The
+name-matching cascade this session existed to check handed the trainer to `ftmsbike` as
+before — which is the whole question §11.6 asked of it.
+
+The session also turned up a Windows connection fault that has nothing to do with the strip:
+the first launch found the bike and then never finished discovering its services, so nothing
+was subscribed and the trainer never started. It recovered by itself on the next run. Written
+up in [TODO.md](TODO.md); not a phase 5 defect and not a gate on anything here.
 
 The revision of Group E made this phase much smaller — four drivers rather than fourteen —
 but it did **not** make it safe to skip H1. `bluetooth.cpp` decides which driver to build

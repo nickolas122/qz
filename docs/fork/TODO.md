@@ -9,7 +9,15 @@ behind.
 
 ---
 
-## The device-name branches in ftmsbike are unreachable from a test
+## ~~The device-name branches in ftmsbike are unreachable from a test~~
+
+**Resolved 2026-08-21.** `applyDeviceProfile()` is that seam - the half of
+`deviceDiscovered()` that does not touch the radio - and `simulatedFtmsBike` calls it from its
+constructor, so a test is now the bike it says it is: the default harness arrives as a YPBM
+with `resistance_lvl_mode` set, ERG unsupported and 32 levels. It went in for
+`TestErgSimConflict`, which needs the YPBM profile to reach the continuous-ERG block at all.
+`RideScenario`'s `bike` directive is still read by nothing; wiring it up is what is left, and
+it is now a small job rather than a blocked one. Original entry below.
 
 **Found 2026-08-18, building Layer B.** `ftmsbike` gates around fifty behaviours on flags set
 from the device name — `YPBM`, `DOMYOS`, `FS_YK`, `D500V2` and the rest — and the one that
@@ -25,6 +33,59 @@ The seam is the same shape as the six already there: lift the name matching out 
 `deviceDiscovered()` into something that takes a name and sets the flags, and let a test call it.
 `RideScenario` already has a `bike` directive for exactly this, parsed since phase 0 and read by
 nothing — this is what would read it.
+
+---
+
+## Windows sometimes never finishes discovering the trainer's services, and the retry is silent
+
+**Found 2026-08-21, the phase 5 hardware session.** The first launch found `YPBM001264` and
+connected, then never finished service discovery. All four services arrived, five seconds
+apart, each preceded by WinRT's *"Could not await service operation (the operation returned
+because the timeout period expired)"*:
+
+```
+07:27:35  connectToDevice → ConnectedState → DiscoveringState
+07:27:36  serviceDiscovered {00001800-…}      ← 5 s apart, one timeout each
+07:27:41  serviceDiscovered {00001801-…}
+07:27:46  serviceDiscovered {0000180a-…}
+07:27:51  serviceDiscovered {00001826-…}      ← FTMS, and still nothing subscribed
+07:27:55  ClosingState → UnconnectedState     ← never reached DiscoveredState
+```
+
+Because the controller closed before `DiscoveredState`, no characteristic was ever subscribed,
+which is why the trainer never ran its 1-2-3 countdown and no data flowed. The rider saw an app
+that had found the bike and then sat there.
+
+QZ did notice: `controllerStateChanged` logged "trying to connect back again" and scheduled a
+reconnect 1,000 ms later. Nothing said so on screen, so the app was restarted two seconds after
+that — before the retry could land. The next run connected with **zero** timeouts and rode
+normally: gears 1–16, resistance 10–26, 38 frames of Indoor Bike Data in 59 seconds.
+
+*Evidence:* `debug-Fri_Aug_21_07_27_24_2026.log` (four timeouts, `Connected → Discovering →
+Closing`) against `debug-Fri_Aug_21_07_27_57_2026.log` (none, `Discovering → Discovered`) —
+same trainer, 33 seconds apart, same build (`043ba3c`).
+
+The timeouts themselves are probably not ours to fix.
+[WINDOWS-BLE-HARDENING.md](WINDOWS-BLE-HARDENING.md) already records that Windows picks its own
+connection parameters and that discovery requests get dropped by the OS stack. Two things that
+*are* ours, and they are separable:
+
+- **The reconnect is invisible.** Between the drop and the retry the UI says nothing, so a
+  recovery that was already in flight looks like a hang — and the natural response, restarting,
+  is the one thing that guarantees it cannot finish. Done would be a connection state the rider
+  can see: searching, connecting, discovering, connected, reconnecting. This is the same missing
+  surface as *QZ does not tell the rider when the bike goes away* below, from the other end — a
+  connection that never completed rather than one that ended — and one indicator answers both.
+- **Nothing bounds the discovery phase.** `serviceDiscoveryWatchdog`
+  (`ftmsbike.cpp:2526`, 10 s) starts in `serviceScanDone()` and so covers the *subscription*
+  pass, which is after discovery finishes. This failure was inside Qt's own
+  `discoverServices()`, before that timer exists, and the only thing that ended it was the
+  controller giving up twenty seconds later. A watchdog armed at `connectToDevice()` and
+  stopped on `DiscoveredState` would turn a twenty-second stall into a deliberate retry — and
+  the retry path is already written and already works.
+
+Worth knowing before designing either: it is intermittent, it recovered on its own the next
+time, and one observation is not a rate.
 
 ---
 
