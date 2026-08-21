@@ -669,24 +669,30 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
     QObject *rootObject = engine->rootObjects().constFirst();
     QObject *home = rootObject->findChild<QObject *>(QStringLiteral("home"));
     QObject *stack = rootObject;
-    QObject::connect(home, SIGNAL(start_clicked()), this, SLOT(Start()));
-    QObject::connect(home, SIGNAL(stop_clicked()), this, SLOT(Stop()));
-    QObject::connect(stack, SIGNAL(profile_open_clicked(QUrl)), this, SLOT(profile_open_clicked(QUrl)));
-    QObject::connect(stack, SIGNAL(fitfile_preview_clicked(QUrl)), this, SLOT(fitfile_preview_clicked(QUrl)));
-    QObject::connect(stack, SIGNAL(refresh_bluetooth_devices_clicked()), this,
-                     SLOT(refresh_bluetooth_devices_clicked()));
-    QObject::connect(home, SIGNAL(lap_clicked()), this, SLOT(Lap()));
-    QObject::connect(stack, SIGNAL(loadSettings(QUrl)), this, SLOT(loadSettings(QUrl)));
-    QObject::connect(stack, SIGNAL(saveSettings(QUrl)), this, SLOT(saveSettings(QUrl)));
-    QObject::connect(stack, SIGNAL(deleteSettings(QUrl)), this, SLOT(deleteSettings(QUrl)));
-    QObject::connect(stack, SIGNAL(restoreSettings()), this, SLOT(restoreSettings()));
-    QObject::connect(stack, SIGNAL(saveProfile(QString)), this, SLOT(saveProfile(QString)));
-    QObject::connect(stack, SIGNAL(restart()), this, SLOT(restart()));
+    // "home" is the old tree's tile grid. With ui_next on it is not there, and
+    // connecting to a null sender is six warnings and no behaviour. homeform itself
+    // still runs either way: the QZWS broadcast reads it (STRIP-SPEC.md 7 Group D),
+    // which is what 7c has to re-point before homeform can go.
+    if (home) {
+        QObject::connect(home, SIGNAL(start_clicked()), this, SLOT(Start()));
+        QObject::connect(home, SIGNAL(stop_clicked()), this, SLOT(Stop()));
+        QObject::connect(home, SIGNAL(lap_clicked()), this, SLOT(Lap()));
+        QObject::connect(stack, SIGNAL(profile_open_clicked(QUrl)), this, SLOT(profile_open_clicked(QUrl)));
+        QObject::connect(stack, SIGNAL(fitfile_preview_clicked(QUrl)), this, SLOT(fitfile_preview_clicked(QUrl)));
+        QObject::connect(stack, SIGNAL(refresh_bluetooth_devices_clicked()), this,
+                         SLOT(refresh_bluetooth_devices_clicked()));
+        QObject::connect(stack, SIGNAL(loadSettings(QUrl)), this, SLOT(loadSettings(QUrl)));
+        QObject::connect(stack, SIGNAL(saveSettings(QUrl)), this, SLOT(saveSettings(QUrl)));
+        QObject::connect(stack, SIGNAL(deleteSettings(QUrl)), this, SLOT(deleteSettings(QUrl)));
+        QObject::connect(stack, SIGNAL(restoreSettings()), this, SLOT(restoreSettings()));
+        QObject::connect(stack, SIGNAL(saveProfile(QString)), this, SLOT(saveProfile(QString)));
+        QObject::connect(stack, SIGNAL(restart()), this, SLOT(restart()));
 
-    QObject::connect(stack, SIGNAL(volumeUp()), this, SLOT(volumeUp()));
-    QObject::connect(stack, SIGNAL(volumeDown()), this, SLOT(volumeDown()));
-    QObject::connect(stack, SIGNAL(keyMediaPrevious()), this, SLOT(keyMediaPrevious()));
-    QObject::connect(stack, SIGNAL(keyMediaNext()), this, SLOT(keyMediaNext()));
+        QObject::connect(stack, SIGNAL(volumeUp()), this, SLOT(volumeUp()));
+        QObject::connect(stack, SIGNAL(volumeDown()), this, SLOT(volumeDown()));
+        QObject::connect(stack, SIGNAL(keyMediaPrevious()), this, SLOT(keyMediaPrevious()));
+        QObject::connect(stack, SIGNAL(keyMediaNext()), this, SLOT(keyMediaNext()));
+    }
 
     qDebug() << "homeform constructor events linked";
 
@@ -704,31 +710,6 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
     }
 
     emit tile_orderChanged(tile_order()); // NOTE: clazy-incorrecrt-emit
-
-    // copying bundles zwo files in the right path if necessary
-    QDirIterator itZwo(":/zwo/");
-    QDir().mkdir(getWritableAppDir() + "training/");
-    while (itZwo.hasNext()) {
-        qDebug() << itZwo.next() << itZwo.fileName();
-        QString targetPath = getWritableAppDir() + "training/" + itZwo.fileName();
-        QString markerPath = getWritableAppDir() + "training/.deleted_" + itZwo.fileName();
-        // Only copy if file doesn't exist AND no deletion marker exists
-        if (!QFile(targetPath).exists() && !QFile(markerPath).exists()) {
-            QFile::copy(":/zwo/" + itZwo.fileName(), targetPath);
-        }
-    }
-
-    QDirIterator itGpx(":/gpx/");
-    QDir().mkdir(getWritableAppDir() + "gpx/");
-    while (itGpx.hasNext()) {
-        qDebug() << itGpx.next() << itGpx.fileName();
-        QString targetPath = getWritableAppDir() + "gpx/" + itGpx.fileName();
-        QString markerPath = getWritableAppDir() + "gpx/.deleted_" + itGpx.fileName();
-        // Only copy if file doesn't exist AND no deletion marker exists
-        if (!QFile(targetPath).exists() && !QFile(markerPath).exists()) {
-            QFile::copy(":/gpx/" + itGpx.fileName(), targetPath);
-        }
-    }
 
     QDirIterator itFit(getWritableAppDir(), QStringList() << "*.fit", QDir::Files);
     qDebug() << itFit.path();
@@ -3754,9 +3735,11 @@ void homeform::deviceConnected(QBluetoothDeviceInfo b) {
 
     QObject *rootObject = engine->rootObjects().constFirst();
     QObject *home = rootObject->findChild<QObject *>(QStringLiteral("home"));
-    QObject::connect(home, SIGNAL(plus_clicked(QString)), this, SLOT(Plus(QString)));
-    QObject::connect(home, SIGNAL(minus_clicked(QString)), this, SLOT(Minus(QString)));
-    QObject::connect(home, SIGNAL(largeButton_clicked(QString)), this, SLOT(LargeButton(QString)));
+    if (home) {
+        QObject::connect(home, SIGNAL(plus_clicked(QString)), this, SLOT(Plus(QString)));
+        QObject::connect(home, SIGNAL(minus_clicked(QString)), this, SLOT(Minus(QString)));
+        QObject::connect(home, SIGNAL(largeButton_clicked(QString)), this, SLOT(LargeButton(QString)));
+    }
 
     emit workoutNameChanged(workoutName());
     emit instructorNameChanged(instructorName());

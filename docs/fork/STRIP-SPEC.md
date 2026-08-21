@@ -671,7 +671,7 @@ with Rouvy is still the final word, but it is no longer the only evidence availa
 | 4 | Group D — telemetry | medium (verify RTSS first) | **covered** |  ← landed 2026-08-21; RTSS check failed, see §7 Group D
 | 5 | Group E — rival trainers, running sensors, `virtualtreadmill` | low, once cscbike is resolved | **covered** |  ← landed 2026-08-20, H1 passed 2026-08-21
 | 6 | Settings consolidation | medium (§3.6 runtime failures) | **covered** |  ← moved to after 7c, see below
-| 7a | `RideState` object + `ui_next` flag + new tree under `src/ui/` | medium | **none** |
+| 7a | `RideState` object + `ui_next` flag + new tree under `src/ui/` | medium | **none** |  ← landed 2026-08-21
 | 7b | Ride on the new UI with Rouvy and Zwift; flip the default | low, but needs calendar time | **none** |
 | 7c | Delete Group F — old tree, tile system, `homeform.cpp`, the flag | high | **none** |
 | 8 | Group G, Pi build revival | medium | partial |
@@ -1073,6 +1073,41 @@ still ride wrong.
 builds on Windows *and* Android; `RideState` contract test passes.
 *Tests:* QML lint on both dialects (item 4) is the gate. Contract test (item 8).
 *Hardware:* **none** — the flag is off.
+
+*Landed 2026-08-21.* `src/ui/` holds `ridestate.{h,cpp}` and nine QML files: `Main.qml`
+with the three-tab bar, the three screens, and four small components. `main.cpp` picks the
+entry QML off the flag and exposes `rideState` as a context property; nothing else changed
+in the old path.
+
+`RideState` came out at **16 members** — 12 properties and 4 invokables, the §9.2 list
+exactly — and `TestRideState` asserts the member names rather than just the count, so
+adding one fails the test even if the total stays under the ceiling. Nine cases, all green.
+
+Three things worth recording:
+
+- **`appName` is empty, always.** A BLE central never announces who it is, and the DIRCON
+  client's address is known only to `DirconProcessor`, which does not surface it. Reaching
+  it means widening the bridge to satisfy a status pill, which is the trade §9.2 exists to
+  refuse. The pill shows the transport instead — "Training app (DIRCON)" — which is
+  the half that tells you something when a ride stops. One accessor was added:
+  `virtualbike::isDirconFTMS()`, so the pill can name the path rather than guess it.
+- **`homeform` still runs behind the new UI.** It has to: `buildContext()` reads
+  `homeform::singleton()` for most of the QZWS broadcast, and that socket is what
+  `tools/qz-rouvy-rtss` draws from. Its QML wiring is now guarded on `home` — the old
+  tree's tile grid, whose presence *is* the test for which tree loaded — because
+  connecting to a root object that has none of those signals was 36 warnings and no
+  behaviour. **Phase 7c cannot delete `homeform` until the broadcast is re-pointed**, at
+  `RideState` or at the device directly. That is the real prerequisite hiding in 7c.
+- The **settings screen holds the four groups, not the final controls.** Which of the
+  surviving keys belong on that page is phase 6's question, and phase 6 now runs after 7c.
+  What is there is what a rider reaches for mid-setup; the shape is what 7a was for.
+
+*Verified:* contract test 9/9; full suite 189 green with the same 12 skips (201 from 20
+suites, up 9 with the new one); Qt 5 `qmllint` clean on all nine files; the Qt 6 import
+rewriter picks all nine up and leaves their imports alone, as §9.8 predicts. With the flag
+on the new tree loads with **zero warnings** and `qzws_smoke.py` is still green through it;
+with the flag off the old tree logs 51, all of them pre-existing categories and 18 fewer
+than before phase 3. Android is unverified locally — §3.5's wall — and is CI's job.
 
 **Phase 7b — flip the default**
 *Criteria:* the new UI has ridden successfully with both Rouvy and Zwift.

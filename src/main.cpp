@@ -55,6 +55,7 @@
 #endif
 
 
+#include "ui/ridestate.h"
 #include "handleurl.h"
 #include "mywhooshlink.h"
 
@@ -767,7 +768,10 @@ int main(int argc, char *argv[]) {
         }
 
         QQmlApplicationEngine engine;
-        const QUrl url(QStringLiteral("qrc:/main.qml"));
+        // Section 9.9: both trees ship for one release, chosen by a flag that defaults
+        // off. A bad ride on the new UI costs a settings toggle, not a rebuild.
+        const bool uiNext = settings.value(QZSettings::ui_next, QZSettings::default_ui_next).toBool();
+        const QUrl url(uiNext ? QStringLiteral("qrc:/ui/Main.qml") : QStringLiteral("qrc:/main.qml"));
         QObject::connect(
             &engine, &QQmlApplicationEngine::objectCreated, qobject_cast<QGuiApplication *>(app.data()),
             [url](QObject *obj, const QUrl &objUrl) {
@@ -794,6 +798,11 @@ int main(int argc, char *argv[]) {
         // Expose FileSearcher for fast recursive file searching
         FileSearcher fileSearcher;
         engine.rootContext()->setContextProperty("fileSearcher", &fileSearcher);
+
+        // The whole of what the new UI is allowed to know about a ride. QML must not
+        // talk to homeform - see STRIP-SPEC.md section 9.2.
+        RideState rideState(&bl);
+        engine.rootContext()->setContextProperty("rideState", &rideState);
 
         engine.load(url);
         homeform *h = new homeform(&engine, &bl);

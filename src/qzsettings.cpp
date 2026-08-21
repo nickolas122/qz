@@ -1140,9 +1140,10 @@ const QString QZSettings::gamepad_repeat_rate = QStringLiteral("gamepad_repeat_r
 const QString QZSettings::gears_neutral_gear = QStringLiteral("gears_neutral_gear");
 const QString QZSettings::simulated_bike = QStringLiteral("simulated_bike");
 const QString QZSettings::simulated_bike_ride = QStringLiteral("simulated_bike_ride");
+const QString QZSettings::ui_next = QStringLiteral("ui_next");
 const QString QZSettings::default_simulated_bike_ride = QLatin1String("");
 
-const uint32_t allSettingsCount = 904;
+const uint32_t allSettingsCount = 905;
 
 QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::cryptoKeySettingsProfiles, QZSettings::default_cryptoKeySettingsProfiles},
@@ -2069,6 +2070,7 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::gears_neutral_gear, QZSettings::default_gears_neutral_gear},
     {QZSettings::simulated_bike, QZSettings::default_simulated_bike},
     {QZSettings::simulated_bike_ride, QZSettings::default_simulated_bike_ride},
+    {QZSettings::ui_next, QZSettings::default_ui_next},
 };
 
 void QZSettings::qDebugAllSettings(bool showDefaults) {
