@@ -8,6 +8,7 @@
 #include <QMetaObject>
 
 #include "devices/ftmsbike/ftmsbike.h"
+#include "devices/ftmsbike/speedracex_defaults.h"
 
 /**
  * The shipped `ftmsbike`, driven from a test: frames in, writes out, no radio.
@@ -34,9 +35,10 @@
 class simulatedFtmsBike : public ftmsbike {
   public:
     /**
-     * @param name What the bike is called. Only matters for the branches gated on device
-     *        name; the flags those set are private to `ftmsbike` and are not reachable from
-     *        here, so a test that needs one of them needs another seam first.
+     * @param name What the bike is called. The name-derived profile is applied, so this is
+     *        the bike it says it is: the default is the YPBM the fork is built around, and
+     *        it arrives with resistance_lvl_mode set, ERG unsupported and 32 levels, exactly
+     *        as discovery would have left it.
      */
     explicit simulatedFtmsBike(const QString &name = QStringLiteral("YPBM123456"))
         : ftmsbike(false, false, 4, 1.0) {
@@ -44,6 +46,10 @@ class simulatedFtmsBike : public ftmsbike {
         // QBluetoothDeviceInfo is not valid.
         bluetoothDevice = QBluetoothDeviceInfo(QBluetoothAddress(QStringLiteral("11:22:33:44:55:66")),
                                                name, 0);
+        // The half of deviceDiscovered() that does not touch the radio. Without it every
+        // name-gated flag stays at its default and the object is a bike in general rather
+        // than any bike in particular.
+        applyDeviceProfile(bluetoothDevice);
     }
 
     /** @brief Deliver a notification, as the radio would. */
@@ -72,6 +78,19 @@ class simulatedFtmsBike : public ftmsbike {
      * dispatch still lands on `ftmsbike`'s override, so this reads the real value.
      */
     uint16_t wattsValue() { return static_cast<bike *>(this)->watts(); }
+
+    /** @brief The resistance the app is currently asking for, before gears and limiter. */
+    resistance_t requestedResistance() const { return requestResistance; }
+
+    /**
+     * @brief Seed the ERG table with a real bike's calibration.
+     *
+     * An empty table answers 1 for every target at every cadence, so a test about ERG
+     * *choosing* a level has nothing to observe. These are the SpeedRaceX defaults - measured
+     * points, 9 cadences x 32 levels - which is a resistance-level bike of the same shape as
+     * the YPBM.
+     */
+    void seedErgTable() { _ergTable.loadDefaultData(kSpeedRaceXDefaultErgData); }
 
     /** @brief Every payload `ftmsbike` has tried to write, in order. */
     const QList<QByteArray> &writes() const { return m_writes; }

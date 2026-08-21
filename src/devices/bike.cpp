@@ -129,6 +129,7 @@ void bike::changeCadence(int16_t cadence) { RequestedCadence = cadence; }
 void bike::changePower(int32_t power) {
 
     RequestedPower = power; // in order to paint in any case the request power on the charts
+    m_controlMode = control_mode::erg;
 
     if (!autoResistanceEnable) {
         qDebug() << QStringLiteral("changePower ignored because auto resistance is disabled");
@@ -396,6 +397,22 @@ metric bike::lastRequestedResistance() { return RequestedResistance; }
 metric bike::lastRequestedPelotonResistance() { return RequestedPelotonResistance; }
 metric bike::lastRequestedCadence() { return RequestedCadence; }
 metric bike::lastRequestedPower() { return RequestedPower; }
+
+void bike::controlledBySimulation() {
+    if (m_controlMode != control_mode::simulation) {
+        qDebug() << QStringLiteral("control mode -> simulation, retiring power target")
+                 << RequestedPower.value();
+    }
+    m_controlMode = control_mode::simulation;
+    // Assigned, not clear()ed: metric::clear() resets the accumulators and leaves m_value
+    // where it was, so the session reset that was supposed to be the one thing retiring a
+    // power target never retired it either.
+    RequestedPower = 0;
+    // And the one the driver has not got round to yet. A power request sits in requestPower
+    // until the next update() converts it, so without this the stray packet still gets one
+    // free write - a level chosen for a target the app has already stopped asking for.
+    requestPower = -1;
+}
 metric bike::currentResistance() { return Resistance; }
 uint8_t bike::fanSpeed() { return FanSpeed; }
 bool bike::connected() { return false; }

@@ -501,6 +501,12 @@ void ftmsbike::commandResistance(resistance_t requestResistance) {
     QSettings settings;
     configureResistanceSlew(settings);
 
+    // The ERG damping gate compares against this. It has to track what the *bike* was last
+    // told, not what the ERG loop last told it: the simulation loop writes through here too,
+    // and a gate that only remembers its own writes reads 4 -> 1 as a one-level nudge while
+    // the trainer is actually being dropped 24 -> 1 on a climb.
+    m_lastErgResistance = requestResistance;
+
     if (!resistanceSlew.enabled()) {
         // Keep the limiter aware of where we are, so enabling it mid-session doesn't
         // start the first ramp from a stale level.
@@ -932,7 +938,11 @@ void ftmsbike::update() {
         // Re-evaluate resistance when cadence changes to maintain target power.
         // Without this, resistance is only set once when Zwift sends a new power target,
         // and cadence changes don't trigger resistance adjustment.
+        // lastControlMode() is the gate, not lastRequestedPower() alone: the metric outlives
+        // the mode that set it, and a simulation ride that once saw a single power packet used
+        // to keep this block running for the rest of the session.
         if (resistance_lvl_mode && !ergModeSupported && !SMARTBIKE_3DIGIT &&
+            lastControlMode() == control_mode::erg &&
             lastRequestedPower().value() > 0 && autoResistance()) {
             resistance_t newR = resistanceFromPowerRequest(
                 (uint16_t)lastRequestedPower().value());
@@ -947,7 +957,6 @@ void ftmsbike::update() {
                              << "target" << lastRequestedPower().value()
                              << "resistance" << m_lastErgResistance << "->" << newR;
                     commandResistance(newR);
-                    m_lastErgResistance = newR;
                 }
             }
         }
@@ -2548,204 +2557,219 @@ resistance_t ftmsbike::pelotonToBikeResistance(int pelotonResistance) {
     return (pelotonResistance * max_resistance) / 100;
 }
 
-void ftmsbike::deviceDiscovered(const QBluetoothDeviceInfo &device) {
+/**
+ * @brief Everything discovery decides about a bike before it touches the radio.
+ *
+ * This cascade used to sit inline in deviceDiscovered(), a few lines above
+ * `QLowEnergyController::createCentral()`. That put the only route to a profile -
+ * `resistance_lvl_mode`, `ergModeSupported`, `max_resistance` - behind building a real
+ * controller and connecting to it, so a test could drive `ftmsbike` but never as any
+ * particular bike. Pulling it out is the same idiom as the four seams
+ * `simulatedFtmsBike` already overrides, and leaves the production order unchanged:
+ * deviceDiscovered() calls this first and builds the controller after.
+ */
+void ftmsbike::applyDeviceProfile(const QBluetoothDeviceInfo &device) {
     QSettings settings;
+    bluetoothDevice = device;
+    if (bluetoothDevice.name().toUpper().startsWith("SUITO")) {
+        qDebug() << QStringLiteral("SUITO found");
+        max_resistance = 16;
+    } else if ((bluetoothDevice.name().toUpper().startsWith("MAGNUS "))) {
+        qDebug() << QStringLiteral("MAGNUS found");
+        MAGNUS = true;
+        resistance_lvl_mode = true;            
+        ergModeSupported = true;
+    } else if ((bluetoothDevice.name().toUpper().startsWith("DU30-"))) {
+        qDebug() << QStringLiteral("DU30 found");
+        max_resistance = 32;
+        DU30_bike = true;
+    } else if ((bluetoothDevice.name().toUpper().startsWith("ICSE") && bluetoothDevice.name().length() == 4)) {
+        qDebug() << QStringLiteral("ICSE found");
+        ICSE = true;
+        secondsToResetTimer = 15;
+        autoResistanceEnable = false;  // Disable auto resistance for ICSE bikes
+        qDebug() << QStringLiteral("ICSE: autoResistance disabled by default");
+    } else if ((bluetoothDevice.name().toUpper().startsWith("DOMYOS"))) {
+        qDebug() << QStringLiteral("DOMYOS found");
+        resistance_lvl_mode = true;
+        ergModeSupported = false;
+        max_resistance = 32;
+        DOMYOS = true;
+    } else if (bluetoothDevice.name().toUpper().startsWith("D500V2")) {
+        qDebug() << QStringLiteral("D500V2 found - enabling workaround for start simulation command");
+        D500V2 = true;           
+    } else if ((bluetoothDevice.name().toUpper().startsWith("3G Cardio RB"))) {
+        qDebug() << QStringLiteral("_3G_Cardio_RB found");
+        _3G_Cardio_RB = true;
+    } else if((bluetoothDevice.name().toUpper().startsWith("SCH_190U"))) {
+        qDebug() << QStringLiteral("SCH_190U found");
+        SCH_190U = true;
+        max_resistance = 100;
+    } else if((bluetoothDevice.name().toUpper().startsWith("SCH_290R"))) {
+        qDebug() << QStringLiteral("SCH_290R found");
+        SCH_290R = true;
+        max_resistance = 100;
+    } else if(bluetoothDevice.name().toUpper().startsWith("D2RIDE")) {
+        qDebug() << QStringLiteral("D2RIDE found");
+        D2RIDE = true;
+    } else if(bluetoothDevice.name().toUpper().startsWith("VFSPINBIKE")) {
+        qDebug() << QStringLiteral("VFSPINBIKE found");
+        VFSPINBIKE = true;
+    } else if(bluetoothDevice.name().toUpper().startsWith("DIRETO XR")) {
+        qDebug() << QStringLiteral("DIRETO XR found");
+        DIRETO_XR = true;
+    } else if(bluetoothDevice.name().toUpper().startsWith("JFBK5.0") || bluetoothDevice.name().toUpper().startsWith("JFBK7.0")) {
+        qDebug() << QStringLiteral("JFBK5.0 found");
+        resistance_lvl_mode = true;
+        ergModeSupported = false;
+        JFBK5_0 = true;
+    } else if((bluetoothDevice.name().toUpper().startsWith("BIKE-"))) {
+        qDebug() << QStringLiteral("BIKE- found");
+        BIKE_ = true;
+    } else if ((bluetoothDevice.name().toUpper().startsWith("SMB1"))) {
+        qDebug() << QStringLiteral("SMB1 found");
+        SMB1 = true;
+    } else if ((bluetoothDevice.name().toUpper().startsWith("SPAX-BK-"))) {
+        qDebug() << QStringLiteral("SPAX-BK found");
+        resistance_lvl_mode = true;
+        ergModeSupported = false;
+    } else if ((bluetoothDevice.name().toUpper().startsWith("LYDSTO"))) {
+        qDebug() << QStringLiteral("LYDSTO found");
+        LYDSTO = true;
+    } else if ((bluetoothDevice.name().toUpper().startsWith("DMASUN-") && bluetoothDevice.name().toUpper().endsWith("-BIKE"))) {
+        qDebug() << QStringLiteral("DMASUN bike found");
+        DMASUN = true;
+    } else if ((bluetoothDevice.name().toUpper().startsWith("SL010-"))) {
+        qDebug() << QStringLiteral("SL010 found");
+        SL010 = true;
+        max_resistance = 25;
+        resistance_lvl_mode = true;
+        ergModeSupported = false;
+    } else if ((bluetoothDevice.name().toUpper().startsWith("REEBOK"))) {
+        qDebug() << QStringLiteral("REEBOK found");
+        REEBOK = true;
+        max_resistance = 32;
+        resistance_lvl_mode = true;
+        ergModeSupported = false;
+    } else if ((bluetoothDevice.name().toUpper().startsWith("RAVE"))) {
+        qDebug() << QStringLiteral("Zipro Rave found");
+        max_resistance = 32;
+        resistance_lvl_mode = true;
+        ergModeSupported = false;
+        ZIPRO_RAVE = true;
+    } else if ((bluetoothDevice.name().toUpper().startsWith("TITAN 7000"))) {
+        qDebug() << QStringLiteral("Titan 7000 found");
+        TITAN_7000 = true;
+    } else if ((bluetoothDevice.name().toUpper().startsWith("T2 "))) {
+        qDebug() << QStringLiteral("T2 found");
+        T2 = true;
+    } else if ((bluetoothDevice.name().toUpper().startsWith(QStringLiteral("FIT-BK-")))) {
+        qDebug() << QStringLiteral("FIT-BK found");
+        FIT_BK = true;
+        ergModeSupported = false; // this bike doesn't have ERG mode natively
+    } else if ((bluetoothDevice.name().toUpper().startsWith(QStringLiteral("EXPERT-SX9")))) {
+        qDebug() << QStringLiteral("EXPERT-SX9 found");
+        EXPERT_SX9 = true;
+        ergModeSupported = false; // this bike doesn't have ERG mode natively            
+    } else if (((bluetoothDevice.name().toUpper().startsWith("YS_G1MPLUS")))) {
+        qDebug() << QStringLiteral("YS_G1MPLUS found");
+        YS_G1MPLUS = true;
+        max_resistance = 100;
+    } else if (bluetoothDevice.name().toUpper().startsWith(QStringLiteral("PM5"))) {
+        PM5 = true;
+        qDebug() << QStringLiteral("PM5 found");
+    } else if(device.name().toUpper().startsWith(QStringLiteral("THINK X")) || device.name().toUpper().startsWith(QStringLiteral("THINK-"))) {
+        THINK_X = true;
+        qDebug() << "THINK X workaround enabled!";
+    } else if(device.name().toUpper().startsWith(QStringLiteral("WLT8828"))) {
+        qDebug() << QStringLiteral("WLT8828 found");
+        WLT8828 = true;
+        max_resistance = 32;
+        resistance_lvl_mode = true;
+        ergModeSupported = false; // this bike doesn't have ERG mode natively
+    } else if(device.name().toUpper().startsWith("VANRYSEL-HT")) {
+        qDebug() << QStringLiteral("VANRYSEL-HT found");
+        VANRYSEL_HT = true;
+    } else if(device.name().toUpper().startsWith("MRK-S26C-")) {
+        qDebug() << QStringLiteral("MRK-S26C found");
+        MRK_S26C = true;
+    } else if(device.name().toUpper().startsWith("MRK-S28-")) {
+        qDebug() << QStringLiteral("MRK-S28 found");
+        MRK_S28 = true;
+        resistance_lvl_mode = true;
+    } else if(device.name().toUpper().startsWith("MRK-S36C-")) {
+        qDebug() << QStringLiteral("MRK-S36C found");
+        MRK_S36C = true;
+        resistance_lvl_mode = true;
+        ergModeSupported = false; // this bike doesn't have ERG mode natively, target power must be converted to resistance
+    } else if(device.name().toUpper().startsWith("HAMMER")) {
+        qDebug() << QStringLiteral("HAMMER found");
+        HAMMER = true;
+    } else if(device.name().toUpper().startsWith("YPBM") && device.name().length() == 10) {
+        qDebug() << QStringLiteral("YPBM found");
+        YPBM = true;
+        resistance_lvl_mode = true;
+        ergModeSupported = false;
+        max_resistance = 32;
+    } else if(device.name().toUpper().startsWith("TOPUTURE TEB5")) {
+        qDebug() << QStringLiteral("TOPUTURE TEB5 found");
+        TOPUTURE_TEB5 = true;
+        max_resistance = 32;
+        ergModeSupported = false;
+        Resistance = 1; // Initialize resistance to 1 for SPORT01
+    } else if(device.name().toUpper().startsWith("SPORT01")) {
+        qDebug() << QStringLiteral("SPORT01 found");
+        SPORT01 = true;
+        resistance_lvl_mode = true;
+        ergModeSupported = false;
+        max_resistance = 10;
+        Resistance = 1; // Initialize resistance to 1 for SPORT01
+    } else if(device.name().toUpper().startsWith("MOKFITNESS-")) {
+        qDebug() << QStringLiteral("MOKFITNESS found");
+        MOK_FITNESS = true;
+        max_resistance = 32;
+        ergModeSupported = false; // this bike doesn't have ERG mode natively
+    } else if (isSmartBikeThreeDigitName(device.name())) {
+        qDebug() << QStringLiteral("SMARTBIKE-### found");
+        SMARTBIKE_3DIGIT = true;
+        resistance_lvl_mode = true;
+        ergModeSupported = false;
+        Resistance = 1;
+        max_resistance = cscbike::customResistanceMax();
+    } else if(device.name().toUpper().startsWith("FS-YK-")) {
+        qDebug() << QStringLiteral("FS-YK- found");
+        FS_YK = true;
+        resistance_lvl_mode = true;
+        ergModeSupported = false; // this bike doesn't have ERG mode natively
+        max_resistance = 24;
+    } else if(device.name().compare(QStringLiteral("S18"), Qt::CaseInsensitive) == 0) {
+        qDebug() << QStringLiteral("S18 found");
+        S18 = true;
+        max_resistance = 24;
+    } else if(device.name().toUpper().startsWith("SPEEDRACEX")) {
+        qDebug() << QStringLiteral("SpeedRaceX found");
+        SPEEDRACEX = true;
+        resistance_lvl_mode = true;
+        ergModeSupported = false;
+        max_resistance = 32;
+        _ergTable.loadDefaultData(kSpeedRaceXDefaultErgData);
+    } else if (device.name().toUpper().startsWith("USDC-D700-")) {
+        qDebug() << QStringLiteral("USDC-D700 found");
+        USDC_D700 = true;
+        resistance_lvl_mode = true;
+    }
+
+
+    if(settings.value(QZSettings::force_resistance_instead_inclination, QZSettings::default_force_resistance_instead_inclination).toBool()) {
+        resistance_lvl_mode = true;
+    }
+}
+
+void ftmsbike::deviceDiscovered(const QBluetoothDeviceInfo &device) {
     emit debug(QStringLiteral("Found new device: ") + device.name() + QStringLiteral(" (") +
                device.address().toString() + ')');
     {
-        bluetoothDevice = device;
-        if (bluetoothDevice.name().toUpper().startsWith("SUITO")) {
-            qDebug() << QStringLiteral("SUITO found");
-            max_resistance = 16;
-        } else if ((bluetoothDevice.name().toUpper().startsWith("MAGNUS "))) {
-            qDebug() << QStringLiteral("MAGNUS found");
-            MAGNUS = true;
-            resistance_lvl_mode = true;            
-            ergModeSupported = true;
-        } else if ((bluetoothDevice.name().toUpper().startsWith("DU30-"))) {
-            qDebug() << QStringLiteral("DU30 found");
-            max_resistance = 32;
-            DU30_bike = true;
-        } else if ((bluetoothDevice.name().toUpper().startsWith("ICSE") && bluetoothDevice.name().length() == 4)) {
-            qDebug() << QStringLiteral("ICSE found");
-            ICSE = true;
-            secondsToResetTimer = 15;
-            autoResistanceEnable = false;  // Disable auto resistance for ICSE bikes
-            qDebug() << QStringLiteral("ICSE: autoResistance disabled by default");
-        } else if ((bluetoothDevice.name().toUpper().startsWith("DOMYOS"))) {
-            qDebug() << QStringLiteral("DOMYOS found");
-            resistance_lvl_mode = true;
-            ergModeSupported = false;
-            max_resistance = 32;
-            DOMYOS = true;
-        } else if (bluetoothDevice.name().toUpper().startsWith("D500V2")) {
-            qDebug() << QStringLiteral("D500V2 found - enabling workaround for start simulation command");
-            D500V2 = true;           
-        } else if ((bluetoothDevice.name().toUpper().startsWith("3G Cardio RB"))) {
-            qDebug() << QStringLiteral("_3G_Cardio_RB found");
-            _3G_Cardio_RB = true;
-        } else if((bluetoothDevice.name().toUpper().startsWith("SCH_190U"))) {
-            qDebug() << QStringLiteral("SCH_190U found");
-            SCH_190U = true;
-            max_resistance = 100;
-        } else if((bluetoothDevice.name().toUpper().startsWith("SCH_290R"))) {
-            qDebug() << QStringLiteral("SCH_290R found");
-            SCH_290R = true;
-            max_resistance = 100;
-        } else if(bluetoothDevice.name().toUpper().startsWith("D2RIDE")) {
-            qDebug() << QStringLiteral("D2RIDE found");
-            D2RIDE = true;
-        } else if(bluetoothDevice.name().toUpper().startsWith("VFSPINBIKE")) {
-            qDebug() << QStringLiteral("VFSPINBIKE found");
-            VFSPINBIKE = true;
-        } else if(bluetoothDevice.name().toUpper().startsWith("DIRETO XR")) {
-            qDebug() << QStringLiteral("DIRETO XR found");
-            DIRETO_XR = true;
-        } else if(bluetoothDevice.name().toUpper().startsWith("JFBK5.0") || bluetoothDevice.name().toUpper().startsWith("JFBK7.0")) {
-            qDebug() << QStringLiteral("JFBK5.0 found");
-            resistance_lvl_mode = true;
-            ergModeSupported = false;
-            JFBK5_0 = true;
-        } else if((bluetoothDevice.name().toUpper().startsWith("BIKE-"))) {
-            qDebug() << QStringLiteral("BIKE- found");
-            BIKE_ = true;
-        } else if ((bluetoothDevice.name().toUpper().startsWith("SMB1"))) {
-            qDebug() << QStringLiteral("SMB1 found");
-            SMB1 = true;
-        } else if ((bluetoothDevice.name().toUpper().startsWith("SPAX-BK-"))) {
-            qDebug() << QStringLiteral("SPAX-BK found");
-            resistance_lvl_mode = true;
-            ergModeSupported = false;
-        } else if ((bluetoothDevice.name().toUpper().startsWith("LYDSTO"))) {
-            qDebug() << QStringLiteral("LYDSTO found");
-            LYDSTO = true;
-        } else if ((bluetoothDevice.name().toUpper().startsWith("DMASUN-") && bluetoothDevice.name().toUpper().endsWith("-BIKE"))) {
-            qDebug() << QStringLiteral("DMASUN bike found");
-            DMASUN = true;
-        } else if ((bluetoothDevice.name().toUpper().startsWith("SL010-"))) {
-            qDebug() << QStringLiteral("SL010 found");
-            SL010 = true;
-            max_resistance = 25;
-            resistance_lvl_mode = true;
-            ergModeSupported = false;
-        } else if ((bluetoothDevice.name().toUpper().startsWith("REEBOK"))) {
-            qDebug() << QStringLiteral("REEBOK found");
-            REEBOK = true;
-            max_resistance = 32;
-            resistance_lvl_mode = true;
-            ergModeSupported = false;
-        } else if ((bluetoothDevice.name().toUpper().startsWith("RAVE"))) {
-            qDebug() << QStringLiteral("Zipro Rave found");
-            max_resistance = 32;
-            resistance_lvl_mode = true;
-            ergModeSupported = false;
-            ZIPRO_RAVE = true;
-        } else if ((bluetoothDevice.name().toUpper().startsWith("TITAN 7000"))) {
-            qDebug() << QStringLiteral("Titan 7000 found");
-            TITAN_7000 = true;
-        } else if ((bluetoothDevice.name().toUpper().startsWith("T2 "))) {
-            qDebug() << QStringLiteral("T2 found");
-            T2 = true;
-        } else if ((bluetoothDevice.name().toUpper().startsWith(QStringLiteral("FIT-BK-")))) {
-            qDebug() << QStringLiteral("FIT-BK found");
-            FIT_BK = true;
-            ergModeSupported = false; // this bike doesn't have ERG mode natively
-        } else if ((bluetoothDevice.name().toUpper().startsWith(QStringLiteral("EXPERT-SX9")))) {
-            qDebug() << QStringLiteral("EXPERT-SX9 found");
-            EXPERT_SX9 = true;
-            ergModeSupported = false; // this bike doesn't have ERG mode natively            
-        } else if (((bluetoothDevice.name().toUpper().startsWith("YS_G1MPLUS")))) {
-            qDebug() << QStringLiteral("YS_G1MPLUS found");
-            YS_G1MPLUS = true;
-            max_resistance = 100;
-        } else if (bluetoothDevice.name().toUpper().startsWith(QStringLiteral("PM5"))) {
-            PM5 = true;
-            qDebug() << QStringLiteral("PM5 found");
-        } else if(device.name().toUpper().startsWith(QStringLiteral("THINK X")) || device.name().toUpper().startsWith(QStringLiteral("THINK-"))) {
-            THINK_X = true;
-            qDebug() << "THINK X workaround enabled!";
-        } else if(device.name().toUpper().startsWith(QStringLiteral("WLT8828"))) {
-            qDebug() << QStringLiteral("WLT8828 found");
-            WLT8828 = true;
-            max_resistance = 32;
-            resistance_lvl_mode = true;
-            ergModeSupported = false; // this bike doesn't have ERG mode natively
-        } else if(device.name().toUpper().startsWith("VANRYSEL-HT")) {
-            qDebug() << QStringLiteral("VANRYSEL-HT found");
-            VANRYSEL_HT = true;
-        } else if(device.name().toUpper().startsWith("MRK-S26C-")) {
-            qDebug() << QStringLiteral("MRK-S26C found");
-            MRK_S26C = true;
-        } else if(device.name().toUpper().startsWith("MRK-S28-")) {
-            qDebug() << QStringLiteral("MRK-S28 found");
-            MRK_S28 = true;
-            resistance_lvl_mode = true;
-        } else if(device.name().toUpper().startsWith("MRK-S36C-")) {
-            qDebug() << QStringLiteral("MRK-S36C found");
-            MRK_S36C = true;
-            resistance_lvl_mode = true;
-            ergModeSupported = false; // this bike doesn't have ERG mode natively, target power must be converted to resistance
-        } else if(device.name().toUpper().startsWith("HAMMER")) {
-            qDebug() << QStringLiteral("HAMMER found");
-            HAMMER = true;
-        } else if(device.name().toUpper().startsWith("YPBM") && device.name().length() == 10) {
-            qDebug() << QStringLiteral("YPBM found");
-            YPBM = true;
-            resistance_lvl_mode = true;
-            ergModeSupported = false;
-            max_resistance = 32;
-        } else if(device.name().toUpper().startsWith("TOPUTURE TEB5")) {
-            qDebug() << QStringLiteral("TOPUTURE TEB5 found");
-            TOPUTURE_TEB5 = true;
-            max_resistance = 32;
-            ergModeSupported = false;
-            Resistance = 1; // Initialize resistance to 1 for SPORT01
-        } else if(device.name().toUpper().startsWith("SPORT01")) {
-            qDebug() << QStringLiteral("SPORT01 found");
-            SPORT01 = true;
-            resistance_lvl_mode = true;
-            ergModeSupported = false;
-            max_resistance = 10;
-            Resistance = 1; // Initialize resistance to 1 for SPORT01
-        } else if(device.name().toUpper().startsWith("MOKFITNESS-")) {
-            qDebug() << QStringLiteral("MOKFITNESS found");
-            MOK_FITNESS = true;
-            max_resistance = 32;
-            ergModeSupported = false; // this bike doesn't have ERG mode natively
-        } else if (isSmartBikeThreeDigitName(device.name())) {
-            qDebug() << QStringLiteral("SMARTBIKE-### found");
-            SMARTBIKE_3DIGIT = true;
-            resistance_lvl_mode = true;
-            ergModeSupported = false;
-            Resistance = 1;
-            max_resistance = cscbike::customResistanceMax();
-        } else if(device.name().toUpper().startsWith("FS-YK-")) {
-            qDebug() << QStringLiteral("FS-YK- found");
-            FS_YK = true;
-            resistance_lvl_mode = true;
-            ergModeSupported = false; // this bike doesn't have ERG mode natively
-            max_resistance = 24;
-        } else if(device.name().compare(QStringLiteral("S18"), Qt::CaseInsensitive) == 0) {
-            qDebug() << QStringLiteral("S18 found");
-            S18 = true;
-            max_resistance = 24;
-        } else if(device.name().toUpper().startsWith("SPEEDRACEX")) {
-            qDebug() << QStringLiteral("SpeedRaceX found");
-            SPEEDRACEX = true;
-            resistance_lvl_mode = true;
-            ergModeSupported = false;
-            max_resistance = 32;
-            _ergTable.loadDefaultData(kSpeedRaceXDefaultErgData);
-        } else if (device.name().toUpper().startsWith("USDC-D700-")) {
-            qDebug() << QStringLiteral("USDC-D700 found");
-            USDC_D700 = true;
-            resistance_lvl_mode = true;
-        }
-
-
-        if(settings.value(QZSettings::force_resistance_instead_inclination, QZSettings::default_force_resistance_instead_inclination).toBool()) {
-            resistance_lvl_mode = true;
-        }
+        applyDeviceProfile(device);
 
         m_control = QLowEnergyController::createCentral(bluetoothDevice, this);
         connect(m_control, &QLowEnergyController::serviceDiscovered, this, &ftmsbike::serviceDiscovered);

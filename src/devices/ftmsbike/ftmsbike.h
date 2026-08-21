@@ -376,6 +376,14 @@ class ftmsbike : public bike {
     /** @brief Put @p data on the wire. Default: service->writeCharacteristic(). */
     virtual void performWrite(const WriteRequest &request, const QByteArray &data);
 
+    /**
+     * @brief Apply @p device's name-derived profile: resistance mode, ERG support, ceiling.
+     *
+     * Called by deviceDiscovered() before the controller is built. Split out so a test can
+     * be a *particular* bike without a radio - see VIRTUAL-BIKE.md, Layer B.
+     */
+    void applyDeviceProfile(const QBluetoothDeviceInfo &device);
+
   public slots:
     void deviceDiscovered(const QBluetoothDeviceInfo &device);
 
