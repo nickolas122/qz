@@ -26,7 +26,6 @@ void InitializeTrackedSettings()
     trackedSettings.insert(QZSettings::filter_device, QZSettings::default_filter_device);
     trackedSettings.insert(QZSettings::fitplus_bike, QZSettings::default_fitplus_bike);
     trackedSettings.insert(QZSettings::flywheel_life_fitness_ic8, QZSettings::default_flywheel_life_fitness_ic8);
-    trackedSettings.insert(QZSettings::ftms_accessory_name, QZSettings::default_ftms_accessory_name);
     trackedSettings.insert(QZSettings::ftms_bike, QZSettings::default_ftms_bike);
     trackedSettings.insert(QZSettings::ftms_treadmill, QZSettings::default_ftms_treadmill);
     trackedSettings.insert(QZSettings::gymstick_gx6_0_elliptical, QZSettings::default_gymstick_gx6_0_elliptical);
@@ -37,8 +36,6 @@ void InitializeTrackedSettings()
     trackedSettings.insert(QZSettings::nordictrack_2950_ip, QZSettings::default_nordictrack_2950_ip);
     trackedSettings.insert(QZSettings::pafers_treadmill, QZSettings::default_pafers_treadmill);
     trackedSettings.insert(QZSettings::pafers_treadmill_bh_iboxster_plus, QZSettings::default_pafers_treadmill_bh_iboxster_plus);
-    trackedSettings.insert(QZSettings::power_sensor_as_bike, QZSettings::default_power_sensor_as_bike);
-    trackedSettings.insert(QZSettings::power_sensor_as_treadmill, QZSettings::default_power_sensor_as_treadmill);
     trackedSettings.insert(QZSettings::power_sensor_name, QZSettings::default_power_sensor_name);
     trackedSettings.insert(QZSettings::proform_elliptical_ip, QZSettings::default_proform_elliptical_ip);
     trackedSettings.insert(QZSettings::proformtdf1ip, QZSettings::default_proformtdf1ip);
@@ -47,7 +44,6 @@ void InitializeTrackedSettings()
     trackedSettings.insert(QZSettings::saris_trainer, QZSettings::default_saris_trainer);
     trackedSettings.insert(QZSettings::snode_bike, QZSettings::default_snode_bike);
     trackedSettings.insert(QZSettings::sole_treadmill_inclination, QZSettings::default_sole_treadmill_inclination);
-    trackedSettings.insert(QZSettings::ss2k_peloton, QZSettings::default_ss2k_peloton);
     trackedSettings.insert(QZSettings::tdf_10_ip, QZSettings::default_tdf_10_ip);
     trackedSettings.insert(QZSettings::technogym_myrun_treadmill_experimental, QZSettings::default_technogym_myrun_treadmill_experimental);
     trackedSettings.insert(QZSettings::toorx_bike, QZSettings::default_toorx_bike);

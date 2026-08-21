@@ -12,9 +12,6 @@
 #include "screencapture.h"
 #include "sessionline.h"
 #include "trainprogram.h"
-// autoInclinationEnabled() below casts VirtualDevice() to virtualtreadmill. The
-// declaration used to arrive transitively through a concrete device header.
-#include "virtualdevices/virtualtreadmill.h"
 #include <QChart>
 #include <QColor>
 #include <QGraphicsScene>
@@ -298,16 +295,11 @@ class homeform : public QObject {
     }
 
 
-    Q_INVOKABLE bool autoInclinationEnabled() {
-        QSettings settings;
-        bool virtual_bike =
-            settings.value(QZSettings::virtual_device_force_bike, QZSettings::default_virtual_device_force_bike)
-                .toBool();
-        return bluetoothManager && bluetoothManager->device() &&
-               bluetoothManager->device()->deviceType() == TREADMILL && !virtual_bike &&
-               bluetoothManager->device()->VirtualDevice() &&
-               ((virtualtreadmill *)bluetoothManager->device()->VirtualDevice())->autoInclinationEnabled();
-    }
+    // Auto-inclination was a treadmill's, published by virtualtreadmill, which went with
+    // Group E. Nothing this fork can connect to reports a TREADMILL device type, so the
+    // answer is now constant - but Home.qml still calls it, and QML resolves invokables at
+    // runtime, so removing it would blank the inclination tile rather than fail the build.
+    Q_INVOKABLE bool autoInclinationEnabled() { return false; }
 
     Q_INVOKABLE bool confirmStopEnabled() {
         QSettings settings;
@@ -837,7 +829,6 @@ public:
     void openFloatingWindowBrowser();
     void deviceFound(const QString &name);
     void deviceConnected(QBluetoothDeviceInfo b);
-    void ftmsAccessoryConnected(smartspin2k *d);    
     void trainprogram_open_other_folder(const QUrl &fileName);
     void gpx_open_other_folder(const QUrl &fileName);
     void profile_open_clicked(const QUrl &fileName);

@@ -12,10 +12,6 @@ const QString QZSettings::hrm_lastdevice_name = QStringLiteral("hrm_lastdevice_n
 const QString QZSettings::default_hrm_lastdevice_name = QStringLiteral("");
 const QString QZSettings::hrm_lastdevice_address = QStringLiteral("hrm_lastdevice_address");
 const QString QZSettings::default_hrm_lastdevice_address = QStringLiteral("");
-const QString QZSettings::ftms_accessory_address = QStringLiteral("ftms_accessory_address");
-const QString QZSettings::default_ftms_accessory_address = QStringLiteral("");
-const QString QZSettings::ftms_accessory_lastdevice_name = QStringLiteral("ftms_accessory_lastdevice_name");
-const QString QZSettings::default_ftms_accessory_lastdevice_name = QStringLiteral("");
 const QString QZSettings::csc_sensor_address = QStringLiteral("csc_sensor_address");
 const QString QZSettings::default_csc_sensor_address = QStringLiteral("");
 const QString QZSettings::csc_sensor_lastdevice_name = QStringLiteral("csc_sensor_lastdevice_name");
@@ -292,8 +288,6 @@ const QString QZSettings::power_hr_pwr2 = QStringLiteral("power_hr_pwr2");
 const QString QZSettings::power_hr_hr2 = QStringLiteral("power_hr_hr2");
 const QString QZSettings::power_sensor_name = QStringLiteral("power_sensor_name");
 const QString QZSettings::default_power_sensor_name = QStringLiteral("Disabled");
-const QString QZSettings::power_sensor_as_bike = QStringLiteral("power_sensor_as_bike");
-const QString QZSettings::power_sensor_as_treadmill = QStringLiteral("power_sensor_as_treadmill");
 const QString QZSettings::power_sensor_speed_inclination_coeff_a = QStringLiteral("power_sensor_speed_inclination_coeff_a");
 const QString QZSettings::power_sensor_speed_inclination_coeff_b = QStringLiteral("power_sensor_speed_inclination_coeff_b");
 const QString QZSettings::powr_sensor_running_cadence_double = QStringLiteral("powr_sensor_running_cadence_double");
@@ -301,9 +295,6 @@ const QString QZSettings::elite_rizer_name = QStringLiteral("elite_rizer_name");
 const QString QZSettings::default_elite_rizer_name = QStringLiteral("Disabled");
 const QString QZSettings::elite_sterzo_smart_name = QStringLiteral("elite_sterzo_smart_name");
 const QString QZSettings::default_elite_sterzo_smart_name = QStringLiteral("Disabled");
-const QString QZSettings::ftms_accessory_name = QStringLiteral("ftms_accessory_name");
-const QString QZSettings::default_ftms_accessory_name = QStringLiteral("Disabled");
-const QString QZSettings::ss2k_shift_step = QStringLiteral("ss2k_shift_step");
 const QString QZSettings::fitmetria_fanfit_enable = QStringLiteral("fitmetria_fanfit_enable");
 const QString QZSettings::fitmetria_fanfit_mode = QStringLiteral("fitmetria_fanfit_mode");
 const QString QZSettings::default_fitmetria_fanfit_mode = QStringLiteral("Heart");
@@ -341,14 +332,6 @@ const QString QZSettings::nordictrack_s30_treadmill = QStringLiteral("nordictrac
 // const QString QZSettings:: nordictrack_fs5i_treadmill = QStringLiteral("nordictrack_fs5i_treadmill");
 //
 const QString QZSettings::renpho_peloton_conversion_v2 = QStringLiteral("renpho_peloton_conversion_v2");
-const QString QZSettings::ss2k_resistance_sample_1 = QStringLiteral("ss2k_resistance_sample_1");
-const QString QZSettings::ss2k_shift_step_sample_1 = QStringLiteral("ss2k_shift_step_sample_1");
-const QString QZSettings::ss2k_resistance_sample_2 = QStringLiteral("ss2k_resistance_sample_2");
-const QString QZSettings::ss2k_shift_step_sample_2 = QStringLiteral("ss2k_shift_step_sample_2");
-const QString QZSettings::ss2k_resistance_sample_3 = QStringLiteral("ss2k_resistance_sample_3");
-const QString QZSettings::ss2k_shift_step_sample_3 = QStringLiteral("ss2k_shift_step_sample_3");
-const QString QZSettings::ss2k_resistance_sample_4 = QStringLiteral("ss2k_resistance_sample_4");
-const QString QZSettings::ss2k_shift_step_sample_4 = QStringLiteral("ss2k_shift_step_sample_4");
 const QString QZSettings::fitshow_truetimer = QStringLiteral("fitshow_truetimer");
 const QString QZSettings::elite_rizer_gain = QStringLiteral("elite_rizer_gain");
 const QString QZSettings::tile_ext_incline_enabled = QStringLiteral("tile_ext_incline_enabled");
@@ -434,8 +417,6 @@ const QString QZSettings::sex = QStringLiteral("sex");
 const QString QZSettings::default_sex = QStringLiteral("Male");
 const QString QZSettings::maps_type = QStringLiteral("maps_type");
 const QString QZSettings::default_maps_type = QStringLiteral("3D");
-const QString QZSettings::ss2k_max_resistance = QStringLiteral("ss2k_max_resistance");
-const QString QZSettings::ss2k_min_resistance = QStringLiteral("ss2k_min_resistance");
 const QString QZSettings::proform_treadmill_se = QStringLiteral("proform_treadmill_se");
 const QString QZSettings::proformtreadmillip = QStringLiteral("proformtreadmillip");
 const QString QZSettings::default_proformtreadmillip = QStringLiteral("");
@@ -581,7 +562,6 @@ const QString QZSettings::android_notification = QStringLiteral("android_notific
 const QString QZSettings::kingsmith_encrypt_v4 = QStringLiteral("kingsmith_encrypt_v4");
 const QString QZSettings::horizon_treadmill_disable_pause = QStringLiteral("horizon_treadmill_disable_pause");
 const QString QZSettings::domyos_bike_500_profile_v1 = QStringLiteral("domyos_bike_500_profile_v1");
-const QString QZSettings::ss2k_peloton = QStringLiteral("ss2k_peloton");
 const QString QZSettings::computrainer_serialport = QStringLiteral("computrainer_serialport");
 const QString QZSettings::default_computrainer_serialport = QStringLiteral("");
 const QString QZSettings::kettler_usb_serialport = QStringLiteral("kettler_usb_serialport");
@@ -1200,7 +1180,7 @@ const QString QZSettings::simulated_bike = QStringLiteral("simulated_bike");
 const QString QZSettings::simulated_bike_ride = QStringLiteral("simulated_bike_ride");
 const QString QZSettings::default_simulated_bike_ride = QLatin1String("");
 
-const uint32_t allSettingsCount = 952;
+const uint32_t allSettingsCount = 935;
 
 QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::cryptoKeySettingsProfiles, QZSettings::default_cryptoKeySettingsProfiles},
@@ -1210,8 +1190,6 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::bluetooth_lastdevice_address, QZSettings::default_bluetooth_lastdevice_address},
     {QZSettings::hrm_lastdevice_name, QZSettings::default_hrm_lastdevice_name},
     {QZSettings::hrm_lastdevice_address, QZSettings::default_hrm_lastdevice_address},
-    {QZSettings::ftms_accessory_address, QZSettings::default_ftms_accessory_address},
-    {QZSettings::ftms_accessory_lastdevice_name, QZSettings::default_ftms_accessory_lastdevice_name},
     {QZSettings::csc_sensor_address, QZSettings::default_csc_sensor_address},
     {QZSettings::csc_sensor_lastdevice_name, QZSettings::default_csc_sensor_lastdevice_name},
     {QZSettings::power_sensor_lastdevice_name, QZSettings::default_power_sensor_lastdevice_name},
@@ -1456,15 +1434,11 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::power_hr_pwr2, QZSettings::default_power_hr_pwr2},
     {QZSettings::power_hr_hr2, QZSettings::default_power_hr_hr2},
     {QZSettings::power_sensor_name, QZSettings::default_power_sensor_name},
-    {QZSettings::power_sensor_as_bike, QZSettings::default_power_sensor_as_bike},
-    {QZSettings::power_sensor_as_treadmill, QZSettings::default_power_sensor_as_treadmill},
     {QZSettings::power_sensor_speed_inclination_coeff_a, QZSettings::default_power_sensor_speed_inclination_coeff_a},
     {QZSettings::power_sensor_speed_inclination_coeff_b, QZSettings::default_power_sensor_speed_inclination_coeff_b},
     {QZSettings::powr_sensor_running_cadence_double, QZSettings::default_powr_sensor_running_cadence_double},
     {QZSettings::elite_rizer_name, QZSettings::default_elite_rizer_name},
     {QZSettings::elite_sterzo_smart_name, QZSettings::default_elite_sterzo_smart_name},
-    {QZSettings::ftms_accessory_name, QZSettings::default_ftms_accessory_name},
-    {QZSettings::ss2k_shift_step, QZSettings::default_ss2k_shift_step},
     {QZSettings::fitmetria_fanfit_enable, QZSettings::default_fitmetria_fanfit_enable},
     {QZSettings::fitmetria_fanfit_mode, QZSettings::default_fitmetria_fanfit_mode},
     {QZSettings::fitmetria_fanfit_min, QZSettings::default_fitmetria_fanfit_min},
@@ -1496,14 +1470,6 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::fitshow_anyrun, QZSettings::default_fitshow_anyrun},
     {QZSettings::nordictrack_s30_treadmill, QZSettings::default_nordictrack_s30_treadmill},
     {QZSettings::renpho_peloton_conversion_v2, QZSettings::default_renpho_peloton_conversion_v2},
-    {QZSettings::ss2k_resistance_sample_1, QZSettings::default_ss2k_resistance_sample_1},
-    {QZSettings::ss2k_shift_step_sample_1, QZSettings::default_ss2k_shift_step_sample_1},
-    {QZSettings::ss2k_resistance_sample_2, QZSettings::default_ss2k_resistance_sample_2},
-    {QZSettings::ss2k_shift_step_sample_2, QZSettings::default_ss2k_shift_step_sample_2},
-    {QZSettings::ss2k_resistance_sample_3, QZSettings::default_ss2k_resistance_sample_3},
-    {QZSettings::ss2k_shift_step_sample_3, QZSettings::default_ss2k_shift_step_sample_3},
-    {QZSettings::ss2k_resistance_sample_4, QZSettings::default_ss2k_resistance_sample_4},
-    {QZSettings::ss2k_shift_step_sample_4, QZSettings::default_ss2k_shift_step_sample_4},
     {QZSettings::fitshow_truetimer, QZSettings::default_fitshow_truetimer},
     {QZSettings::elite_rizer_gain, QZSettings::default_elite_rizer_gain},
     {QZSettings::tile_ext_incline_enabled, QZSettings::default_tile_ext_incline_enabled},
@@ -1582,8 +1548,6 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::tile_vertical_oscillation_order, QZSettings::default_tile_vertical_oscillation_order},
     {QZSettings::sex, QZSettings::default_sex},
     {QZSettings::maps_type, QZSettings::default_maps_type},
-    {QZSettings::ss2k_max_resistance, QZSettings::default_ss2k_max_resistance},
-    {QZSettings::ss2k_min_resistance, QZSettings::default_ss2k_min_resistance},
     {QZSettings::proform_treadmill_se, QZSettings::default_proform_treadmill_se},
     {QZSettings::proformtreadmillip, QZSettings::default_proformtreadmillip},
     {QZSettings::kingsmith_encrypt_v3, QZSettings::default_kingsmith_encrypt_v3},
@@ -1690,7 +1654,6 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::kingsmith_encrypt_v4, QZSettings::default_kingsmith_encrypt_v4},
     {QZSettings::horizon_treadmill_disable_pause, QZSettings::default_horizon_treadmill_disable_pause},
     {QZSettings::domyos_bike_500_profile_v1, QZSettings::domyos_bike_500_profile_v1},
-    {QZSettings::ss2k_peloton, QZSettings::default_ss2k_peloton},
     {QZSettings::computrainer_serialport, QZSettings::default_computrainer_serialport},
     {QZSettings::kettler_usb_serialport, QZSettings::default_kettler_usb_serialport},
     {QZSettings::kettler_usb_baudrate, QZSettings::default_kettler_usb_baudrate},

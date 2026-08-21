@@ -83,7 +83,6 @@ void stagesbike::update() {
     }
 
     if (initRequest) {
-        // required to the SS2K only one time
         Resistance = 0;
         emit resistanceRead(Resistance.value());
         initRequest = false;
@@ -100,10 +99,9 @@ void stagesbike::update() {
                                                                            // gattWriteCharacteristic.isValid() &&
                                                                            // gattNotify1Characteristic.isValid() &&
                /*initDone*/) {
-        QSettings settings;
-        bool power_as_bike =
-            settings.value(QZSettings::power_sensor_as_bike, QZSettings::default_power_sensor_as_bike).toBool();
-        update_metrics(false, watts(), !power_as_bike);
+        // Always the power sensor beside the trainer now, never the machine itself, so
+        // the metrics are always the accessory's.
+        update_metrics(false, watts(), true);
 
         // updating the treadmill console every second
         if (sec1Update++ == (500 / refresh->interval())) {
@@ -398,17 +396,13 @@ void stagesbike::characteristicChanged(const QLowEnergyCharacteristic &character
 
             qDebug() << QStringLiteral("Current Peloton Resistance: ") + QString::number(m_pelotonResistance.value());
 
-            if (ResistanceFromFTMSAccessoryLastTime == 0) {
-                if (settings.value(QZSettings::schwinn_bike_resistance, QZSettings::default_schwinn_bike_resistance)
-                        .toBool())
-                    Resistance = pelotonToBikeResistance(m_pelotonResistance.value());
-                else
-                    Resistance = m_pelotonResistance;
-                emit resistanceRead(Resistance.value());
-                qDebug() << QStringLiteral("Current Resistance Calculated: ") + QString::number(Resistance.value());
-            } else {
-                Resistance = ResistanceFromFTMSAccessory.value();
-            }
+            if (settings.value(QZSettings::schwinn_bike_resistance, QZSettings::default_schwinn_bike_resistance)
+                    .toBool())
+                Resistance = pelotonToBikeResistance(m_pelotonResistance.value());
+            else
+                Resistance = m_pelotonResistance;
+            emit resistanceRead(Resistance.value());
+            qDebug() << QStringLiteral("Current Resistance Calculated: ") + QString::number(Resistance.value());
 
             if (watts())
                 KCal +=
@@ -698,12 +692,6 @@ uint16_t stagesbike::watts() {
     }
 
     return m_watt.value();
-}
-
-void stagesbike::resistanceFromFTMSAccessory(resistance_t res) {
-    ResistanceFromFTMSAccessory = res;
-    ResistanceFromFTMSAccessoryLastTime = QDateTime::currentMSecsSinceEpoch();
-    qDebug() << QStringLiteral("resistanceFromFTMSAccessory") << res;
 }
 
 void stagesbike::controllerStateChanged(QLowEnergyController::ControllerState state) {

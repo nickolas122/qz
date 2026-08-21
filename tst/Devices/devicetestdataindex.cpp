@@ -159,17 +159,11 @@ void DeviceTestDataIndex::Initialize() {
         ->expectDevice<elitesterzosmart>()
         ->disable("Unable to detect with current logic");
 
-    // FTMS Bike general
-    auto ftmsBikeConfigureExclusions = {
-        DeviceTestDataIndex::GetTypeId<stagesbike>()
-    };
-
     // FTMS Bike Hammer Racer S
     RegisterNewDeviceTestData(DeviceIndex::FTMSBikeHammerRacerS())
         ->expectDevice<ftmsbike>()        
         ->acceptDeviceName("FS-", DeviceNameComparison::StartsWith)
-        ->configureSettingsWith(QZSettings::hammer_racer_s)
-        ->excluding(ftmsBikeConfigureExclusions);
+        ->configureSettingsWith(QZSettings::hammer_racer_s);
 
     // FTMS Bike Hammer 64123
     RegisterNewDeviceTestData(DeviceIndex::FTMSBikeHammer())
@@ -181,25 +175,20 @@ void DeviceTestDataIndex::Initialize() {
                 DeviceDiscoveryInfo config(info);
 
                 if (enable) {
-                    config.setValue(QZSettings::power_sensor_as_bike, false);
                     config.setValue(QZSettings::saris_trainer, false);
                     configurations.push_back(config);
                 } else {
-                for(int x = 1; x<=3; x++) {
-                    config.setValue(QZSettings::power_sensor_as_bike, x & 1);
-                    config.setValue(QZSettings::saris_trainer, x & 2);
+                    // power_sensor_as_bike used to be the other way out of this branch;
+                    // saris_trainer is the only one left.
+                    config.setValue(QZSettings::saris_trainer, true);
                     configurations.push_back(config);
-                }
-
-            }})
-        ->excluding(ftmsBikeConfigureExclusions);
+                }});
 
     // FTMS Bike IConsole
     RegisterNewDeviceTestData(DeviceIndex::FTMSBikeIConsole())
         ->expectDevice<ftmsbike>()
         ->acceptDeviceName("ICONSOLE+", DeviceNameComparison::StartsWithIgnoreCase)
-        ->configureSettingsWith(QZSettings::toorx_ftms)
-        ->excluding(ftmsBikeConfigureExclusions);
+        ->configureSettingsWith(QZSettings::toorx_ftms);
 
 
     // FTMS Bike
@@ -285,28 +274,12 @@ void DeviceTestDataIndex::Initialize() {
         ->rejectDeviceName("XQ020111814", DeviceNameComparison::IgnoreCase)
         ->rejectDeviceName("XQ02ABC18141", DeviceNameComparison::IgnoreCase)
         ->rejectDeviceName("XQ02011181411", DeviceNameComparison::IgnoreCase)
-
-        ->excluding(ftmsBikeConfigureExclusions);
-
-    // FTMS Accessory
-    QString ftmsAccessoryName = "accessory";
-    RegisterNewDeviceTestData(DeviceIndex::FTMSAccessory())
-        ->expectDevice<ftmsbike>()        
-        ->acceptDeviceName(ftmsAccessoryName, DeviceNameComparison::StartsWithIgnoreCase)
-        ->configureSettingsWith(
-            [ftmsAccessoryName](DeviceDiscoveryInfo& info, bool enable)->void
-            {
-                info.setValue(QZSettings::ss2k_peloton, enable);
-                info.setValue(QZSettings::ftms_accessory_name, enable ? ftmsAccessoryName : "NOT " + ftmsAccessoryName );
-            })
-        ->excluding(ftmsBikeConfigureExclusions);
-
+;
 
     // FTMS "BIKE-"
     RegisterNewDeviceTestData(DeviceIndex::FTMSBike3())
         ->expectDevice<ftmsbike>()
         ->acceptDeviceName("BIKE-", DeviceNameComparison::StartsWithIgnoreCase)
-        ->excluding(ftmsBikeConfigureExclusions)
         ->configureSettingsWith([](const DeviceDiscoveryInfo& info, bool enable, std::vector<DeviceDiscoveryInfo>& configurations) -> void {
             if(!enable)
                 return;
@@ -324,75 +297,7 @@ void DeviceTestDataIndex::Initialize() {
         ->acceptDeviceNames({"GLT",
                              "SPORT01-"}, // Labgrey Magnetic Exercise Bike https://www.amazon.co.uk/dp/B0CXMF1NPY?_encoding=UTF8&psc=1&ref=cm_sw_r_cp_ud_dp_PE420HA7RD7WJBZPN075&ref_=cm_sw_r_cp_ud_dp_PE420HA7RD7WJBZPN075&social_share=cm_sw_r_cp_ud_dp_PE420HA7RD7WJBZPN075&skipTwisterOG=1,
                             DeviceNameComparison::StartsWithIgnoreCase)
-        ->excluding(ftmsBikeConfigureExclusions)
         ->configureSettingsWith(QBluetoothUuid((quint16)0x1826));
-
-    // Power (Stages) Bike
-    QString powerSensorName = "WattsItCalled";
-    RegisterNewDeviceTestData(DeviceIndex::StagesPowerBike())
-        ->expectDevice<stagesbike>()
-        ->acceptDeviceName(powerSensorName+"Suffix", DeviceNameComparison::Exact) // needs a non-trivial name, but could be anything
-        ->configureSettingsWith([powerSensorName](const DeviceDiscoveryInfo& info, bool enable, std::vector<DeviceDiscoveryInfo>& configurations) -> void {
-            DeviceDiscoveryInfo config(info);
-
-            if(enable) {
-                config.setValue(QZSettings::power_sensor_as_bike, true);
-                config.setValue(QZSettings::power_sensor_name, powerSensorName);
-                configurations.push_back(config);
-            } else {
-                // enabled but wrong name
-                config.setValue(QZSettings::power_sensor_as_bike, true);
-                config.setValue(QZSettings::power_sensor_name, "NOT "+ powerSensorName);
-                configurations.push_back(config);
-
-                // disabled but acceptable name
-                config.setValue(QZSettings::power_sensor_as_bike, false);
-                config.setValue(QZSettings::power_sensor_name, powerSensorName);
-                configurations.push_back(config);
-
-                // disabled and wrong name
-                config.setValue(QZSettings::power_sensor_as_bike, false);
-                config.setValue(QZSettings::power_sensor_name, "NOT "+powerSensorName);
-                configurations.push_back(config);
-            }
-        });
-
-    // StrydeRun Power Sensor
-    RegisterNewDeviceTestData(DeviceIndex::StrydeRunTreadmill_PowerSensor())
-        ->expectDevice<strydrunpowersensor>()        
-        ->acceptDeviceName("", DeviceNameComparison::StartsWith,1) // accept any name
-        ->configureSettingsWith(
-            [](const DeviceDiscoveryInfo &info, bool enable, std::vector<DeviceDiscoveryInfo> &configurations) -> void
-            {
-                DeviceDiscoveryInfo config(info);
-                QString name = config.DeviceInfo()->name();
-                if(enable) {
-                    // power_as_treadmill enabled and powerSensorName in settings matches device name
-                    config.setValue(QZSettings::power_sensor_as_treadmill, true);
-                    config.setValue(QZSettings::power_sensor_name, name);
-                    configurations.push_back(config);
-                } else {
-                    // enabled but powerSensorName in settings does not match device name
-                    config.setValue(QZSettings::power_sensor_as_treadmill, true);
-                    config.setValue(QZSettings::power_sensor_name, "NOT " + name);
-                    configurations.push_back(config);
-
-                    // disabled with non-matching name
-                    config.setValue(QZSettings::power_sensor_as_treadmill, false);
-                    config.setValue(QZSettings::power_sensor_name, "NOT " + name);
-                    configurations.push_back(config);
-
-                    // disabled with matching name
-                    config.setValue(QZSettings::power_sensor_as_treadmill, false);
-                    config.setValue(QZSettings::power_sensor_name, name);
-                    configurations.push_back(config);
-                }
-            });
-
-    RegisterNewDeviceTestData(DeviceIndex::StrydeRunTreadmill_PowerSensor2())
-        ->expectDevice<strydrunpowersensor>()
-        ->acceptDeviceNames({"TREADMILL", "S10"}, DeviceNameComparison::StartsWithIgnoreCase)
-        ->configureSettingsWith(QBluetoothUuid((quint16)0x1814));
 
     auto trxAppGateUSBEllipticalSettingsApplicator =
         [](const DeviceDiscoveryInfo &info, bool enable, std::vector<DeviceDiscoveryInfo> &configurations) -> void
@@ -408,48 +313,6 @@ void DeviceTestDataIndex::Initialize() {
             configurations.push_back(config);
         }
     };
-
-
-    // TODO: revisit
-    // Zwift Runpod
-    QString zwiftRunPodPowerSensorName = "WattsItCalled";
-    RegisterNewDeviceTestData(DeviceIndex::ZwiftRunpod())
-        ->expectDevice<strydrunpowersensor>()        
-        ->acceptDeviceName("ZWIFT RUNPOD", DeviceNameComparison::StartsWithIgnoreCase)
-        ->configureSettingsWith(
-            [zwiftRunPodPowerSensorName](const DeviceDiscoveryInfo &info, bool enable, std::vector<DeviceDiscoveryInfo> &configurations) -> void
-            {
-                DeviceDiscoveryInfo config(info);
-
-                if(enable) {
-                    /* Avoid the config that enables the StrydeRunPowerSensorTestData device
-                    // power_as_treadmill enabled and powerSensorName in settings matches device name
-                    config.setValue(QZSettings::power_as_treadmill, true);
-                    config.setValue(QZSettings::powerSensorName, powerSensorName);
-                    configurations.push_back(config);
-                    */
-
-                    /*
-                     * In order for the search to occur, the power sensor name must start with "Disabled", or
-                     * power_as_bike or power_as_treadmill must be true.
-                    */
-
-                    config.setValue(QZSettings::power_sensor_as_treadmill, true);
-                    config.setValue(QZSettings::power_sensor_name, "NOT " + zwiftRunPodPowerSensorName);
-                    configurations.push_back(config);
-
-                    config.setValue(QZSettings::power_sensor_as_treadmill, false);
-                    config.setValue(QZSettings::power_sensor_name, "Disabled");
-                    configurations.push_back(config);
-
-                } else {
-                    // disable the search
-                    config.setValue(QZSettings::power_sensor_as_treadmill, false);
-                    config.setValue(QZSettings::power_sensor_name, zwiftRunPodPowerSensorName);
-                    config.setValue(QZSettings::power_sensor_as_bike, false);
-                    configurations.push_back(config);
-                }
-            });
 
 
     isInitialized() = true;

@@ -7,6 +7,7 @@
 #include <QSet>
 #include <QTime>
 #include <QTimer>
+#include <QUdpSocket>
 
 #ifdef Q_OS_IOS
 #include "ios/lockscreen.h"

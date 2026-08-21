@@ -39,7 +39,6 @@ class stagesbike : public bike {
     resistance_t pelotonToBikeResistance(int pelotonResistance) override;
     bool connected() override;
     resistance_t maxResistance() override { return 100; }
-    bool ergManagedBySS2K() override { return true; }
     bool inclinationAvailableBySoftware() override { return true; }
 
   private:
@@ -47,8 +46,6 @@ class stagesbike : public bike {
                                            uint8_t *data, uint8_t data_len, QString info, bool disable_log = false,
                                            bool wait_for_response = false);
     uint16_t wattsFromResistance(double resistance);
-    metric ResistanceFromFTMSAccessory;
-    uint64_t ResistanceFromFTMSAccessoryLastTime = 0;
     void startDiscover();
     uint16_t watts() override;
 
@@ -94,7 +91,6 @@ class stagesbike : public bike {
 
   public slots:
     void deviceDiscovered(const QBluetoothDeviceInfo &device);
-    void resistanceFromFTMSAccessory(resistance_t res) override;
 
   private slots:
 

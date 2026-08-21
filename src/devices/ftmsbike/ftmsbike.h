@@ -267,7 +267,6 @@ class ftmsbike : public bike {
     bool D2RIDE = false;
     bool WATTBIKE = false;
     bool VFSPINBIKE = false;
-    bool SS2K = false;
     bool DIRETO_XR = false;
     bool JFBK5_0 = false;
     bool BIKE_ = false;

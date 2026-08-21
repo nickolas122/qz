@@ -640,7 +640,6 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
     connect(bluetoothManager, &bluetooth::bluetoothDeviceDisconnected, this, &homeform::bluetoothDeviceDisconnected);
     connect(bluetoothManager, &bluetooth::deviceFound, this, &homeform::deviceFound);
     connect(bluetoothManager, &bluetooth::deviceConnected, this, &homeform::deviceConnected);
-    connect(bluetoothManager, &bluetooth::ftmsAccessoryConnected, this, &homeform::ftmsAccessoryConnected);
     connect(bluetoothManager, &bluetooth::deviceConnected, this, &homeform::trainProgramSignals);
     connect(this, &homeform::workoutNameChanged, this->userTemplateManager,
             &TemplateInfoSenderBuilder::onWorkoutNameChanged);
@@ -1470,7 +1469,7 @@ QStringList homeform::tile_order() {
     return r;
 }
 
-// these events are coming from the SS2K, so when the auto resistance is off, this event shouldn't be processed
+// these events come from the shifters, so when the auto resistance is off they should not be processed
 void homeform::gearUp() {
     if (autoResistance()) {
         Plus(QStringLiteral("gears"));
@@ -1503,12 +1502,6 @@ void homeform::inclinationPlus() {
 
 void homeform::inclinationMinus() {
     Minus(QStringLiteral("inclination"));
-}
-
-void homeform::ftmsAccessoryConnected(smartspin2k *d) {
-    connect(this, &homeform::autoResistanceChanged, d, &smartspin2k::autoResistanceChanged);
-    connect(d, &smartspin2k::gearUp, this, &homeform::gearUp);
-    connect(d, &smartspin2k::gearDown, this, &homeform::gearDown);
 }
 
 void homeform::sortTiles() {

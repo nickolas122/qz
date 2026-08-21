@@ -33,7 +33,6 @@ class bike : public bluetoothdevice {
     virtual resistance_t pelotonToBikeResistance(int pelotonResistance);
     virtual resistance_t resistanceFromPowerRequest(uint16_t power);
     virtual uint16_t powerFromResistanceRequest(resistance_t requestResistance);
-    virtual bool ergManagedBySS2K() { return false; }
     BLUETOOTH_TYPE deviceType() override;
     metric pelotonResistance();
     void clearStats() override;
@@ -85,7 +84,6 @@ class bike : public bluetoothdevice {
     void powerSensor(uint16_t power) override;
     void changeInclination(double grade, double percentage) override;
     virtual void changeSteeringAngle(double angle) { m_steeringAngle = angle; }
-    virtual void resistanceFromFTMSAccessory(resistance_t res) { Q_UNUSED(res); }
     void gearUp() {
         QSettings settings;
         bool gears_zwift_ratio = settings.value(QZSettings::gears_zwift_ratio, QZSettings::default_gears_zwift_ratio).toBool();

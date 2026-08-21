@@ -562,15 +562,11 @@ import AndroidStatusBar 1.0
             property real power_hr_hr2: 170
 
             property string power_sensor_name: "Disabled"
-            property bool power_sensor_as_bike: false
-            property bool power_sensor_as_treadmill: false
             property bool powr_sensor_running_cadence_double: false
 
             property string elite_rizer_name: "Disabled"
             property string elite_sterzo_smart_name: "Disabled"
 
-            property string ftms_accessory_name: "Disabled"
-            property real ss2k_shift_step: 900
 
             property bool fitmetria_fanfit_enable: false
             property string fitmetria_fanfit_mode: "Heart"
@@ -621,14 +617,6 @@ import AndroidStatusBar 1.0
             property bool renpho_peloton_conversion_v2: false
 
             // from version 2.10.27
-            property real ss2k_resistance_sample_1: 20
-            property real ss2k_shift_step_sample_1: 0
-            property real ss2k_resistance_sample_2: 30
-            property real ss2k_shift_step_sample_2: 0
-            property real ss2k_resistance_sample_3: 40
-            property real ss2k_shift_step_sample_3: 0
-            property real ss2k_resistance_sample_4: 50
-            property real ss2k_shift_step_sample_4: 0
 
             property bool  fitshow_truetimer: false
 
@@ -745,8 +733,6 @@ import AndroidStatusBar 1.0
             property string maps_type: "3D"
 
             // from version 2.10.112
-            property real ss2k_max_resistance: 100
-            property real ss2k_min_resistance: 0
 
             // from version 2.11.10
             property bool proform_treadmill_se: false
@@ -900,7 +886,6 @@ import AndroidStatusBar 1.0
             property bool domyos_bike_500_profile_v1: false
 
             // from version 2.12.14
-            property bool ss2k_peloton: false
 
             // from version 2.12.16
             property string computrainer_serialport: ""
@@ -12238,62 +12223,6 @@ import AndroidStatusBar 1.0
                         accordionContent: ColumnLayout {
                             spacing: 0
                             IndicatorOnlySwitch {
-                                id: powerSensorAsBikeDelegate
-                                text: qsTr("Power Sensor as a Bike")
-                                spacing: 0
-                                bottomPadding: 0
-                                topPadding: 0
-                                rightPadding: 0
-                                leftPadding: 0
-                                clip: false
-                                checked: settings.power_sensor_as_bike
-                                Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                                Layout.fillWidth: true
-                                onClicked: { settings.power_sensor_as_bike = checked; window.settings_restart_to_apply = true; }
-                            }
-
-                            Label {
-                                text: qsTr("If your bike doesn’t have Bluetooth, this setting allows you to use a power meter pedal sensor so your bike will work with QZ. Default is off.")
-                                font.bold: true
-                                font.italic: true
-                                font.pixelSize: Qt.application.font.pixelSize - 2
-                                textFormat: Text.PlainText
-                                wrapMode: Text.WordWrap
-                                verticalAlignment: Text.AlignVCenter
-                                Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                                Layout.fillWidth: true
-                                color: Material.color(Material.Lime)
-                            }
-
-                            IndicatorOnlySwitch {
-                                id: powerSensorAsTreadmillDelegate
-                                text: qsTr("Power Sensor as a Treadmill")
-                                spacing: 0
-                                bottomPadding: 0
-                                topPadding: 0
-                                rightPadding: 0
-                                leftPadding: 0
-                                clip: false
-                                checked: settings.power_sensor_as_treadmill
-                                Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                                Layout.fillWidth: true
-                                onClicked: { settings.power_sensor_as_treadmill = checked; window.settings_restart_to_apply = true; }
-                            }
-
-                            Label {
-                                text: qsTr("If your treadmill doesn’t have Bluetooth, this setting allows you to use a Stryde sensor (or similar) so your treadmill will work with QZ. Default is off.")
-                                font.bold: true
-                                font.italic: true
-                                font.pixelSize: Qt.application.font.pixelSize - 2
-                                textFormat: Text.PlainText
-                                wrapMode: Text.WordWrap
-                                verticalAlignment: Text.AlignVCenter
-                                Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                                Layout.fillWidth: true
-                                color: Material.color(Material.Lime)
-                            }
-
-                            IndicatorOnlySwitch {
                                 id: powerSensorRunCadenceDoubleDelegate
                                 text: qsTr("Doubling Cadence for Run")
                                 spacing: 0
@@ -12651,338 +12580,6 @@ import AndroidStatusBar 1.0
                                         text: qsTr("Refresh Devices List")
                                         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                                         onClicked: refresh_bluetooth_devices_clicked();
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    AccordionElement {
-                        id: ftmsAccessoryOptionsAccordion
-                        title: qsTr("SmartSpin2k Options")
-                        indicatRectColor: Material.color(Material.Grey)
-                        textColor: Material.color(Material.Yellow)
-                        color: Material.backgroundColor
-                        accordionContent: ColumnLayout {
-                            spacing: 0
-                            Label {
-                                id: labelFTMSAccessoryName
-                                text: qsTr("SmartSpin2k device:")
-                                Layout.fillWidth: true
-                            }
-                            RowLayout {
-                                spacing: 10
-                                ComboBox {
-                                    id: ftmsAccessoryNameTextField
-                                    model: rootItem.bluetoothDevices
-                                    displayText: settings.ftms_accessory_name
-                                    Layout.fillHeight: false
-                                    Layout.fillWidth: true
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    onActivated: {
-                                        console.log("combomodel activated" + ftmsAccessoryNameTextField.currentIndex)
-                                        displayText = ftmsAccessoryNameTextField.currentValue
-                                    }
-
-                                }
-                                Button {
-                                    id: okFTMSAccessoryNameButton
-                                    text: qsTr("OK")
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    onClicked: { settings.ftms_accessory_name = stripRssi(ftmsAccessoryNameTextField.displayText); window.settings_restart_to_apply = true; toast.show(qsTr("Setting saved!")); }
-                                }
-                            }
-
-                            Button {
-                                id: refreshFTMSAccessoryNameButton
-                                text: qsTr("Refresh Devices List")
-                                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                onClicked: refresh_bluetooth_devices_clicked();
-                            }                                                        
-
-                            IndicatorOnlySwitch {
-                                id: ss2kPelotonDelegate
-                                text: qsTr("Peloton Bike")
-                                spacing: 0
-                                bottomPadding: 0
-                                topPadding: 0
-                                rightPadding: 0
-                                leftPadding: 0
-                                clip: false
-                                checked: settings.ss2k_peloton
-                                Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                                Layout.fillWidth: true
-                                onClicked: { settings.ss2k_peloton = checked; window.settings_restart_to_apply = true; }
-                            }
-
-                            RowLayout {
-                                spacing: 10
-                                Label {
-                                    id: labelSS2KShiftStep
-                                    text: qsTr("Shift Step")
-                                    Layout.fillWidth: true
-                                }
-                                TextField {
-                                    id: ss2kShiftStepTextField
-                                    text: settings.ss2k_shift_step
-                                    horizontalAlignment: Text.AlignRight
-                                    Layout.fillHeight: false
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    inputMethodHints: Qt.ImhDigitsOnly
-                                    onAccepted: settings.ss2k_shift_step = text
-                                    onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                }
-                                Button {
-                                    id: okSS2kShiftStep
-                                    text: qsTr("OK")
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    onClicked: { settings.ss2k_shift_step = ss2kShiftStepTextField.text; toast.show(qsTr("Setting saved!")); }
-                                }
-                            }
-                            RowLayout {
-                                spacing: 10
-                                Label {
-                                    id: labelSS2KMaxResistance
-                                    text: qsTr("Max Resistance")
-                                    Layout.fillWidth: true
-                                }
-                                TextField {
-                                    id: ss2kMaxResistanceTextField
-                                    text: settings.ss2k_max_resistance
-                                    horizontalAlignment: Text.AlignRight
-                                    Layout.fillHeight: false
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    inputMethodHints: Qt.ImhDigitsOnly
-                                    onAccepted: settings.ss2k_max_resistance = text
-                                    onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                }
-                                Button {
-                                    id: okSS2kMaxResistance
-                                    text: qsTr("OK")
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    onClicked: { settings.ss2k_max_resistance = ss2kMaxResistanceTextField.text; toast.show(qsTr("Setting saved!")); }
-                                }
-                            }
-                            RowLayout {
-                                spacing: 10
-                                Label {
-                                    id: labelSS2KMinResistance
-                                    text: qsTr("Min Resistance")
-                                    Layout.fillWidth: true
-                                }
-                                TextField {
-                                    id: ss2kMinResistanceTextField
-                                    text: settings.ss2k_min_resistance
-                                    horizontalAlignment: Text.AlignRight
-                                    Layout.fillHeight: false
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    inputMethodHints: Qt.ImhDigitsOnly
-                                    onAccepted: settings.ss2k_min_resistance = text
-                                    onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                }
-                                Button {
-                                    id: okSS2kMinResistance
-                                    text: qsTr("OK")
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    onClicked: { settings.ss2k_min_resistance = ss2kMinResistanceTextField.text; toast.show(qsTr("Setting saved!")); }
-                                }
-                            }
-
-                            AccordionElement {
-                                id: ftmsAccessoryAdvancedOptionsAccordion
-                                title: qsTr("Advanced SmartSpin2k Calibration")
-                                indicatRectColor: Material.color(Material.Grey)
-                                textColor: Material.color(Material.Blue)
-                                color: Material.backgroundColor
-                                accordionContent: ColumnLayout {
-                                    spacing: 10
-                                    RowLayout {
-                                        spacing: 10
-                                        Label {
-                                            id: labelSS2KResistanceSample1
-                                            text: qsTr("Resistance Sample 1")
-                                            Layout.fillWidth: true
-                                        }
-                                        TextField {
-                                            id: ss2kResistanceSample1TextField
-                                            text: settings.ss2k_resistance_sample_1
-                                            horizontalAlignment: Text.AlignRight
-                                            Layout.fillHeight: false
-                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                            inputMethodHints: Qt.ImhDigitsOnly
-                                            onAccepted: settings.resistance_sample_1 = text
-                                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                        }
-                                        Button {
-                                            id: okSS2kResistanceSample1
-                                            text: qsTr("OK")
-                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                            onClicked: { settings.ss2k_resistance_sample_1 = ss2kResistanceSample1TextField.text; window.settings_restart_to_apply = true; toast.show(qsTr("Setting saved!")); }
-                                        }
-                                    }
-                                    RowLayout {
-                                        Label {
-                                            id: labelSS2KShiftStepSample1
-                                            text: qsTr("Shift Step Sample 1")
-                                            Layout.fillWidth: true
-                                        }
-                                        TextField {
-                                            id: ss2kShiftStepSample1TextField
-                                            text: settings.ss2k_shift_step_sample_1
-                                            horizontalAlignment: Text.AlignRight
-                                            Layout.fillHeight: false
-                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                            inputMethodHints: Qt.ImhDigitsOnly
-                                            onAccepted: settings.ss2k_shift_step_sample_1 = text
-                                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                        }
-                                        Button {
-                                            id: okSS2kShiftStepSample1
-                                            text: qsTr("OK")
-                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                            onClicked: { settings.ss2k_shift_step_sample_1 = ss2kShiftStepSample1TextField.text; window.settings_restart_to_apply = true; toast.show(qsTr("Setting saved!")); }
-                                        }
-                                    }
-                                    RowLayout {
-                                        spacing: 10
-                                        Label {
-                                            id: labelSS2KResistanceSample2
-                                            text: qsTr("Resistance Sample 2")
-                                            Layout.fillWidth: true
-                                        }
-                                        TextField {
-                                            id: ss2kResistanceSample2TextField
-                                            text: settings.ss2k_resistance_sample_2
-                                            horizontalAlignment: Text.AlignRight
-                                            Layout.fillHeight: false
-                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                            inputMethodHints: Qt.ImhDigitsOnly
-                                            onAccepted: settings.resistance_sample_2 = text
-                                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                        }
-                                        Button {
-                                            id: okSS2kResistanceSample2
-                                            text: qsTr("OK")
-                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                            onClicked: { settings.ss2k_resistance_sample_2 = ss2kResistanceSample2TextField.text; window.settings_restart_to_apply = true; toast.show(qsTr("Setting saved!")); }
-                                        }
-                                    }
-                                    RowLayout {
-                                        Label {
-                                            id: labelSS2KShiftStepSample2
-                                            text: qsTr("Shift Step Sample 2")
-                                            Layout.fillWidth: true
-                                        }
-                                        TextField {
-                                            id: ss2kShiftStepSample2TextField
-                                            text: settings.ss2k_shift_step_sample_2
-                                            horizontalAlignment: Text.AlignRight
-                                            Layout.fillHeight: false
-                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                            inputMethodHints: Qt.ImhDigitsOnly
-                                            onAccepted: settings.ss2k_shift_step_sample_2 = text
-                                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                        }
-                                        Button {
-                                            id: okSS2kShiftStepSample2
-                                            text: qsTr("OK")
-                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                            onClicked: { settings.ss2k_shift_step_sample_2 = ss2kShiftStepSample2TextField.text; window.settings_restart_to_apply = true; toast.show(qsTr("Setting saved!")); }
-                                        }
-                                    }
-                                    RowLayout {
-                                        spacing: 10
-                                        Label {
-                                            id: labelSS2KResistanceSample3
-                                            text: qsTr("Resistance Sample 3")
-                                            Layout.fillWidth: true
-                                        }
-                                        TextField {
-                                            id: ss2kResistanceSample3TextField
-                                            text: settings.ss2k_resistance_sample_3
-                                            horizontalAlignment: Text.AlignRight
-                                            Layout.fillHeight: false
-                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                            inputMethodHints: Qt.ImhDigitsOnly
-                                            onAccepted: settings.resistance_sample_3 = text
-                                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                        }
-                                        Button {
-                                            id: okSS2kResistanceSample3
-                                            text: qsTr("OK")
-                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                            onClicked: { settings.ss2k_resistance_sample_3 = ss2kResistanceSample3TextField.text; window.settings_restart_to_apply = true; toast.show(qsTr("Setting saved!")); }
-                                        }
-                                    }
-                                    RowLayout {
-                                        Label {
-                                            id: labelSS2KShiftStepSample3
-                                            text: qsTr("Shift Step Sample 3")
-                                            Layout.fillWidth: true
-                                        }
-                                        TextField {
-                                            id: ss2kShiftStepSample3TextField
-                                            text: settings.ss2k_shift_step_sample_3
-                                            horizontalAlignment: Text.AlignRight
-                                            Layout.fillHeight: false
-                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                            inputMethodHints: Qt.ImhDigitsOnly
-                                            onAccepted: settings.ss2k_shift_step_sample_3 = text
-                                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                        }
-                                        Button {
-                                            id: okSS2kShiftStepSample3
-                                            text: qsTr("OK")
-                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                            onClicked: { settings.ss2k_shift_step_sample_3 = ss2kShiftStepSample3TextField.text; window.settings_restart_to_apply = true; toast.show(qsTr("Setting saved!")); }
-                                        }
-                                    }
-                                    RowLayout {
-                                        spacing: 10
-                                        Label {
-                                            id: labelSS2KResistanceSample4
-                                            text: qsTr("Resistance Sample 4")
-                                            Layout.fillWidth: true
-                                        }
-                                        TextField {
-                                            id: ss2kResistanceSample4TextField
-                                            text: settings.ss2k_resistance_sample_4
-                                            horizontalAlignment: Text.AlignRight
-                                            Layout.fillHeight: false
-                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                            inputMethodHints: Qt.ImhDigitsOnly
-                                            onAccepted: settings.resistance_sample_4 = text
-                                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                        }
-                                        Button {
-                                            id: okSS2kResistanceSample4
-                                            text: qsTr("OK")
-                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                            onClicked: { settings.ss2k_resistance_sample_4 = ss2kResistanceSample4TextField.text; window.settings_restart_to_apply = true; toast.show(qsTr("Setting saved!")); }
-                                        }
-                                    }
-                                    RowLayout {
-                                        Label {
-                                            id: labelSS2KShiftStepSample4
-                                            text: qsTr("Shift Step Sample 4")
-                                            Layout.fillWidth: true
-                                        }
-                                        TextField {
-                                            id: ss2kShiftStepSample4TextField
-                                            text: settings.ss2k_shift_step_sample_4
-                                            horizontalAlignment: Text.AlignRight
-                                            Layout.fillHeight: false
-                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                            inputMethodHints: Qt.ImhDigitsOnly
-                                            onAccepted: settings.ss2k_shift_step_sample_4 = text
-                                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                        }
-                                        Button {
-                                            id: okSS2kShiftStepSample4
-                                            text: qsTr("OK")
-                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                            onClicked: { settings.ss2k_shift_step_sample_4 = ss2kShiftStepSample4TextField.text; window.settings_restart_to_apply = true; toast.show(qsTr("Setting saved!")); }
-                                        }
                                     }
                                 }
                             }

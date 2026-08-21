@@ -17,15 +17,16 @@ Upstream is the project. If you are looking for QZ, go there first.
 
 ## Read this before downloading
 
-**Device support has been cut from 132 drivers to 18.** If your machine is not in the list
+**Device support has been cut from 132 drivers to 15.** If your machine is not in the list
 below, this build cannot talk to it and never will — that is the point of the fork, not a
 bug in it. Use upstream instead.
 
-What is left: `ftmsbike` (the FTMS trainer this fork is built around), `cscbike`,
-`stagesbike`, `smartspin2k`, `strydrunpowersensor`, `heartratebelt`, `coresensor`,
-`moxy5sensor`, `dircon`, plus the Elite accessories (`eliteariafan`, `eliterizer`,
-`elitesquarecontroller`, `elitesterzosmart`), `fitmetria_fanfit`, `wahookickrheadwind`,
-`sramAXSController`, `cycplusbc2controller` and `thinkridercontroller`.
+What is left: `ftmsbike` (the FTMS trainer this fork is built around), `cscbike` and
+`stagesbike` (the generic BLE cadence sensor and power meter, read beside the trainer —
+neither can be the machine any more), `heartratebelt`, `coresensor`, `dircon`, plus the
+Elite accessories (`eliteariafan`, `eliterizer`, `elitesquarecontroller`,
+`elitesterzosmart`), `fitmetria_fanfit`, `wahookickrheadwind`, `sramAXSController`,
+`cycplusbc2controller` and `thinkridercontroller`.
 
 **Only Windows and Android are built.** iOS, macOS, Raspberry Pi, NordicTrack/iFIT,
 FitPro and Peloton builds are all disabled here. The releases carry a Windows (Qt 6) zip

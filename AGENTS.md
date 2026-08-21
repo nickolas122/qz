@@ -32,7 +32,7 @@ The application follows a hierarchical device architecture:
 
 ### Virtual Device System
 - `virtualdevice` - Abstract base for virtual representations
-- `virtualbike`, `virtualtreadmill`, etc. - Advertise to external apps
+- `virtualbike` - Advertises to external apps (`virtualtreadmill` went with Group E)
 - Enables bidirectional communication between physical and virtual devices
 
 ### Bluetooth Management

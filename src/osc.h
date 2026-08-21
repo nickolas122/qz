@@ -7,6 +7,7 @@
 #include <QJsonObject>
 #include <QSettings>
 #include <QHash>
+#include <QUdpSocket>
 #include <QVariant>
 #include "bluetoothdevice.h"
 #include "devices/bike.h"

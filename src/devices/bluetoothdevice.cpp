@@ -268,15 +268,11 @@ void bluetoothdevice::update_metrics(bool watt_calc, const double watts, const b
     QSettings settings;
     QString heartRateBeltName =
         settings.value(QZSettings::heart_rate_belt_name, QZSettings::default_heart_rate_belt_name).toString();
-    bool power_as_bike =
-        settings.value(QZSettings::power_sensor_as_bike, QZSettings::default_power_sensor_as_bike).toBool();
-    bool power_as_treadmill =
-        settings.value(QZSettings::power_sensor_as_treadmill, QZSettings::default_power_sensor_as_treadmill).toBool();
-
+    // A named power sensor supplies the watts, so stop calculating them. It is always a
+    // sensor now: the modes that let it be the machine went with Group E.
     if (settings.value(QZSettings::power_sensor_name, QZSettings::default_power_sensor_name)
                 .toString()
-                .startsWith(QStringLiteral("Disabled")) == false &&
-        !power_as_bike && !power_as_treadmill)
+                .startsWith(QStringLiteral("Disabled")) == false)
         watt_calc = false;
 
     if(deviceType() == BIKE && !from_accessory)  // append only if it's coming from the bike, not from the power sensor

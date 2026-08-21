@@ -377,7 +377,7 @@ void ftmsbike::zwiftPlayInit() {
 }
 
 void ftmsbike::forcePower(int16_t requestPower) {
-    if((resistance_lvl_mode || TITAN_7000) && !MAGNUS && !SS2K) {
+    if((resistance_lvl_mode || TITAN_7000) && !MAGNUS) {
         const resistance_t targetResistance = resistanceFromPowerRequest(requestPower);
         commandResistance(targetResistance);
     } else {
@@ -582,8 +582,7 @@ void ftmsbike::forceResistance(resistance_t requestResistance) {
 
     QSettings settings;
     bool ergModeNotSupported = (requestPower > 0 && !ergModeSupported);
-    if (!settings.value(QZSettings::ss2k_peloton, QZSettings::default_ss2k_peloton).toBool() &&
-        resistance_lvl_mode == false && _3G_Cardio_RB == false && JFBK5_0 == false) {
+    if (resistance_lvl_mode == false && _3G_Cardio_RB == false && JFBK5_0 == false) {
 
         uint8_t write[] = {FTMS_SET_INDOOR_BIKE_SIMULATION_PARAMS, 0x00, 0x00, 0x00, 0x00, 0x28, 0x19};
 
@@ -965,13 +964,6 @@ void ftmsbike::update() {
             emit debug(QStringLiteral("stopping..."));
             // writeCharacteristic(initDataF0C800B8, sizeof(initDataF0C800B8), "stop tape");
             requestStop = -1;
-
-            QSettings settings;
-            if (settings.value(QZSettings::ss2k_peloton, QZSettings::default_ss2k_peloton).toBool()) {
-                uint8_t write[] = {FTMS_SET_INDOOR_BIKE_SIMULATION_PARAMS, 0x00, 0x00, 0x00, 0x00, 0x28, 0x19};
-
-                writeCharacteristic(write, sizeof(write), QStringLiteral("init SS2K"));
-            }
         }
     }
 }
@@ -2508,7 +2500,7 @@ void ftmsbike::serviceScanDone(void) {
             connect(service, &QLowEnergyService::stateChanged, this, &ftmsbike::stateChanged);
 
             // watt bikes has the 6 as default gear value
-            if(s == QBluetoothUuid(QStringLiteral("b4cc1223-bc02-4cae-adb9-1217ad2860d1")) && SS2K == false) {
+            if(s == QBluetoothUuid(QStringLiteral("b4cc1223-bc02-4cae-adb9-1217ad2860d1"))) {
                 WATTBIKE = true;
                 qDebug() << QStringLiteral("restoring gear 6 to watt bikes");
                 setGears(6);
@@ -2606,9 +2598,6 @@ void ftmsbike::deviceDiscovered(const QBluetoothDeviceInfo &device) {
         } else if(bluetoothDevice.name().toUpper().startsWith("VFSPINBIKE")) {
             qDebug() << QStringLiteral("VFSPINBIKE found");
             VFSPINBIKE = true;
-        } else if(bluetoothDevice.name().toUpper().startsWith("SMARTSPIN2K")) {
-            qDebug() << QStringLiteral("SS2K found");
-            SS2K = true;
         } else if(bluetoothDevice.name().toUpper().startsWith("DIRETO XR")) {
             qDebug() << QStringLiteral("DIRETO XR found");
             DIRETO_XR = true;

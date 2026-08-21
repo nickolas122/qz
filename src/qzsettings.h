@@ -39,12 +39,6 @@ class QZSettings {
     static const QString hrm_lastdevice_address;
     static const QString default_hrm_lastdevice_address;
 
-    static const QString ftms_accessory_address;
-    static const QString default_ftms_accessory_address;
-
-    static const QString ftms_accessory_lastdevice_name;
-    static const QString default_ftms_accessory_lastdevice_name;
-
     static const QString csc_sensor_address;
     static const QString default_csc_sensor_address;
 
@@ -918,12 +912,6 @@ class QZSettings {
     static const QString power_sensor_name;
     static const QString default_power_sensor_name;
 
-    static const QString power_sensor_as_bike;
-    static constexpr bool default_power_sensor_as_bike = false;
-
-    static const QString power_sensor_as_treadmill;
-    static constexpr bool default_power_sensor_as_treadmill = false;
-
     static const QString power_sensor_speed_inclination_coeff_a;
     static constexpr double default_power_sensor_speed_inclination_coeff_a = 0.0;
 
@@ -938,12 +926,6 @@ class QZSettings {
 
     static const QString elite_sterzo_smart_name;
     static const QString default_elite_sterzo_smart_name;
-
-    static const QString ftms_accessory_name;
-    static const QString default_ftms_accessory_name;
-
-    static const QString ss2k_shift_step;
-    static constexpr float default_ss2k_shift_step = 900;
 
     static const QString fitmetria_fanfit_enable;
     static constexpr bool default_fitmetria_fanfit_enable = false;
@@ -1082,30 +1064,6 @@ class QZSettings {
 
     static const QString renpho_peloton_conversion_v2;
     static constexpr bool default_renpho_peloton_conversion_v2 = false;
-
-    static const QString ss2k_resistance_sample_1;
-    static constexpr float default_ss2k_resistance_sample_1 = 20;
-
-    static const QString ss2k_shift_step_sample_1;
-    static constexpr float default_ss2k_shift_step_sample_1 = 0;
-
-    static const QString ss2k_resistance_sample_2;
-    static constexpr float default_ss2k_resistance_sample_2 = 30;
-
-    static const QString ss2k_shift_step_sample_2;
-    static constexpr float default_ss2k_shift_step_sample_2 = 0;
-
-    static const QString ss2k_resistance_sample_3;
-    static constexpr float default_ss2k_resistance_sample_3 = 40;
-
-    static const QString ss2k_shift_step_sample_3;
-    static constexpr float default_ss2k_shift_step_sample_3 = 0;
-
-    static const QString ss2k_resistance_sample_4;
-    static constexpr float default_ss2k_resistance_sample_4 = 50;
-
-    static const QString ss2k_shift_step_sample_4;
-    static constexpr float default_ss2k_shift_step_sample_4 = 0;
 
     static const QString fitshow_truetimer;
     static constexpr bool default_fitshow_truetimer = false;
@@ -1358,12 +1316,6 @@ class QZSettings {
 
     static const QString maps_type;
     static const QString default_maps_type;
-
-    static const QString ss2k_max_resistance;
-    static constexpr float default_ss2k_max_resistance = 100;
-
-    static const QString ss2k_min_resistance;
-    static constexpr float default_ss2k_min_resistance = 0;
 
     static const QString proform_treadmill_se;
     static constexpr bool default_proform_treadmill_se = false;
@@ -1697,9 +1649,6 @@ class QZSettings {
 
     static const QString domyos_bike_500_profile_v1;
     static constexpr bool default_domyos_bike_500_profile_v1 = false;
-
-    static const QString ss2k_peloton;
-    static constexpr bool default_ss2k_peloton = false;
 
     static const QString computrainer_serialport;
     static const QString default_computrainer_serialport;

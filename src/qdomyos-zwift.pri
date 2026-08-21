@@ -117,7 +117,6 @@ SOURCES += \
     $$PWD/devices/coresensor/coresensor.cpp \
     $$PWD/devices/elitesquarecontroller/elitesquarecontroller.cpp \
     $$PWD/devices/jumprope.cpp \
-    $$PWD/devices/moxy5sensor/moxy5sensor.cpp \
     $$PWD/devices/cycplusbc2controller/cycplusbc2controller.cpp \
     $$PWD/devices/sramAXSController/sramAXSController.cpp \
     $$PWD/devices/thinkridercontroller/thinkridercontroller.cpp \
@@ -205,9 +204,7 @@ signalhandler.cpp \
 simplecrypt.cpp \
 devices/simulatedbike/ridescenario.cpp \
 devices/simulatedbike/simulatedbike.cpp \
-devices/smartspin2k/smartspin2k.cpp \
 devices/stagesbike/stagesbike.cpp \
-devices/strydrunpowersensor/strydrunpowersensor.cpp \
 tcpclientinfosender.cpp \
 templateinfosender.cpp \
 templateinfosenderbuilder.cpp \
@@ -216,7 +213,6 @@ devices/treadmill.cpp \
 virtualdevices/virtualrower.cpp \
 trainprogram.cpp \
 virtualdevices/virtualbike.cpp \
-virtualdevices/virtualtreadmill.cpp \
 scanrecordresult.cpp \
 windows_zwift_incline_paddleocr_thread.cpp \
 zwiftworkout.cpp
@@ -244,7 +240,6 @@ HEADERS += \
     $$PWD/devices/coresensor/coresensor.h \
     $$PWD/devices/elitesquarecontroller/elitesquarecontroller.h \
     $$PWD/devices/jumprope.h \
-    $$PWD/devices/moxy5sensor/moxy5sensor.h \
     $$PWD/devices/cycplusbc2controller/cycplusbc2controller.h \
     $$PWD/devices/sramAXSController/sramAXSController.h \
     $$PWD/devices/thinkridercontroller/thinkridercontroller.h \
@@ -380,9 +375,7 @@ signalhandler.h \
 simplecrypt.h \
 devices/simulatedbike/ridescenario.h \
 devices/simulatedbike/simulatedbike.h \
-devices/smartspin2k/smartspin2k.h \
 devices/stagesbike/stagesbike.h \
-devices/strydrunpowersensor/strydrunpowersensor.h \
 tcpclientinfosender.h \
 templateinfosender.h \
 templateinfosenderbuilder.h \
@@ -393,7 +386,6 @@ mainwindow.h \
 trainprogram.h \
 virtualdevices/virtualbike.h \
 virtualdevices/virtualrower.h \
-virtualdevices/virtualtreadmill.h \
 scanrecordresult.h \
 windows_zwift_incline_paddleocr_thread.h \
 zwiftworkout.h

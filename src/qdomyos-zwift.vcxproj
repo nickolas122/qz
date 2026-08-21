@@ -214,7 +214,6 @@
     <ClCompile Include="treadmill.cpp" />
     <ClCompile Include="trxappgateusbtreadmill.cpp" />
     <ClCompile Include="virtualbike.cpp" />
-    <ClCompile Include="virtualtreadmill.cpp" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="bike.h">
@@ -240,8 +239,6 @@
     <QtMoc Include="trxappgateusbtreadmill.h">
     </QtMoc>
     <QtMoc Include="virtualbike.h">
-    </QtMoc>
-    <QtMoc Include="virtualtreadmill.h">
     </QtMoc>
   </ItemGroup>
   <ItemGroup>

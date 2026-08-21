@@ -20,7 +20,6 @@
 #endif
 #include "homeform.h"
 #include "mainwindow.h"
-#include "virtualdevices/virtualtreadmill.h"
 #include <QDir>
 #include <QGuiApplication>
 #include <QOperatingSystemVersion>
@@ -67,7 +66,6 @@ bool noWriteResistance = false;
 bool noHeartService = true;
 bool noConsole = false;
 bool onlyVirtualBike = false;
-bool onlyVirtualTreadmill = false;
 QString mqtt_host = "";
 int mqtt_port = -1;
 QString mqtt_username = "";
@@ -100,7 +98,6 @@ uint32_t pollDeviceTime = 200;
 int8_t bikeResistanceOffset = 4;
 double bikeResistanceGain = 1.0;
 QString power_sensor_name = QStringLiteral("Disabled");
-bool power_sensor_as_treadmill = false;
 bool smokeTest = false;
 // The bike that is not there - docs/fork/VIRTUAL-BIKE.md. Flags rather than settings-only so a
 // simulated session can be started from a shortcut without touching a saved profile.
@@ -151,10 +148,8 @@ void displayHelp() {
     printf("  -bike-power-sensor            Enable bike power sensor\n");
     printf("  -bike-wheel-revs              Enable bike wheel revolution tracking\n");
     printf("  -power-sensor-name <name>     Set power sensor name\n");
-    printf("  -power-sensor-as-treadmill    Use power sensor as treadmill\n");
 
     printf("\nTreadmill specific options:\n");
-    printf("  -only-virtualtreadmill        Run only virtual treadmill mode\n");
     printf("  -run-cadence-sensor           Enable run cadence sensor\n");
     printf("  -horizon-treadmill-7-8        Enable Horizon 7.8 treadmill support\n");
     printf("  -horizon-treadmill-force-ftms Force FTMS for Horizon treadmill\n");
@@ -295,8 +290,6 @@ QCoreApplication *createApplication(int &argc, char *argv[]) {
             noHeartService = false;
         if (!qstrcmp(argv[i], "-only-virtualbike"))
             onlyVirtualBike = true;
-        if (!qstrcmp(argv[i], "-only-virtualtreadmill"))
-            onlyVirtualTreadmill = true;
         if (!qstrcmp(argv[i], "-no-reconnection"))
             bluetooth_no_reconnection = true;
         if (!qstrcmp(argv[i], "-bluetooth_relaxed"))
@@ -367,9 +360,6 @@ QCoreApplication *createApplication(int &argc, char *argv[]) {
         }
         if (!qstrcmp(argv[i], "-power-sensor-name")) {
             power_sensor_name = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-power-sensor-as-treadmill")) {
-            power_sensor_as_treadmill = true;
         }
         if (!qstrcmp(argv[i], "-mqtt-host")) {
             mqtt_host = argv[++i];
@@ -612,7 +602,6 @@ int main(int argc, char *argv[]) {
         settings.setValue(QZSettings::zwift_play_emulator, zwift_play_emulator);
         settings.setValue(QZSettings::virtual_device_bluetooth, virtual_device_bluetooth);
         settings.setValue(QZSettings::power_sensor_name, power_sensor_name);
-        settings.setValue(QZSettings::power_sensor_as_treadmill, power_sensor_as_treadmill);
         if (mqtt_host.length() > 0) {
             settings.setValue(QZSettings::mqtt_host, mqtt_host);
         }
@@ -672,12 +661,6 @@ int main(int argc, char *argv[]) {
         if (onlyVirtualBike) {
             virtualbike V(new bike(), noWriteResistance,
                           noHeartService); // FIXED: clang-analyzer-cplusplus.NewDeleteLeaks - potential leak
-
-            Q_UNUSED(V)
-            return app->exec();
-        } else if (onlyVirtualTreadmill) {
-            virtualtreadmill V(new treadmill(),
-                               noHeartService); // FIXED: clang-analyzer-cplusplus.NewDeleteLeaks - potential leak
 
             Q_UNUSED(V)
             return app->exec();

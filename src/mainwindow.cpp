@@ -1,6 +1,5 @@
 #include "mainwindow.h"
 #include "gpx.h"
-#include "virtualdevices/virtualtreadmill.h"
 #include "ui_mainwindow.h"
 #include <QFileDialog>
 #include <chrono>
@@ -143,21 +142,12 @@ void MainWindow::update() {
             ui->connectionToTreadmill->setEnabled(true);
             if (bluetoothManager->device()->VirtualDevice()) {
 
-                if (bluetoothManager->device()->deviceType() == TREADMILL &&
-                    ((virtualtreadmill *)((treadmill *)bluetoothManager->device())->VirtualDevice())->connected()) {
-
-                    ui->connectionToZwift->setEnabled(true);
-                } else if (bluetoothManager->device()->deviceType() == BIKE &&
+                if (bluetoothManager->device()->deviceType() == BIKE &&
                            ((virtualbike *)((bike *)bluetoothManager->device())->VirtualDevice())->connected()) {
 
                     ui->connectionToZwift->setEnabled(true);
                 } else if (bluetoothManager->device()->deviceType() == ROWING &&
                            ((virtualbike *)((rower *)bluetoothManager->device())->VirtualDevice())->connected()) {
-
-                    ui->connectionToZwift->setEnabled(true);
-                } else if (bluetoothManager->device()->deviceType() == ELLIPTICAL &&
-                           ((virtualtreadmill *)((elliptical *)bluetoothManager->device())->VirtualDevice())
-                               ->connected()) {
 
                     ui->connectionToZwift->setEnabled(true);
                 } else {
