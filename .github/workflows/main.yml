@@ -285,7 +285,6 @@ jobs:
           echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           cd ..
 
       - name: Build
@@ -475,7 +474,6 @@ jobs:
 #            echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
 #            echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
 #            echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-#            echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
 #            echo "#define STEAM_STORE" >> secret.h
 #            cd ..
 #            make -j8
@@ -605,7 +603,6 @@ jobs:
           echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           cd ..
 
       # Every command's status is checked. window-build does not do this, and as a
@@ -988,7 +985,6 @@ jobs:
           echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           echo "#define LICENSE" >> secret.h
 
       - name: Prepare Android signing key
@@ -1359,7 +1355,6 @@ jobs:
           echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           cd ..
           qmake CONFIG+=debug CONFIG+=iphonesimulator \
             && make -j4
@@ -1471,7 +1466,6 @@ jobs:
           echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           cd ..
 
       - name: Cache vcpkg
@@ -1674,7 +1668,6 @@ jobs:
           echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           cd ..
 
       - name: Cache vcpkg
@@ -1779,7 +1772,6 @@ jobs:
           echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           echo "#define LICENSE" >> secret.h
           cd ..
 
@@ -1836,7 +1828,6 @@ jobs:
           echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           echo "#define LICENSE" >> secret.h
           cd ..
 
@@ -2052,7 +2043,6 @@ jobs:
           echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           cd ..
 
       - name: Cache vcpkg
@@ -2265,7 +2255,6 @@ jobs:
           echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           cd ..
 
       - name: Cache vcpkg
@@ -2464,7 +2453,6 @@ jobs:
           echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           echo "#define LICENSE" >> secret.h
           # Set variant-specific IP setting
           sed -i 's/property string ${{ matrix.variant.setting_key }}: ""/property string ${{ matrix.variant.setting_key }}: "${{ matrix.variant.setting_value }}"/' settings.qml
@@ -2609,7 +2597,6 @@ jobs:
           echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           echo "#define LICENSE" >> secret.h
           # Set variant-specific IP setting
           sed -i 's/property string ${{ matrix.variant.setting_key }}: ""/property string ${{ matrix.variant.setting_key }}: "${{ matrix.variant.setting_value }}"/' settings.qml
@@ -2757,7 +2744,6 @@ jobs:
           echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           echo "#define LICENSE" >> secret.h
           cd ..
 
@@ -2884,7 +2870,6 @@ jobs:
           echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           echo "#define LICENSE" >> secret.h
           cd ..
 

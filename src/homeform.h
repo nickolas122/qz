@@ -1,17 +1,14 @@
 #ifndef HOMEFORM_H
 #define HOMEFORM_H
 
-#include "PathController.h"
 #include "qtchartscompat.h"
 #include "bluetooth.h"
-#include "gpx.h"
 #include "rtssosd.h"
 #include "qmdnsengine/browser.h"
 #include "qmdnsengine/cache.h"
 #include "qmdnsengine/resolver.h"
 #include "screencapture.h"
 #include "sessionline.h"
-#include "trainprogram.h"
 #include <QChart>
 #include <QColor>
 #include <QGraphicsScene>
@@ -145,12 +142,6 @@ class homeform : public QObject {
                    setGeneralPopupVisible)
     Q_PROPERTY(bool licensePopupVisible READ licensePopupVisible NOTIFY licensePopupVisibleChanged WRITE
                    setLicensePopupVisible)
-    Q_PROPERTY(bool mapsVisible READ mapsVisible NOTIFY mapsVisibleChanged WRITE setMapsVisible)
-    Q_PROPERTY(bool videoIconVisible READ videoIconVisible NOTIFY videoIconVisibleChanged WRITE setVideoIconVisible)
-    Q_PROPERTY(bool videoVisible READ videoVisible NOTIFY videoVisibleChanged WRITE setVideoVisible)
-    Q_PROPERTY(QUrl videoPath READ videoPath NOTIFY videoPathChanged)
-    Q_PROPERTY(int videoPosition READ videoPosition NOTIFY videoPositionChanged WRITE setVideoPosition)
-    Q_PROPERTY(double videoRate READ videoRate NOTIFY videoRateChanged WRITE setVideoRate)
     Q_PROPERTY(double currentSpeed READ currentSpeed NOTIFY currentSpeedChanged)
     Q_PROPERTY(int zwiftLogin READ zwiftLogin NOTIFY zwiftLoginChanged)
     Q_PROPERTY(QString workoutStartDate READ workoutStartDate)
@@ -161,24 +152,11 @@ class homeform : public QObject {
     Q_PROPERTY(bool stopRequested READ stopRequested NOTIFY stopRequestedChanged WRITE setStopRequestedChanged)
     Q_PROPERTY(bool startRequested READ startRequested NOTIFY startRequestedChanged WRITE setStartRequestedChanged)
     Q_PROPERTY(QString toastRequested READ toastRequested NOTIFY toastRequestedChanged WRITE setToastRequested)
-    Q_PROPERTY(bool clipboardWorkoutPromptRequested READ clipboardWorkoutPromptRequested NOTIFY clipboardWorkoutPromptRequestedChanged WRITE setClipboardWorkoutPromptRequested)
-    Q_PROPERTY(QString clipboardWorkoutPromptName READ clipboardWorkoutPromptName NOTIFY clipboardWorkoutPromptNameChanged)
-    Q_PROPERTY(bool clipboardWorkoutDeletePromptRequested READ clipboardWorkoutDeletePromptRequested NOTIFY clipboardWorkoutDeletePromptRequestedChanged WRITE setClipboardWorkoutDeletePromptRequested)
 
     // workout preview
-    Q_PROPERTY(int preview_workout_points READ preview_workout_points NOTIFY previewWorkoutPointsChanged)
-    Q_PROPERTY(QList<double> preview_workout_watt READ preview_workout_watt)
-    Q_PROPERTY(QList<double> preview_workout_speed READ preview_workout_speed)
-    Q_PROPERTY(QList<double> preview_workout_inclination READ preview_workout_inclination)
-    Q_PROPERTY(QList<double> preview_workout_resistance READ preview_workout_resistance)
-    Q_PROPERTY(QList<double> preview_workout_cadence READ preview_workout_cadence)
-    Q_PROPERTY(QString previewWorkoutDescription READ previewWorkoutDescription NOTIFY previewWorkoutDescriptionChanged)
-    Q_PROPERTY(QString previewWorkoutTags READ previewWorkoutTags NOTIFY previewWorkoutTagsChanged)
     Q_PROPERTY(bool miles_unit READ miles_unit)
     Q_PROPERTY(bool iPadMultiWindowMode READ iPadMultiWindowMode)
 
-    Q_PROPERTY(bool currentCoordinateValid READ currentCoordinateValid)
-    Q_PROPERTY(bool trainProgramLoadedWithVideo READ trainProgramLoadedWithVideo)
 
 
 
@@ -360,18 +338,12 @@ class homeform : public QObject {
     QString toastRequested() { return m_toastRequested; }
     bool generalPopupVisible();
     bool licensePopupVisible();
-    bool mapsVisible();
-    bool videoIconVisible();
-    bool videoVisible() { return m_VideoVisible; }
-    int videoPosition();
-    double videoRate();
     double currentSpeed() {
         if (bluetoothManager && bluetoothManager->device())
             return bluetoothManager->device()->currentSpeed().value();
         else
             return 0;
     }
-    QUrl videoPath() { return movieFileName; }
     bool labelHelp();
     QStringList metrics();
     QStringList bluetoothDevices();
@@ -393,38 +365,7 @@ class homeform : public QObject {
         emit startRequestedChanged(value);
     }
     void setLicensePopupVisible(bool value);
-    void setVideoIconVisible(bool value);
-    void setVideoVisible(bool value) {
-        m_VideoVisible = value;
-        emit videoVisibleChanged(m_VideoVisible);
-    }
-    void setVideoPosition(int position); // on startup
-    void videoSeekPosition(int ms);      // in realtime
-    void setVideoRate(double rate);
-    void setMapsVisible(bool value);
     void setToastRequested(QString value) { m_toastRequested = value; emit toastRequestedChanged(value); }
-    bool clipboardWorkoutPromptRequested() const { return m_clipboardWorkoutPromptRequested; }
-    QString clipboardWorkoutPromptName() const { return m_clipboardWorkoutPromptName; }
-    void setClipboardWorkoutPromptRequested(bool value) {
-        if (m_clipboardWorkoutPromptRequested == value) {
-            return;
-        }
-        m_clipboardWorkoutPromptRequested = value;
-        emit clipboardWorkoutPromptRequestedChanged(value);
-    }
-    bool clipboardWorkoutDeletePromptRequested() const { return m_clipboardWorkoutDeletePromptRequested; }
-    void setClipboardWorkoutDeletePromptRequested(bool value) {
-        if (m_clipboardWorkoutDeletePromptRequested == value) {
-            return;
-        }
-        m_clipboardWorkoutDeletePromptRequested = value;
-        emit clipboardWorkoutDeletePromptRequestedChanged(value);
-    }
-    Q_INVOKABLE QUrl clipboard_workout_url() const { return QUrl::fromLocalFile(m_clipboardWorkoutPromptFile); }
-    Q_INVOKABLE void clipboard_accept_workout_prompt();
-    Q_INVOKABLE void clipboard_dismiss_workout_prompt();
-    Q_INVOKABLE void clipboard_delete_finished_workout();
-    Q_INVOKABLE void clipboard_keep_finished_workout();
 
     Q_INVOKABLE void selectGymModeDevice(const QString &deviceName);
     Q_INVOKABLE bool hasConnectedDevice() const;
@@ -434,7 +375,6 @@ private:
 
 public:
     void setGeneralPopupVisible(bool value);
-    int preview_workout_points();
 
 #if defined(Q_OS_ANDROID)
     QString getBluetoothName();
@@ -443,7 +383,6 @@ public:
     Q_INVOKABLE static QString getWritableAppDir();
     Q_INVOKABLE static QString getProfileDir();
     Q_INVOKABLE static void clearFiles();
-    Q_INVOKABLE bool startTrainingProgramFromFile(const QString &filePath);
     Q_INVOKABLE void openAndroidDocumentPicker(const QString &kind);
     Q_INVOKABLE bool deleteTrainingProgramFile(const QString &fileUrl);
 
@@ -472,90 +411,6 @@ public:
     Q_INVOKABLE void moveTile(QString name, int newIndex, int oldIndex);
     DataObject *tileFromName(QString name);
 
-    QList<double> preview_workout_watt() {
-        QList<double> l;
-        if (!previewTrainProgram)
-            return l;
-        QTime d = previewTrainProgram->duration();
-        l.reserve((d.hour() * 3600) + (d.minute() * 60) + d.second() + 1);
-        foreach (trainrow r, previewTrainProgram->loadedRows) {
-            for (int i = 0; i < (r.duration.hour() * 3600) + (r.duration.minute() * 60) + r.duration.second(); i++) {
-                l.append(r.power);
-            }
-        }
-        return l;
-    }
-
-    QList<double> preview_workout_speed() {
-        QList<double> l;
-        if (!previewTrainProgram)
-            return l;
-        QTime d = previewTrainProgram->duration();
-        l.reserve((d.hour() * 3600) + (d.minute() * 60) + d.second() + 1);
-        foreach (trainrow r, previewTrainProgram->loadedRows) {
-            for (int i = 0; i < (r.duration.hour() * 3600) + (r.duration.minute() * 60) + r.duration.second(); i++) {
-                l.append(r.speed);
-            }
-        }
-        return l;
-    }
-
-    QList<double> preview_workout_inclination() {
-        QList<double> l;
-        if (!previewTrainProgram)
-            return l;
-        QTime d = previewTrainProgram->duration();
-        l.reserve((d.hour() * 3600) + (d.minute() * 60) + d.second() + 1);
-        foreach (trainrow r, previewTrainProgram->loadedRows) {
-            for (int i = 0; i < (r.duration.hour() * 3600) + (r.duration.minute() * 60) + r.duration.second(); i++) {
-                l.append(r.inclination);
-            }
-        }
-        return l;
-    }
-
-    QList<double> preview_workout_resistance() {
-        QList<double> l;
-        if (!previewTrainProgram)
-            return l;
-        QTime d = previewTrainProgram->duration();
-        l.reserve((d.hour() * 3600) + (d.minute() * 60) + d.second() + 1);
-        foreach (trainrow r, previewTrainProgram->loadedRows) {
-            for (int i = 0; i < (r.duration.hour() * 3600) + (r.duration.minute() * 60) + r.duration.second(); i++) {
-                l.append(r.resistance);
-            }
-        }
-        return l;
-    }
-
-    QList<double> preview_workout_cadence() {
-        QList<double> l;
-        if (!previewTrainProgram)
-            return l;
-        QTime d = previewTrainProgram->duration();
-        l.reserve((d.hour() * 3600) + (d.minute() * 60) + d.second() + 1);
-        foreach (trainrow r, previewTrainProgram->loadedRows) {
-            for (int i = 0; i < (r.duration.hour() * 3600) + (r.duration.minute() * 60) + r.duration.second(); i++) {
-                l.append(r.cadence);
-            }
-        }
-        return l;
-    }
-
-    QString previewWorkoutDescription() {
-        if (previewTrainProgram) {
-            return previewTrainProgram->description;
-        }
-        return "";
-    }
-
-    QString previewWorkoutTags() {
-        if (previewTrainProgram) {
-            return previewTrainProgram->tags;
-        }
-        return "";
-    }
-
     bool miles_unit() {
         QSettings settings;
         return settings.value(QZSettings::miles_unit, QZSettings::default_miles_unit).toBool();
@@ -573,16 +428,7 @@ public:
 #endif
     }
 
-    bool currentCoordinateValid() {
-        if (bluetoothManager && bluetoothManager->device()) {
-            return bluetoothManager->device()->currentCordinate().isValid();
-        }
-        return false;
-    }
 
-    bool trainProgramLoadedWithVideo() { return (trainProgram && trainProgram->videoAvailable); }
-
-    trainprogram *trainingProgram() { return trainProgram; }
     void updateGearsValue();
     
     DataObject *speed;
@@ -680,23 +526,15 @@ public:
   private:
     static homeform *m_singleton;
     TemplateInfoSenderBuilder *userTemplateManager = nullptr;
-    TemplateInfoSenderBuilder *innerTemplateManager = nullptr;
     QList<QObject *> dataList;
     QList<SessionLine> Session;
     QQmlApplicationEngine *engine;
-    trainprogram *trainProgram = nullptr;
-    trainprogram *previewTrainProgram = nullptr;
 
     int m_topBarHeight = 120;
     QString m_info = QStringLiteral("Connecting...");
     bool m_labelHelp = true;
     bool m_generalPopupVisible = false;
     bool m_LicensePopupVisible = false;
-    bool m_MapsVisible = false;
-    bool m_VideoIconVisible = false;
-    bool m_VideoVisible = false;
-    int m_VideoPosition = 0;
-    double m_VideoRate = 1;
 
 
     bool paused = false;
@@ -712,20 +550,11 @@ public:
     qint64 currentUpdateJitter = 0;
 
     QString m_toastRequested = "";
-    bool m_clipboardWorkoutPromptRequested = false;
-    bool m_clipboardWorkoutDeletePromptRequested = false;
-    QString m_clipboardWorkoutPromptName = QStringLiteral("");
-    QString m_clipboardWorkoutPromptFile = QStringLiteral("");
-    QString m_activeClipboardWorkoutFile = QStringLiteral("");
-    QByteArray m_lastClipboardWorkoutHash;
     int m_zwiftLoginState = -1;
     QString stravaPelotonActivityName;
     QString stravaPelotonInstructorName;
     QString stravaWorkoutName = "";
-    QUrl movieFileName;
-    QString activityDescription;
 
-    QString lastTrainProgramFileSaved = QLatin1String("");
 
     bool m_autoresistance = true;
     bool m_stopRequested = false;
@@ -735,7 +564,6 @@ public:
 
     QTimer *timer;
     QTimer *automaticShiftingTimer;
-    QTimer *clipboardWorkoutTimer = nullptr;
 
     // HR PID controller state - tracks when training program changes speed to prevent race conditions
     QDateTime lastTrainingProgramSpeedChange = QDateTime::fromMSecsSinceEpoch(0);
@@ -752,7 +580,6 @@ public:
 
     void update();
     void ten_hz();
-    void checkClipboardForWorkout();
     double heartRateMax();
     bool getDevice();
     bool getLap();
@@ -770,9 +597,6 @@ public:
     void licenseRequest();
 #endif
 
-    QGeoPath gpx_preview;
-    PathController pathController;
-    bool videoMustBeReset = true;
 
     // Gear/resistance/ERG drawn over a training app that owns the screen. Costs
     // nothing when RivaTuner Statistics Server is not running, and is Windows
@@ -805,14 +629,11 @@ public:
     void restart();
     void Minus(const QString &);
     void Plus(const QString &);
-    void trainprogram_open_clicked(const QUrl &fileName);
-    void trainprogram_autostart_requested();
     void handleAndroidDocumentPicked(int requestCode, const QString &uriString);
 
   private slots:
     void Start();
     void Stop();
-    void StopFromTrainProgram(bool paused);
     void StartRequested();
     void StopRequested();
     void Lap();
@@ -823,20 +644,10 @@ public:
     void keyMediaNext();
     void deviceFound(const QString &name);
     void deviceConnected(QBluetoothDeviceInfo b);
-    void trainprogram_open_other_folder(const QUrl &fileName);
-    void gpx_open_other_folder(const QUrl &fileName);
     void profile_open_clicked(const QUrl &fileName);
-    void trainprogram_preview(const QUrl &fileName);
-    void gpxpreview_open_clicked(const QUrl &fileName);
-    void trainprogram_zwo_loaded(const QString &comp);
-    void gpx_open_clicked(const QUrl &fileName);
-    void gpx_save_clicked();
-    void saveSessionAsTrainingProgram();
-    void trainProgramSignals();
     void onTrainingProgramSpeedChanged(double speed);
     void refresh_bluetooth_devices_clicked();
     void zwiftLoginState(bool ok);
-    void setActivityDescription(QString newdesc);
     void sortTilesTimeout();
     void gearUp();
     void gearDown();
@@ -844,10 +655,8 @@ public:
     void speedMinus();
     void inclinationPlus();
     void inclinationMinus();
-    void changeTimestamp(QTime source, QTime actual);
     void pelotonOffset_Plus();
     void pelotonOffset_Minus();
-    int pelotonOffset() { return (trainProgram ? trainProgram->offsetElapsedTime() : 0); }
     void bluetoothDeviceConnected(bluetoothdevice *b);
     void bluetoothDeviceDisconnected();
     void onToastRequested(QString message);
@@ -881,19 +690,10 @@ public:
     void tile_orderChanged(QStringList value);
     void changeLabelHelp(bool value);
     void toastRequestedChanged(QString value);
-    void clipboardWorkoutPromptRequestedChanged(bool value);
-    void clipboardWorkoutPromptNameChanged(QString value);
-    void clipboardWorkoutDeletePromptRequestedChanged(bool value);
     void generalPopupVisibleChanged(bool value);
     void licensePopupVisibleChanged(bool value);
-    void videoIconVisibleChanged(bool value);
-    void videoVisibleChanged(bool value);
-    void videoPositionChanged(int value);
-    void videoPathChanged(QUrl value);
-    void videoRateChanged(double value);
     void manualCscBikeResistanceAdjusted(resistance_t resistance);
     void currentSpeedChanged(double value);
-    void mapsVisibleChanged(bool value);
     void autoResistanceChanged(bool value);
     void zwiftLoginChanged(int ok);
     void userProfileChanged();
@@ -904,9 +704,6 @@ public:
     void stopRequestedChanged(bool value);
     void trainingProgramIntervalSoundRequested();
 
-    void previewWorkoutPointsChanged(int value);
-    void previewWorkoutDescriptionChanged(QString value);
-    void previewWorkoutTagsChanged(QString value);
 
 
 

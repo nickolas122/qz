@@ -135,7 +135,6 @@ rtssosd.cpp \
 devices/wahookickrheadwind/wahookickrheadwind.cpp \
 windows_zwift_workout_paddleocr_thread.cpp \
 zwift_play/zwiftclickremote.cpp \
-PathController.cpp \
 characteristics/characteristicnotifier2a53.cpp \
 characteristics/characteristicnotifier2a5b.cpp \
 characteristics/characteristicnotifier2acc.cpp \
@@ -175,7 +174,6 @@ devices/elliptical.cpp \
 filedownloader.cpp \
 devices/fitmetria_fanfit/fitmetria_fanfit.cpp \
 devices/ftmsbike/ftmsbike.cpp \
-gpx.cpp \
 devices/heartratebelt/heartratebelt.cpp \
 homeform.cpp \
 mywhooshlink.cpp \
@@ -193,17 +191,13 @@ devices/simulatedbike/simulatedbike.cpp \
 devices/stagesbike/stagesbike.cpp \
 templateinfosender.cpp \
 templateinfosenderbuilder.cpp \
-webtranslation.cpp \
 devices/treadmill.cpp \
 virtualdevices/virtualrower.cpp \
-trainprogram.cpp \
 virtualdevices/virtualbike.cpp \
 scanrecordresult.cpp \
-windows_zwift_incline_paddleocr_thread.cpp \
-zwiftworkout.cpp
+windows_zwift_incline_paddleocr_thread.cpp
    
 macx: SOURCES += macos/lockscreen.mm
-!ios: SOURCES += mainwindow.cpp
 
 #zwift api
 msvc {
@@ -254,7 +248,6 @@ windowsblebond.h \
 gamepadcontroller.h \
 rtssosd.h \
 devices/wahookickrheadwind/wahookickrheadwind.h \
-PathController.h \
 characteristics/characteristicnotifier2a53.h \
 characteristics/characteristicnotifier2a5b.h \
 characteristics/characteristicnotifier2acc.h \
@@ -334,23 +327,15 @@ devices/simulatedbike/simulatedbike.h \
 devices/stagesbike/stagesbike.h \
 templateinfosender.h \
 templateinfosenderbuilder.h \
-webtranslation.h \
-gpx.h \
 devices/treadmill.h \
-mainwindow.h \
-trainprogram.h \
 virtualdevices/virtualbike.h \
 virtualdevices/virtualrower.h \
 scanrecordresult.h \
-windows_zwift_incline_paddleocr_thread.h \
-zwiftworkout.h
+windows_zwift_incline_paddleocr_thread.h
 
 
 exists(secret.h): HEADERS += secret.h
 
-
-!ios: FORMS += \
-	mainwindow.ui
 
 # Translation files - 30 most used languages worldwide
 CONFIG += lrelease

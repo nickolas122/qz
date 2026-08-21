@@ -88,7 +88,7 @@ Page {
 
                     Image {
                         Layout.alignment: Qt.AlignHCenter
-                        source: "qrc:/inner_templates/chartjs/qzlogo.png" // Replace with your logo path
+                        source: "icons/icons/qzlogo.png"
                         width: 100
                         height: 100
                     }

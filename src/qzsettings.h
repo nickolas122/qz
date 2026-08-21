@@ -592,12 +592,6 @@ class QZSettings {
      */
     static const QString pacef_marathon;
     static constexpr float default_pacef_marathon = 360;
-    static const QString trainprogram_warmup_speed;
-    static constexpr float default_trainprogram_warmup_speed = 420;
-    static const QString trainprogram_cooldown_speed;
-    static constexpr float default_trainprogram_cooldown_speed = 420;
-    static const QString trainprogram_rest_speed;
-    static constexpr float default_trainprogram_rest_speed = 420;
 
     /**
      *@brief default pace to be used when the ZWO file does not indicate a precise pace.
@@ -804,32 +798,14 @@ class QZSettings {
     static const QString ant_heart_device_number;
     static constexpr int default_ant_heart_device_number = 0;
 
-    static const QString trainprogram_random;
-    static constexpr bool default_trainprogram_random = false;
 
-    static const QString trainprogram_total;
-    static constexpr int default_trainprogram_total = 60;
 
-    static const QString trainprogram_period_seconds;
-    static constexpr float default_trainprogram_period_seconds = 60;
 
-    static const QString trainprogram_speed_min;
-    static constexpr float default_trainprogram_speed_min = 8;
 
-    static const QString trainprogram_speed_max;
-    static constexpr float default_trainprogram_speed_max = 16;
 
-    static const QString trainprogram_incline_min;
-    static constexpr float default_trainprogram_incline_min = 0;
 
-    static const QString trainprogram_incline_max;
-    static constexpr float default_trainprogram_incline_max = 15;
 
-    static const QString trainprogram_resistance_min;
-    static constexpr float default_trainprogram_resistance_min = 1;
 
-    static const QString trainprogram_resistance_max;
-    static constexpr float default_trainprogram_resistance_max = 32;
 
     /**
      * @brief Adjusts value in a metric object that's configured specifically for measuring WATTS.
@@ -1314,8 +1290,6 @@ class QZSettings {
     static const QString sex;
     static const QString default_sex;
 
-    static const QString maps_type;
-    static const QString default_maps_type;
 
     static const QString proform_treadmill_se;
     static constexpr bool default_proform_treadmill_se = false;
@@ -1347,8 +1321,6 @@ class QZSettings {
     /**
      *@brief The number of seconds to add to the video timestamp.
      */
-    static const QString video_playback_window_s;
-    static constexpr int default_video_playback_window_s = 12;
 
     static const QString horizon_treadmill_profile_user1;
     static const QString default_horizon_treadmill_profile_user1;
@@ -1623,20 +1595,12 @@ class QZSettings {
     static const QString proform_treadmill_cadence_lt;
     static constexpr bool default_proform_treadmill_cadence_lt = false;
 
-    static const QString trainprogram_stop_at_end;
-    static constexpr bool default_trainprogram_stop_at_end = false;
 
-    static const QString trainprogram_clipboard_workout_enabled;
-    static constexpr bool default_trainprogram_clipboard_workout_enabled = false;
 
-    static const QString trainprogram_sound_on_segment;
-    static constexpr bool default_trainprogram_sound_on_segment = false;
 
     static const QString domyos_elliptical_inclination;
     static constexpr bool default_domyos_elliptical_inclination = true;
 
-    static const QString gpx_loop;
-    static constexpr bool default_gpx_loop = false;
 
     static const QString android_notification;
     static constexpr bool default_android_notification = false;
@@ -2818,8 +2782,6 @@ class QZSettings {
     /**
      * @brief Automatically trigger a lap when completing each workout segment/row in TrainProgram
      */
-    static const QString trainprogram_auto_lap_on_segment;
-    static constexpr bool default_trainprogram_auto_lap_on_segment = false;
 
     /**
      * @brief Enable hardware button handling (Start/Pause/Stop) for KingSmith R2 Treadmill

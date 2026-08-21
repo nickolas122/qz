@@ -36,18 +36,6 @@ HomeForm {
         property string theme_tile_shadow_color: "#9C27B0"
         property int theme_tile_secondline_textsize: 12
         property bool skipLocationServicesDialog: false
-        property bool trainprogram_sound_on_segment: false
-    }
-
-    SoundEffect {
-        id: trainingProgramSegmentSound
-        source: "qrc:/sounds/training-program-segment.wav"
-        volume: 0.9
-    }
-
-    Connections {
-        target: rootItem
-        onTrainingProgramIntervalSoundRequested: trainingProgramSegmentSound.play()
     }
 
     Popup {
@@ -396,118 +384,6 @@ HomeForm {
                 Accessible.description: name + ": " + largeButtonLabel
                 Accessible.focusable: true
                 Accessible.onPressAction: { largeButton_clicked(objectName) }
-            }
-        }
-    }
-
-    footer: Item {
-        id: footerItem
-        width: parent.width
-        height: footerHeight
-        property real footerHeight: parent.height / 2
-        property real minHeight: parent.height / 4
-        property real maxHeight: parent.height * 3 / 4
-        anchors.bottom: parent.bottom
-        clip: true
-        visible: rootItem.videoVisible
-
-        Rectangle {
-            id: dragHandle
-            width: parent.width / 5
-            height: 10
-            color: "#9C27B0"
-            anchors.top: parent.top
-            anchors.horizontalCenter: parent.horizontalCenter
-            visible: rootItem.videoVisible
-
-            Canvas {
-                anchors.fill: parent
-                onPaint: {
-                    var ctx = getContext("2d");
-                    ctx.strokeStyle = "#FFFFFF";
-                    ctx.lineWidth = 2;
-
-                    for (var i = 0; i < 3; i++) {
-                        ctx.beginPath();
-                        ctx.moveTo(0, (i + 1) * parent.height / 4);
-                        ctx.lineTo(parent.width, (i + 1) * parent.height / 4);
-                        ctx.stroke();
-                    }
-                }
-            }
-
-            MouseArea {
-                id: dragArea
-                anchors.fill: parent
-                cursorShape: Qt.SizeVerCursor
-
-                property real startY: 0
-                property real startHeight: 0
-
-                onPressed: {
-                    startY = mouseY
-                    startHeight = footerItem.height
-                }
-
-                onMouseYChanged: {
-                    if (pressed) {
-                        var newHeight = Math.max(footerItem.minHeight, Math.min(footerItem.maxHeight, startHeight + startY - mouseY))
-                        footerItem.footerHeight = newHeight
-                    }
-                }
-            }
-        }
-
-        Rectangle {
-            objectName: "footerrectangle"
-            visible: rootItem.videoVisible
-            anchors.top: dragHandle.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-
-            onVisibleChanged: {
-                if(visible === true) {
-                    console.log("mediaPlayer onCompleted: " + rootItem.videoPath)
-                    console.log("videoRate: " + rootItem.videoRate)
-                    videoPlaybackHalf.source = rootItem.videoPath
-                    videoPlaybackHalf.seek(rootItem.videoPosition)
-                    videoPlaybackHalf.play()
-                    videoPlaybackHalf.muted = rootItem.currentCoordinateValid
-                } else {
-                    videoPlaybackHalf.stop()
-                }
-            }
-
-            // Qt 6 renamed this signal from error() to errorOccurred(). The Qt 5
-            // spelling is the one that belongs here - these sources are Qt 5 and the
-            // Qt 6 variants are generated (tools/qt6-qml-imports.py, which does the
-            // rename) - because Qt 5.15 has no errorOccurred and rejects the
-            // assignment outright. That is a load error rather than a warning, so it
-            // takes Home.qml with it, StackView is left with no initialItem, and the
-            // Android window comes up empty with the app running fine underneath.
-            //
-            // The body is a function expression rather than either version's parameter
-            // syntax: Qt 5 injects signal parameters and Qt 6 removed injection, and a
-            // plain function is the one form both bind correctly.
-            //
-            // videoOutput needs no such care - it exists in Qt 5.15 too (revision 15).
-            MediaPlayer {
-                id: videoPlaybackHalf
-                objectName: "videoplaybackhalf"
-                playbackRate: rootItem.videoRate
-                videoOutput: videoPlayer
-
-                onError: function(error, errorString) {
-                    if (MediaPlayer.NoError !== error) {
-                        console.log("[qmlvideo] MediaPlayer error " + error + " errorString " + errorString)
-                    }
-                }
-            }
-
-            VideoOutput {
-                id: videoPlayer
-                anchors.fill: parent
             }
         }
     }
