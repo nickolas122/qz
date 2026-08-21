@@ -40,6 +40,8 @@ class virtualbike : public virtualdevice {
     void relayEchelonPacket(const QBluetoothUuid &sourceUuid, const QByteArray &value);
     DirconManager *detachDirconManager();
     bool ftmsDeviceConnected() { return lastFTMSFrameReceived != 0 || lastDirconFTMSFrameReceived != 0; }
+    /** @brief Which path the connected training app is driving FTMS over. */
+    bool isDirconFTMS() const { return lastFTMSFrameReceived == 0 && lastDirconFTMSFrameReceived != 0; }
     qint64 whenLastFTMSFrameReceived() {
         if (lastFTMSFrameReceived != 0)
             return lastFTMSFrameReceived;

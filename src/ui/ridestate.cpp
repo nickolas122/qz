@@ -1,0 +1,113 @@
+#include "ridestate.h"
+
+#include "devices/bike.h"
+#include "devices/bluetooth.h"
+#include "devices/bluetoothdevice.h"
+#include "qzsettings.h"
+#include "virtualdevices/virtualbike.h"
+
+#include <QSettings>
+
+RideState::RideState(bluetooth *bl, QObject *parent) : QObject(parent), bluetoothManager(bl) {
+    // The bridge has no single "something changed" signal - the metrics are pulled off
+    // the device by whoever wants them. One second matches the rate the trainer sends
+    // Indoor Bike Data at, so a faster poll would only re-read the same frame.
+    connect(&poll, &QTimer::timeout, this, &RideState::changed);
+    poll.start(1000);
+}
+
+bike *RideState::currentBike() const {
+    if (!bluetoothManager)
+        return nullptr;
+    bluetoothdevice *dev = bluetoothManager->device();
+    if (!dev || dev->deviceType() != BIKE)
+        return nullptr;
+    return static_cast<bike *>(dev);
+}
+
+bool RideState::trainerConnected() const { return currentBike() != nullptr; }
+
+QString RideState::trainerName() const {
+    bike *b = currentBike();
+    return b ? b->bluetoothDevice.name() : QString();
+}
+
+bool RideState::appConnected() const { return !transport().isEmpty(); }
+
+QString RideState::appName() const { return QString(); }
+
+QString RideState::transport() const {
+    bike *b = currentBike();
+    if (!b)
+        return QString();
+    virtualbike *v = b->VirtualBike();
+    if (!v || !v->ftmsDeviceConnected())
+        return QString();
+    // Both paths stamp their own timestamp; whichever is set is the one carrying the
+    // ride. They fail differently, which is why the pill names the transport rather
+    // than just saying "connected" - see STRIP-SPEC.md section 9.4.
+    return v->isDirconFTMS() ? QStringLiteral("DIRCON") : QStringLiteral("BLE");
+}
+
+int RideState::gear() const {
+    bike *b = currentBike();
+    return b ? qRound(b->gears()) : 0;
+}
+
+double RideState::resistance() const {
+    bike *b = currentBike();
+    return b ? b->currentResistance().value() : 0.0;
+}
+
+double RideState::power() const {
+    bike *b = currentBike();
+    return b ? b->wattsMetricforUI() : 0.0;
+}
+
+double RideState::cadence() const {
+    bike *b = currentBike();
+    return b ? b->currentCadence().value() : 0.0;
+}
+
+double RideState::speed() const {
+    bike *b = currentBike();
+    return b ? b->currentSpeed().value() : 0.0;
+}
+
+double RideState::heartRate() const {
+    bike *b = currentBike();
+    return b ? b->currentHeart().value() : 0.0;
+}
+
+bool RideState::ergMode() const {
+    QSettings settings;
+    return settings.value(QZSettings::zwift_erg, QZSettings::default_zwift_erg).toBool();
+}
+
+void RideState::gearUp() {
+    if (bike *b = currentBike()) {
+        b->gearUp();
+        emit changed();
+    }
+}
+
+void RideState::gearDown() {
+    if (bike *b = currentBike()) {
+        b->gearDown();
+        emit changed();
+    }
+}
+
+void RideState::setGear(int gear) {
+    if (bike *b = currentBike()) {
+        b->setGears(gear);
+        emit changed();
+    }
+}
+
+void RideState::toggleErg() {
+    QSettings settings;
+    settings.setValue(QZSettings::zwift_erg,
+                      !settings.value(QZSettings::zwift_erg, QZSettings::default_zwift_erg).toBool());
+    emit changed();
+}

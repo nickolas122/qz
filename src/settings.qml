@@ -1635,6 +1635,7 @@ import AndroidStatusBar 1.0
             property int gears_neutral_gear: 0
             property bool simulated_bike: false
             property string simulated_bike_ride: ""
+            property bool ui_next: false
         }
 
 

@@ -195,7 +195,8 @@ devices/treadmill.cpp \
 virtualdevices/virtualrower.cpp \
 virtualdevices/virtualbike.cpp \
 scanrecordresult.cpp \
-windows_zwift_incline_paddleocr_thread.cpp
+windows_zwift_incline_paddleocr_thread.cpp \
+ui/ridestate.cpp
    
 macx: SOURCES += macos/lockscreen.mm
 
@@ -331,7 +332,8 @@ devices/treadmill.h \
 virtualdevices/virtualbike.h \
 virtualdevices/virtualrower.h \
 scanrecordresult.h \
-windows_zwift_incline_paddleocr_thread.h
+windows_zwift_incline_paddleocr_thread.h \
+ui/ridestate.h
 
 
 exists(secret.h): HEADERS += secret.h
