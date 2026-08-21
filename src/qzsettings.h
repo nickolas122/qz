@@ -1664,17 +1664,9 @@ class QZSettings {
     static const QString nordictrack_ifit_adb_remote;
     static constexpr bool default_nordictrack_ifit_adb_remote = false;
 
-    static const QString floating_width;
-    static constexpr int default_floating_width = 370;
 
-    static const QString floating_height;
-    static constexpr int default_floating_height = 210;
 
-    static const QString floating_transparency;
-    static constexpr int default_floating_transparency = 80;
 
-    static const QString floating_startup;
-    static constexpr int default_floating_startup = false;
 
     static const QString norditrack_s25i_treadmill;
     static constexpr int default_norditrack_s25i_treadmill = false;
@@ -2296,20 +2288,10 @@ class QZSettings {
     static const QString proform_treadmill_c960i;
     static constexpr bool default_proform_treadmill_c960i = false;
 
-    static const QString mqtt_host;
-    static const QString default_mqtt_host;
 
-    static const QString mqtt_port;
-    static constexpr int default_mqtt_port = 1883;
 
-    static const QString mqtt_username;
-    static const QString default_mqtt_username;
 
-    static const QString mqtt_password;
-    static const QString default_mqtt_password;
 
-    static const QString mqtt_deviceid;
-    static const QString default_mqtt_deviceid;
 
     static const QString nordictrack_tseries5_treadmill;
     static constexpr bool default_nordictrack_tseries5_treadmill = false;
@@ -2320,11 +2302,7 @@ class QZSettings {
     static const QString nordictrack_gx_44_pro;
     static constexpr bool default_nordictrack_gx_44_pro = false;
 
-    static const QString OSC_ip;
-    static const QString default_OSC_ip;
 
-    static const QString OSC_port;
-    static constexpr int default_OSC_port = 9000;
 
     static const QString iconsole_rower;
     static constexpr bool default_iconsole_rower = false;
@@ -2650,12 +2628,6 @@ class QZSettings {
      */
     static const QString automatic_virtual_shifting_sprint_gear_down_time;
     static constexpr float default_automatic_virtual_shifting_sprint_gear_down_time = 2.0;
-
-    /**
-     * @brief Type of floating window to use. 0 = classic, 1 = horizontal
-     */
-    static const QString floatingwindow_type;
-    static constexpr int default_floatingwindow_type = 0;
 
     static const QString pid_heart_zone_erg_mode_watt_step;
     static constexpr int default_pid_heart_zone_erg_mode_watt_step = 5;

@@ -12,16 +12,7 @@
         <file>AccordionCheckElement.qml</file>
         <file>icons/arrow-collapse-vertical.png</file>
         <file>icons/arrow-expand-vertical.png</file>
-        <file>TemplateTcpClient.qml</file>
         <file>TemplateWebServer.qml</file>
-        <file>templates/vlc-TcpClient.qzt</file>
-        <file>templates/example/sethtml.js</file>
-        <file>templates/example/style.css</file>
-        <file>templates/example/workout.htm</file>
-        <file>templates/debug/sethtml.js</file>
-        <file>templates/debug/style.css</file>
-        <file>templates/debug/workout.htm</file>
-        <file>templates/qz-TcpClient.qzt</file>
         <file>TrainingProgramsList.qml</file>
         <file>TrainingProgramsListJS.qml</file>
         <file>WorkoutEditor.qml</file>
@@ -90,11 +81,6 @@
         <file>inner_templates/previewchart/main_ws_manager.js</file>
         <file>videoPlayback.qml</file>
         <file>settings-tiles.qml</file>
-        <file>inner_templates/floating/floating.htm</file>
-        <file>inner_templates/floating/globals.js</file>
-        <file>inner_templates/floating/jquery-3.6.0.min.js</file>
-        <file>inner_templates/floating/main_ws_manager.js</file>
-        <file>inner_templates/floating/radikalmedium.otf</file>
         <file>settings-shortcuts.qml</file>
         <file>settings-treadmill-inclination-override.qml</file>
         <file>Toast.qml</file>
@@ -125,6 +111,5 @@
         <file>StaticAccordionElement.qml</file>
         <file>inner_templates/chartjs/dotreadmillchartlive.js</file>
         <file>inner_templates/chartjs/treadmillchartlive.htm</file>
-        <file>inner_templates/floating/hfloating.htm</file>
     </qresource>
 </RCC>

@@ -570,10 +570,6 @@ const QString QZSettings::kettler_usb_baudrate = QStringLiteral("kettler_usb_bau
 const QString QZSettings::freebeat_serialport = QStringLiteral("freebeat_serialport");
 const QString QZSettings::default_freebeat_serialport = QStringLiteral("");
 const QString QZSettings::nordictrack_ifit_adb_remote = QStringLiteral("nordictrack_ifit_adb_remote");
-const QString QZSettings::floating_height = QStringLiteral("floating_height");
-const QString QZSettings::floating_width = QStringLiteral("floating_width");
-const QString QZSettings::floating_transparency = QStringLiteral("floating_transparency");
-const QString QZSettings::floating_startup = QStringLiteral("floating_startup");
 const QString QZSettings::norditrack_s25i_treadmill = QStringLiteral("norditrack_s25i_treadmill");
 const QString QZSettings::toorx_ftms_treadmill = QStringLiteral("toorx_ftms_treadmill");
 const QString QZSettings::iconcept_ftms_treadmill_inclination_table = QStringLiteral("iconcept_ftms_treadmill_inclination_table");
@@ -812,21 +808,9 @@ const QString QZSettings::proform_performance_400i = QStringLiteral("proform_per
 const QString QZSettings::proform_treadmill_c700 = QStringLiteral("proform_treadmill_c700");
 const QString QZSettings::sram_axs_controller = QStringLiteral("sram_axs_controller");
 const QString QZSettings::proform_treadmill_c960i = QStringLiteral("proform_treadmill_c960i");
-const QString QZSettings::mqtt_host = QStringLiteral("mqtt_host");
-const QString QZSettings::default_mqtt_host = QStringLiteral("");
-const QString QZSettings::mqtt_port = QStringLiteral("mqtt_port");
-const QString QZSettings::mqtt_username = QStringLiteral("mqtt_username");
-const QString QZSettings::mqtt_password = QStringLiteral("mqtt_password");
-const QString QZSettings::mqtt_deviceid = QStringLiteral("mqtt_deviceid");
-const QString QZSettings::default_mqtt_username = QStringLiteral("");
-const QString QZSettings::default_mqtt_password = QStringLiteral("");
-const QString QZSettings::default_mqtt_deviceid = QStringLiteral("default");
 const QString QZSettings::nordictrack_tseries5_treadmill = QStringLiteral("nordictrack_tseries5_treadmill");
 const QString QZSettings::proform_carbon_tl_PFTL59722c = QStringLiteral("proform_carbon_tl_PFTL59722c");
 const QString QZSettings::nordictrack_gx_44_pro = QStringLiteral("nordictrack_gx_44_pro");
-const QString QZSettings::OSC_ip = QStringLiteral("osc_ip");
-const QString QZSettings::default_OSC_ip = QStringLiteral("");
-const QString QZSettings::OSC_port = QStringLiteral("osc_port");
 const QString QZSettings::iconsole_rower = QStringLiteral("iconsole_rower");
 const QString QZSettings::proform_treadmill_1500_pro = QStringLiteral("proform_treadmill_1500_pro");
 const QString QZSettings::proform_505_cst_80_44 = QStringLiteral("proform_505_cst_80_44");
@@ -963,7 +947,6 @@ const QString QZSettings::automatic_virtual_shifting_sprint_gear_up_time = QStri
 const QString QZSettings::automatic_virtual_shifting_sprint_gear_down_cadence = QStringLiteral("automatic_virtual_shifting_sprint_gear_down_cadence");
 const QString QZSettings::automatic_virtual_shifting_sprint_gear_down_time = QStringLiteral("automatic_virtual_shifting_sprint_gear_down_time");
 
-const QString QZSettings::floatingwindow_type = QStringLiteral("floatingwindow_type");
 const QString QZSettings::pid_heart_zone_erg_mode_watt_step = QStringLiteral("pid_heart_zone_erg_mode_watt_step");
 
 const QString QZSettings::tile_auto_virtual_shifting_cruise_enabled = QStringLiteral("tile_auto_virtual_shifting_cruise_enabled");
@@ -1180,7 +1163,7 @@ const QString QZSettings::simulated_bike = QStringLiteral("simulated_bike");
 const QString QZSettings::simulated_bike_ride = QStringLiteral("simulated_bike_ride");
 const QString QZSettings::default_simulated_bike_ride = QLatin1String("");
 
-const uint32_t allSettingsCount = 935;
+const uint32_t allSettingsCount = 923;
 
 QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::cryptoKeySettingsProfiles, QZSettings::default_cryptoKeySettingsProfiles},
@@ -1658,10 +1641,6 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::kettler_usb_serialport, QZSettings::default_kettler_usb_serialport},
     {QZSettings::kettler_usb_baudrate, QZSettings::default_kettler_usb_baudrate},
     {QZSettings::nordictrack_ifit_adb_remote, QZSettings::default_nordictrack_ifit_adb_remote},
-    {QZSettings::floating_height, QZSettings::default_floating_height},
-    {QZSettings::floating_width, QZSettings::default_floating_width},
-    {QZSettings::floating_transparency, QZSettings::default_floating_transparency},
-    {QZSettings::floating_startup, QZSettings::default_floating_startup},
     {QZSettings::norditrack_s25i_treadmill, QZSettings::default_norditrack_s25i_treadmill},
     {QZSettings::toorx_ftms_treadmill, QZSettings::default_toorx_ftms_treadmill},
     {QZSettings::iconcept_ftms_treadmill_inclination_table, QZSettings::default_iconcept_ftms_treadmill_inclination_table},
@@ -1878,16 +1857,9 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::proform_treadmill_c700, QZSettings::default_proform_treadmill_c700},
     {QZSettings::sram_axs_controller, QZSettings::default_sram_axs_controller},
     {QZSettings::proform_treadmill_c960i, QZSettings::default_proform_treadmill_c960i},
-    {QZSettings::mqtt_host, QZSettings::default_mqtt_host},
-    {QZSettings::mqtt_port, QZSettings::default_mqtt_port},
-    {QZSettings::mqtt_username, QZSettings::default_mqtt_username},
-    {QZSettings::mqtt_password, QZSettings::default_mqtt_password},
-    {QZSettings::mqtt_deviceid, QZSettings::default_mqtt_deviceid},
     {QZSettings::nordictrack_tseries5_treadmill, QZSettings::default_nordictrack_tseries5_treadmill},
     {QZSettings::proform_carbon_tl_PFTL59722c, QZSettings::default_proform_carbon_tl_PFTL59722c},
     {QZSettings::nordictrack_gx_44_pro, QZSettings::default_nordictrack_gx_44_pro},
-    {QZSettings::OSC_ip, QZSettings::default_OSC_ip},
-    {QZSettings::OSC_port, QZSettings::default_OSC_port},
     {QZSettings::iconsole_rower, QZSettings::default_iconsole_rower},
     {QZSettings::proform_treadmill_1500_pro, QZSettings::default_proform_treadmill_1500_pro},
     {QZSettings::proform_505_cst_80_44, QZSettings::default_proform_505_cst_80_44},
@@ -1998,7 +1970,6 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::automatic_virtual_shifting_sprint_gear_up_time, QZSettings::default_automatic_virtual_shifting_sprint_gear_up_time},
     {QZSettings::automatic_virtual_shifting_sprint_gear_down_cadence, QZSettings::default_automatic_virtual_shifting_sprint_gear_down_cadence},
     {QZSettings::automatic_virtual_shifting_sprint_gear_down_time, QZSettings::default_automatic_virtual_shifting_sprint_gear_down_time},
-    {QZSettings::floatingwindow_type, QZSettings::default_floatingwindow_type},
     {QZSettings::pid_heart_zone_erg_mode_watt_step, QZSettings::default_pid_heart_zone_erg_mode_watt_step},
     {QZSettings::tile_auto_virtual_shifting_cruise_enabled, QZSettings::default_tile_auto_virtual_shifting_cruise_enabled},
     {QZSettings::tile_auto_virtual_shifting_cruise_order, QZSettings::default_tile_auto_virtual_shifting_cruise_order},

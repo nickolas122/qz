@@ -38,7 +38,6 @@
 #define QZ_GIT_SHA "unknown"
 #endif
 
-#include "mqttpublisher.h"
 #include "androidstatusbar.h"
 #include "fontmanager.h"
 #include "filesearcher.h"
@@ -56,7 +55,6 @@
 #include "ios/lockscreen.h"
 #endif
 
-#include "osc.h"
 
 #include "handleurl.h"
 #include "mywhooshlink.h"
@@ -66,11 +64,6 @@ bool noWriteResistance = false;
 bool noHeartService = true;
 bool noConsole = false;
 bool onlyVirtualBike = false;
-QString mqtt_host = "";
-int mqtt_port = -1;
-QString mqtt_username = "";
-QString mqtt_password = "";
-QString mqtt_deviceid = "";
 bool testResistance = false;
 bool forceQml = true;
 bool miles = false;
@@ -170,13 +163,6 @@ void displayHelp() {
     printf("  -zwift_play_emulator          Enable Zwift Play emulator\n");
     printf("  -smoke-test                   Run smoke test (verify Qt loads, print SMOKE_OK, exit)\n");
     printf("  -train <program>              Specify training program\n");
-
-    printf("\nMQTT options:\n");
-    printf("  -mqtt-host <hostname>         Set MQTT broker hostname\n");
-    printf("  -mqtt-port <port>             Set MQTT broker port (default: 1883)\n");
-    printf("  -mqtt-username <username>     Set MQTT username\n");
-    printf("  -mqtt-password <password>     Set MQTT password\n");
-    printf("  -mqtt-deviceid <deviceid>     Set MQTT device ID\n");
 
     printf("\nOther options:\n");
     printf("  -test-resistance              Enable resistance testing\n");
@@ -360,21 +346,6 @@ QCoreApplication *createApplication(int &argc, char *argv[]) {
         }
         if (!qstrcmp(argv[i], "-power-sensor-name")) {
             power_sensor_name = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-mqtt-host")) {
-            mqtt_host = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-mqtt-port")) {
-            mqtt_port = atoi(argv[++i]);
-        }
-        if (!qstrcmp(argv[i], "-mqtt-username")) {
-            mqtt_username = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-mqtt-password")) {
-            mqtt_password = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-mqtt-deviceid")) {
-            mqtt_deviceid = argv[++i];
         }
     }
 
@@ -602,21 +573,6 @@ int main(int argc, char *argv[]) {
         settings.setValue(QZSettings::zwift_play_emulator, zwift_play_emulator);
         settings.setValue(QZSettings::virtual_device_bluetooth, virtual_device_bluetooth);
         settings.setValue(QZSettings::power_sensor_name, power_sensor_name);
-        if (mqtt_host.length() > 0) {
-            settings.setValue(QZSettings::mqtt_host, mqtt_host);
-        }
-        if (mqtt_port != -1) {
-            settings.setValue(QZSettings::mqtt_port, mqtt_port);
-        }
-        if (mqtt_username.length() > 0) {
-            settings.setValue(QZSettings::mqtt_username, mqtt_username);
-        }
-        if (mqtt_password.length() > 0) {
-            settings.setValue(QZSettings::mqtt_password, mqtt_password);
-        }
-        if (mqtt_deviceid.length() > 0) {
-            settings.setValue(QZSettings::mqtt_deviceid, mqtt_deviceid);
-        }
     }
 #endif
 
@@ -756,18 +712,7 @@ int main(int argc, char *argv[]) {
                  bikeResistanceOffset,
                  bikeResistanceGain); // FIXED: clang-analyzer-cplusplus.NewDeleteLeaks - potential leak
 
-    QString mqtt_host = settings.value(QZSettings::mqtt_host, QZSettings::default_mqtt_host).toString();
-    int mqtt_port = settings.value(QZSettings::mqtt_port, QZSettings::default_mqtt_port).toInt();
-    QString mqtt_username = settings.value(QZSettings::mqtt_username, QZSettings::default_mqtt_username).toString();
-    QString mqtt_password = settings.value(QZSettings::mqtt_password, QZSettings::default_mqtt_password).toString();
-    if(mqtt_host.length() > 0) {
-        new MQTTPublisher(mqtt_host, mqtt_port, mqtt_username, mqtt_password, &bl, &bl);
-    }
 
-    QString OSC_ip = settings.value(QZSettings::OSC_ip, QZSettings::default_OSC_ip).toString();
-    if(OSC_ip.length() > 0) {
-        OSC* osc = new OSC(&bl);
-    }
 
     // MyWhoosh Link integration
     bool mywhoosh_link_enabled = settings.value(QZSettings::mywhoosh_link_enabled, QZSettings::default_mywhoosh_link_enabled).toBool();

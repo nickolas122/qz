@@ -594,12 +594,6 @@ void trainprogram::pelotonOCRprocessPendingDatagrams() {
 
         QString s = datagram;
         pelotonOCRcomputeTime(s);
-
-        QString url = "http://" + localipaddress::getIP(sender).toString() + ":" +
-                      QString::number(settings.value("template_inner_QZWS_port", 6666).toInt()) +
-                      "/floating/floating.htm";
-        int r = pelotonOCRsocket->writeDatagram(QByteArray(url.toLatin1()), sender, 8003);
-        qDebug() << "url floating" << url << r;
     }
 }
 
@@ -655,8 +649,8 @@ void trainprogram::scheduler() {
     currentTimerJitter += msecsElapsed - 1000;
     lastSchedulerCall = now;
 
-    // outside the if case about a valid train program because the information for the floating window url should be
-    // sent anyway
+    // outside the if case about a valid train program: the OCR socket has to be listening
+    // whether or not one is loaded
     if (settings.value(QZSettings::peloton_companion_workout_ocr, QZSettings::default_companion_peloton_workout_ocr)
             .toBool()) {
         if (!pelotonOCRsocket) {

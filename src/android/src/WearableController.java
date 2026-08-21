@@ -31,7 +31,6 @@ public class WearableController {
 
              if(_intent == null)
                 _intent = new Intent(context, WearableMessageListenerService.class);
-             // FloatingWindowGFG service is started
              context.startService(_intent);
              QLog.v("WearableController", "started");
         }

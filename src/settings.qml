@@ -894,14 +894,10 @@ import AndroidStatusBar 1.0
 
             // from version 2.12.29
             property bool nordictrack_ifit_adb_remote: false
-            property int floating_height: 210
-            property int floating_width: 370
 
             // from version 2.12.32
-            property int floating_transparency: 80
 
             // from version 2.12.34
-            property bool floating_startup: false
 
             // from version 2.12.35
             property bool norditrack_s25i_treadmill: false
@@ -1285,11 +1281,6 @@ import AndroidStatusBar 1.0
             property bool proform_treadmill_c960i: false
 
             // from version 2.18.6
-            property string mqtt_host: ""
-            property int mqtt_port: 1883
-            property string mqtt_username: ""
-            property string mqtt_password: ""
-            property string mqtt_deviceid: "default"
 
             // from version 2.18.7
             property bool nordictrack_tseries5_treadmill: false
@@ -1300,8 +1291,6 @@ import AndroidStatusBar 1.0
 
             // from version 2.18.10
             property string csafe_elliptical_port: ""
-            property string osc_ip: ""
-            property int osc_port: 9000
 
             // from version 2.18.11
             property bool iconsole_rower: false
@@ -1403,7 +1392,6 @@ import AndroidStatusBar 1.0
             property bool nordictrack_elite_800: false
             property bool ios_btdevice_native: false            
             property string inclinationResistancePoints: ""
-            property int floatingwindow_type: 0
             property bool horizon_treadmill_7_0_at_24: false  // not used
 
             property bool nordictrack_treadmill_ultra_le: false            
@@ -6303,44 +6291,6 @@ import AndroidStatusBar 1.0
                         onClicked: { settings.top_bar_enabled = checked; window.settings_restart_to_apply = true; }
                     }
 
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelFloatingWindowType
-                            text: qsTr("Floating Window Type:")
-                            Layout.fillWidth: true
-                        }
-                        ComboBox {
-                            id: floatingWindowTypeComboBox
-                            model: ["Classic", "Horizontal"]
-                            currentIndex: settings.floatingwindow_type
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onActivated: {
-                                console.log("floatingwindow_type activated" + floatingWindowTypeComboBox.currentIndex)
-                            }
-                        }
-                        Button {
-                            id: okFloatingWindowTypeButton
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.floatingwindow_type = floatingWindowTypeComboBox.currentIndex; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("Choose the floating window layout type. Classic uses the standard floating.htm file, while Horizontal uses the hfloating.htm file for horizontal layout.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
                     Label {
                         text: qsTr("Allows continuous display of the Start/Pause and Stop buttons across the top of the screen during your workouts. Default is on.")
                         font.bold: true
@@ -6352,151 +6302,6 @@ import AndroidStatusBar 1.0
                         Layout.alignment: Qt.AlignLeft | Qt.AlignTop
                         Layout.fillWidth: true
                         color: Material.color(Material.Lime)
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelFloatingWidth
-                            text: qsTr("Floating Window Width:")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: floatingWidthField
-                            text: settings.floating_width
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onAccepted: settings.floating_width = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okFloatingWidthButton
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.floating_width = floatingWidthField.text; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("Android Only: width of the floating window.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelFloatingHeight
-                            text: qsTr("Floating Window Height:")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: floatingHeightField
-                            text: settings.floating_height
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onAccepted: settings.floating_height = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okFloatingHeightButton
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.floating_height = floatingHeightField.text; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("Android Only: height of the floating window.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelFloatingTransparency
-                            text: qsTr("Floating Window % Transparency:")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: floatingTransparencyField
-                            text: settings.floating_transparency
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onAccepted: settings.floating_transparency = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okFloatingTransparencyButton
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.floating_transparency = floatingTransparencyField.text; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("Android Only: transparency percentage of the floating window.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    IndicatorOnlySwitch {
-                        id: floatingStartupDelegate
-                        text: qsTr("Floating Window Startup")
-                        spacing: 0
-                        bottomPadding: 0
-                        topPadding: 0
-                        rightPadding: 0
-                        leftPadding: 0
-                        clip: false
-                        checked: settings.floating_startup
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        onClicked: settings.floating_startup = checked
-                    }
-
-                    Label {
-                        text: qsTr("Android Only: if enabled the floating window will start as soon as the fitness devices is connected.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    Button {
-                        text: qsTr("Open Floating on a Browser")
-                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                        onClicked: openFloatingWindowBrowser();
                     }
 
                     RowLayout {
@@ -13887,255 +13692,6 @@ import AndroidStatusBar 1.0
                                             onClicked: { settings.dircon_server_base_port = dirconServerPortTextField.text; toast.show(qsTr("Setting saved!")); }
                                         }
                                     }
-                                }
-                            }
-                        }
-                    }
-
-                    AccordionElement {
-                        id: mqttAccordion
-                        title: qsTr("MQTT Settings")
-                        indicatRectColor: Material.color(Material.Grey)
-                        textColor: Material.color(Material.Yellow)
-                        color: Material.backgroundColor
-                        accordionContent: ColumnLayout {
-                            spacing: 0
-
-                            RowLayout {
-                                spacing: 10
-                                Label {
-                                    text: qsTr("MQTT Host:")
-                                    Layout.fillWidth: true
-                                }
-                                TextField {
-                                    id: mqttHostTextField
-                                    text: settings.mqtt_host
-                                    horizontalAlignment: Text.AlignRight
-                                    Layout.fillHeight: false
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    onAccepted: settings.mqtt_host = text
-                                    onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                }
-                                Button {
-                                    text: qsTr("OK")
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    onClicked: { settings.mqtt_host = mqttHostTextField.text; toast.show(qsTr("Setting saved!")); }
-                                }
-                            }
-
-                            Label {
-                                text: qsTr("Enter the MQTT broker hostname or IP address")
-                                font.bold: true
-                                font.italic: true
-                                font.pixelSize: Qt.application.font.pixelSize - 2
-                                textFormat: Text.PlainText
-                                wrapMode: Text.WordWrap
-                                verticalAlignment: Text.AlignVCenter
-                                Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                                Layout.fillWidth: true
-                                color: Material.color(Material.Lime)
-                            }
-
-                            RowLayout {
-                                spacing: 10
-                                Label {
-                                    text: qsTr("MQTT Port:")
-                                    Layout.fillWidth: true
-                                }
-                                TextField {
-                                    id: mqttPortTextField
-                                    text: settings.mqtt_port
-                                    horizontalAlignment: Text.AlignRight
-                                    Layout.fillHeight: false
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    inputMethodHints: Qt.ImhDigitsOnly
-                                    onAccepted: settings.mqtt_port = text
-                                    onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                }
-                                Button {
-                                    text: qsTr("OK")
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    onClicked: { settings.mqtt_port = mqttPortTextField.text; toast.show(qsTr("Setting saved!")); }
-                                }
-                            }
-
-                            Label {
-                                text: qsTr("Enter the MQTT broker port (default: 1883)")
-                                font.bold: true
-                                font.italic: true
-                                font.pixelSize: Qt.application.font.pixelSize - 2
-                                textFormat: Text.PlainText
-                                wrapMode: Text.WordWrap
-                                verticalAlignment: Text.AlignVCenter
-                                Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                                Layout.fillWidth: true
-                                color: Material.color(Material.Lime)
-                            }
-
-                            // Username field
-                            RowLayout {
-                                spacing: 10
-                                Label {
-                                    text: qsTr("Username:")
-                                    Layout.fillWidth: true
-                                }
-                                TextField {
-                                    id: mqttUsernameTextField
-                                    text: settings.mqtt_username
-                                    horizontalAlignment: Text.AlignRight
-                                    Layout.fillHeight: false
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    onAccepted: settings.mqtt_username = text
-                                    onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                }
-                                Button {
-                                    text: qsTr("OK")
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    onClicked: { settings.mqtt_username = mqttUsernameTextField.text; toast.show(qsTr("Setting saved!")); }
-                                }
-                            }
-
-                            Label {
-                                text: qsTr("Enter the MQTT broker username (if required)")
-                                font.bold: true
-                                font.italic: true
-                                font.pixelSize: Qt.application.font.pixelSize - 2
-                                textFormat: Text.PlainText
-                                wrapMode: Text.WordWrap
-                                verticalAlignment: Text.AlignVCenter
-                                Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                                Layout.fillWidth: true
-                                color: Material.color(Material.Lime)
-                            }
-
-                            // Password field
-                            RowLayout {
-                                spacing: 10
-                                Label {
-                                    text: qsTr("Password:")
-                                    Layout.fillWidth: true
-                                }
-                                TextField {
-                                    id: mqttPasswordTextField
-                                    text: settings.mqtt_password
-                                    horizontalAlignment: Text.AlignRight
-                                    Layout.fillHeight: false
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    echoMode: TextInput.Password
-                                    onAccepted: settings.mqtt_password = text
-                                    onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                }
-                                Button {
-                                    text: qsTr("OK")
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    onClicked: { settings.mqtt_password = mqttPasswordTextField.text; toast.show(qsTr("Setting saved!")); }
-                                }
-                            }
-
-                            Label {
-                                text: qsTr("Enter the MQTT broker password (if required)")
-                                font.bold: true
-                                font.italic: true
-                                font.pixelSize: Qt.application.font.pixelSize - 2
-                                textFormat: Text.PlainText
-                                wrapMode: Text.WordWrap
-                                verticalAlignment: Text.AlignVCenter
-                                Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                                Layout.fillWidth: true
-                                color: Material.color(Material.Lime)
-                            }
-
-                            // Device ID field
-                            RowLayout {
-                                spacing: 10
-                                Label {
-                                    text: qsTr("Device ID:")
-                                    Layout.fillWidth: true
-                                }
-                                TextField {
-                                    id: mqttDeviceIdTextField
-                                    text: settings.mqtt_deviceid
-                                    horizontalAlignment: Text.AlignRight
-                                    Layout.fillHeight: false
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    onAccepted: settings.mqtt_deviceid = text
-                                    onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                }
-                                Button {
-                                    text: qsTr("OK")
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    onClicked: { settings.mqtt_deviceid = mqttDeviceIdTextField.text; toast.show(qsTr("Setting saved!")); }
-                                }
-                            }
-
-                            Label {
-                                text: qsTr("Enter a unique device identifier for MQTT client")
-                                font.bold: true
-                                font.italic: true
-                                font.pixelSize: Qt.application.font.pixelSize - 2
-                                textFormat: Text.PlainText
-                                wrapMode: Text.WordWrap
-                                verticalAlignment: Text.AlignVCenter
-                                Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                                Layout.fillWidth: true
-                                color: Material.color(Material.Lime)
-                            }
-                        }
-                    }               
-
-                    AccordionElement {
-                        id: oscAccordion
-                        title: qsTr("OSC Settings")
-                        indicatRectColor: Material.color(Material.Grey)
-                        textColor: Material.color(Material.Yellow)
-                        color: Material.backgroundColor
-                        accordionContent: ColumnLayout {
-                        spacing: 0
-
-                            RowLayout {
-                                spacing: 10
-                                Label {
-                                    text: qsTr("OSC IP:")
-                                    Layout.fillWidth: true
-                                }
-                                TextField {
-                                    id: oscIPTextField
-                                    text: settings.osc_ip
-                                    horizontalAlignment: Text.AlignRight
-                                    Layout.fillHeight: false
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    //inputMethodHints: Qt.ImhFormattedNumbersOnly
-                                    onAccepted: settings.osc_ip = text
-                                    onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                }
-                                Button {
-                                    text: qsTr("OK")
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    onClicked: { settings.osc_ip = oscIPTextField.text; window.settings_restart_to_apply = true; toast.show(qsTr("Setting saved!")); }
-                                }
-                            }
-
-                            RowLayout {
-                                spacing: 10
-                                Label {
-                                    text: qsTr("OSC Port:")
-                                    Layout.fillWidth: true
-                                }
-                                TextField {
-                                    id: oscPortTextField
-                                    text: settings.osc_port
-                                    horizontalAlignment: Text.AlignRight
-                                    Layout.fillHeight: false
-                                    inputMethodHints: Qt.ImhDigitsOnly
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    //inputMethodHints: Qt.ImhFormattedNumbersOnly
-                                    onAccepted: settings.osc_port = text
-                                    onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                                }
-                                Button {
-                                    text: qsTr("OK")
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    onClicked: { settings.osc_port = oscPortTextField.text; window.settings_restart_to_apply = true; toast.show(qsTr("Setting saved!")); }
                                 }
                             }
                         }

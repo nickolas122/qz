@@ -182,6 +182,12 @@ WebSocket, the same messages the QZ web UI sends
 (`src/templateinfosenderbuilder.cpp:1590`). Standard library only — no pip
 install.
 
+This route did not actually work before 2026-08-21, and the description above was
+written from the code rather than from a ride. QZ parsed the message and emitted the
+shift, but `homeform` connected the control signals from the *inner* endpoint only, so
+nothing arriving on 6666 reached a gear. Both endpoints are wired now
+(`src/homeform.cpp`), and `tools/qzws_smoke.py` asserts the shift end to end.
+
 QZ setup:
 
 1. Settings → Template Settings → enable the **web server** (port 6666 by
@@ -239,13 +245,6 @@ is the quickest way to confirm QZ is listening before a ride.
 
 If QZ runs on a phone or tablet, point `--host` at that device — the WebSocket
 is plain TCP on the LAN, and only the Python side needs Windows (for XInput).
-
-### Route B variant: MQTT
-
-If a broker is already in the setup, QZ subscribes to control topics and
-`QZ/<nickname>/control/bike/gears_up` (and `…/gears_down`) calls the same gear
-functions (`src/mqttpublisher.cpp:421`). Same result as the WebSocket bridge,
-one more moving part.
 
 ## Route C — QZ reads the pad itself
 

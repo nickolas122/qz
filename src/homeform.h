@@ -780,10 +780,6 @@ public:
     RtssOsd rtssOsd;
     void updateRtssOsd();
 
-#ifdef Q_OS_ANDROID
-    bool floating_open = false;    
-#endif
-
 #ifdef Q_OS_IOS
     lockscreen *h = nullptr;
 #endif
@@ -825,8 +821,6 @@ public:
     void volumeUp();
     void keyMediaPrevious();
     void keyMediaNext();
-    void floatingOpen();
-    void openFloatingWindowBrowser();
     void deviceFound(const QString &name);
     void deviceConnected(QBluetoothDeviceInfo b);
     void trainprogram_open_other_folder(const QUrl &fileName);

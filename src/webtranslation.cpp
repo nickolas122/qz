@@ -151,8 +151,6 @@ const WebTranslationEntry entries[] = {
     {"chart.targetSpeedKmh", QT_TRANSLATE_NOOP("WebTranslations", "Target Speed (km/h)")},
     {"chart.targetSpeedMph", QT_TRANSLATE_NOOP("WebTranslations", "Target Speed (mph)")},
     {"chart.targetIncline", QT_TRANSLATE_NOOP("WebTranslations", "Target Incline")},
-    {"floating.pelotonWorkoutProgress", QT_TRANSLATE_NOOP("WebTranslations", "Peloton Workout in progress!")},
-    {"floating.followResistanceQuestion", QT_TRANSLATE_NOOP("WebTranslations", "Do you want to follow the resistance?")},
     {"metric.speed", QT_TRANSLATE_NOOP("WebTranslations", "SPEED")},
     {"metric.incline", QT_TRANSLATE_NOOP("WebTranslations", "INCLINE")},
     {"metric.pace", QT_TRANSLATE_NOOP("WebTranslations", "PACE")},

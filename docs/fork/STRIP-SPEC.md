@@ -273,6 +273,14 @@ and §7 Group E for the exception),
 **Fork features:** `gamepadcontroller`, `rtssosd`, `customgears.qml`, `gears.qml`,
 `zwift_play/` and `zwift-api/` (decided 2026-08-20 — §12 q6).
 
+**The QZWS WebSocket** (added 2026-08-21, see §7 Group D): `templateinfosender.*`,
+`templateinfosenderbuilder.*`, `webserverinfosender.*`, `TemplateWebServer.qml`. This is
+how a PC reads the ride — gears, resistance, ERG state — off a tablet running QZ, and how
+it shifts back. `tools/qz-rouvy-rtss/` and `tools/xbox-mywhoosh-gears/` are its clients,
+and the split-host arrangement of §3.2.1 is the reason it matters. Its wire format is a
+published interface now: those two tools parse it, so changing the `workout` broadcast's
+field names or the inbound message vocabulary breaks them.
+
 **Verify before assuming kept:** `ergtable`, `treadmillErgTable`, `sessionline`,
 `simplecrypt`, `handleurl`, `filedownloader`, `mywhooshlink`, `cscbike` (see §4.1).
 
@@ -309,12 +317,53 @@ its size.
 
 ### Group D — telemetry, templates and remote control
 
-`templateinfosender*`, `tcpclientinfosender`, `webserverinfosender`, `mqtt/` + 
-`mqttpublisher`, `osc`/`oscpp/`, `QTelnet`, `TemplateTcpClient.qml`,
-`TemplateWebServer.qml`, `inner_templates/` (59 files), `templates/`.
+**Revised 2026-08-21.** The "verify first" note below fired, and the answer split the
+group in two. `mqtt/` + `mqttpublisher`, `osc`/`oscpp/`, `QTelnet`, `tcpclientinfosender`,
+`TemplateTcpClient.qml` and `templates/` are unreferenced by anything the bridge does and
+come out whole. The **WebSocket half of `webserverinfosender` does not** — see below.
 
-*Verify first:* the template system is how some overlays get data. Confirm the RTSS path
-does not route through it before deleting.
+Deleted: `mqtt/` (30 files) + `mqttpublisher.*`, `osc.*` + `oscpp/` (9 files), `QTelnet.*`
+(already dead — compiled, never constructed), `tcpclientinfosender.*`,
+`TemplateTcpClient.qml`, `templates/` (8 files) and the `.qzt` file-template layer that
+read it, `inner_templates/floating/` and the floating window it drew.
+
+Kept: `templateinfosender.*`, `templateinfosenderbuilder.*`, `webserverinfosender.*` and
+`TemplateWebServer.qml`.
+
+*Verified 2026-08-21, and it did not hold.* There are two RTSS paths, not one. QZ's own
+Windows OSD (`rtssosd.cpp`) is self-contained shared memory and touches no template code —
+that is the one this note was written about. But [`tools/qz-rouvy-rtss/`](../../tools/qz-rouvy-rtss/)
+is an Android-to-PC bridge, and it *does* route through the template system: it reads
+`gears`, `resistance` and `autoresistance` out of the periodic `workout` broadcast and
+polls `getsettings`, over the `user_QZWS` WebSocket that `webserverinfosender` serves.
+[`tools/xbox-mywhoosh-gears/`](../../tools/xbox-mywhoosh-gears/) uses the same socket in the
+other direction, sending `gears_plus`/`gears_minus`.
+
+That WebSocket is the only way to read the ride from another machine, and QZ on a tablet
+with the training app on a PC is the arrangement §3.2.1 says actually works. It stays, and
+it is now a **kept component** rather than a deletion: see §6.
+
+Two things found while verifying, both recorded so the next phase does not rediscover them:
+
+- The `QZWS` endpoint is only created when the template folder scan finds at least one
+  **subdirectory** (`load()`, gated on `globalFolderList`). `:/templates/` shipped
+  `example/` and `debug/`, and that is the entire reason `user_QZWS` exists. Deleting
+  `templates/` without decoupling the endpoint from the folder scan silently removes the
+  service. It is now created unconditionally.
+- The control signals (`gears_Plus`, `Start`, `Stop`, the rest) were connected in
+  `homeform` from the **inner** manager only, whose port is ephemeral — `homeform` rewrites
+  `template_inner_QZWS_port` to 0 on every launch. Nothing was connected from the `user`
+  manager, so a `gears_plus` arriving on the documented port 6666 was parsed, dispatched,
+  emitted and dropped. Route B of `xbox-mywhoosh-gears` cannot ever have shifted a gear.
+  Fixed here rather than left, because the whole point of keeping the socket is that the
+  PC can both read and drive.
+
+*Not in this group after all, deferred to Phase 3:* the HTTP static-file half of
+`webserverinfosender`, and `inner_templates/` less its `floating/` subdirectory. Three live
+QML pages — `WorkoutEditor.qml`, `TrainingProgramsListJS.qml`, `GoogleMap.qml` — load their
+content from `http://localhost:<template_inner_QZWS_port>/`, and all three are Group C. The
+transport cannot come out before its last consumer. When it does, `qthttpserver` and
+`qHttpServerBin/` go with it: nothing else in the tree includes `QHttpServer`.
 
 ### Group E — rival trainers, and anything that is not for this bike
 
@@ -668,6 +717,18 @@ The loop runs entirely in-process over loopback TCP: no radio, no trainer, no tr
 What it does not touch is the UI — `homeform` needs a QML engine — so it proves the bridge
 survived a deletion, and says nothing about whether the screen did.
 
+Two checks live outside the suite because they need the shipped executable rather than the
+library, and process orchestration is where flakiness comes from:
+
+| Script | Covers | Needs |
+| --- | --- | --- |
+| `tools/dircon_smoke.py` | the shipped binary announcing and serving DIRCON, discovered with a foreign mDNS stack | QZ running |
+| `tools/qzws_smoke.py` | the QZWS WebSocket: the `workout` broadcast, `getsettings`, and a shift arriving from outside | QZ running **with its UI** |
+
+Neither is in CI. `qzws_smoke.py` cannot be: the template managers are built in the
+`homeform` constructor, so there is no QZWS under `-no-gui` at all, and that is the same
+wall §11.1 hits everywhere else.
+
 ### 11.2 The browser-session workflow
 
 `on:` carries `pull_request:` with **no branch filter**, while `push:` is restricted to
@@ -884,12 +945,26 @@ skipping a hardware ride defensible.
 the argument for building it first.
 
 **Phase 4 — telemetry and templates**
-*Criteria:* templates, MQTT, OSC, telnet, webserver info senders gone.
-*Precondition:* verified that the RTSS overlay does **not** route through the template
-system. If it does, the overlay is re-pointed before anything is deleted.
-*Tests:* as above. RTSS overlay still displays gear/ERG/resistance — observable on the
-Windows desktop without the bike, by running QZ and watching the overlay.
-*Hardware:* **none.**
+*Precondition:* **checked 2026-08-21, and it failed.** The overlay does route through the
+template system — see §7 Group D for what that turned up and how the group was re-drawn.
+The webserver info sender is therefore **kept**, not deleted, and the phase's criteria are
+the revised ones below.
+
+*Criteria:* MQTT, OSC, telnet, the TcpClient template and the `.qzt` layer, `templates/`,
+and the floating window gone. The `QZWS` WebSocket still serves the `workout` broadcast and
+still answers `getsettings`, on a port that survives a restart. The control vocabulary
+(`gears_plus`/`gears_minus`, `resistance_*`, `speed_*`, `inclination_*`, `start`, `pause`,
+`stop`, `lap`, `autoresistance`) reaches `homeform` from the `user` endpoint, which it did
+not before. `homeform` no longer declares `floatingOpen` or `openFloatingWindowBrowser`.
+
+*Tests:* the universal gates of §11.4, plus a WebSocket loopback check standing in for the
+two Python tools: connect to `user_QZWS`, assert the broadcast carries `gears`,
+`resistance` and `autoresistance`, assert `getsettings` answers `zwift_erg`, and assert a
+`gears_plus` arriving on that socket moves the gear. This is the same argument §11.5 item 5
+makes for DIRCON — it converts "ride and look at the overlay" into something CI can run.
+
+*Hardware:* **none.** The bridge tools are exercised against the loopback socket; nothing
+in this phase touches the BLE path.
 
 **Phase 5 — the rival trainers and the running sensors**
 *Criteria:* `smartspin2k`, `moxy5sensor`, `strydrunpowersensor` and `virtualtreadmill`
