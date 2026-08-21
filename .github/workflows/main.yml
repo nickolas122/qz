@@ -651,7 +651,11 @@ jobs:
             # windeployqt exits 0 when it cannot find a QML module: it notes the import and
             # moves on. That is how a green build shipped a binary whose first act was to fail
             # to load main.qml. Name the modules the QML actually needs and check they arrived.
-            foreach ($module in @("Qt5Compat\GraphicalEffects", "QtQuick\Controls", "QtQuick\Dialogs", "QtMultimedia", "QtCharts")) {
+            # QtCharts is deliberately absent: phase 3 deleted GPXList.qml and
+            # TrainingProgramsList.qml, the last QML that imported it, so windeployqt
+            # correctly stops deploying the module. The C++ still links QtCharts
+            # (homeform.h, qtchartscompat.h), which is why QT += charts stays.
+            foreach ($module in @("Qt5Compat\GraphicalEffects", "QtQuick\Controls", "QtQuick\Dialogs", "QtMultimedia")) {
                 if (-not (Test-Path "qml\$module\qmldir")) { throw "windeployqt did not deploy qml\$module - the artifact cannot load its UI" }
             }
             cp ../../../icons/iOS/iTunesArtwork@2x.png .
