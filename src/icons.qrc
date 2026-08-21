@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/icons">
+        <file>icons/qzlogo.png</file>
         <file>icons/bluetooth-icon.png</file>
         <file>icons/fan.png</file>
         <file>icons/speed.png</file>

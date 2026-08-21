@@ -22,8 +22,6 @@ class TemplateInfoSenderBuilder : public QObject {
     ~TemplateInfoSenderBuilder();
 
   signals:
-    void activityDescriptionChanged(QString newDescription);
-    void chartSaved(QString filename);
     void lap();
     void pelotonOffset_Plus();
     void pelotonOffset_Minus();
@@ -35,10 +33,6 @@ class TemplateInfoSenderBuilder : public QObject {
     void inclination_Minus();
     void resistance_Plus();
     void resistance_Minus();
-    int pelotonOffset();
-    bool pelotonAskStart();
-    void peloton_start_workout();
-    void peloton_abort_workout();
     void Start();
     void Pause();
     void Stop();
@@ -46,16 +40,11 @@ class TemplateInfoSenderBuilder : public QObject {
 
   private:
     void buildContext(bool forceReinit = false);
-    QString activityDescription;
     void collectTemplateFolders(const QString &folder, QStringList &dirTemplates);
-    void clearSessionArray();
-    void clearPreviewSessionArray();
     bluetoothdevice *device = nullptr;
     QTimer updateTimer;
     QString masterId;
     QStringList foldersToLook;
-    QJsonArray sessionArray;
-    QJsonArray previewSessionArray;
     QHash<QString, QVariant> context;
     QJSEngine *engine = nullptr;
     TemplateInfoSenderBuilder(QObject *parent);
@@ -72,8 +61,6 @@ class TemplateInfoSenderBuilder : public QObject {
     void onSetCadence(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
     void onSetSpeed(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
     void onSetDifficult(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
-    void onSaveChart(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
-    void onGetPelotonImage(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
     void onLap(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
     void onPelotonOffsetPlus(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
     void onPelotonOffsetMinus(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
@@ -88,24 +75,6 @@ class TemplateInfoSenderBuilder : public QObject {
     void onPelotonStartWorkout(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
     void onPelotonAbortWorkout(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
     void onAutoresistance(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
-    void onSaveTrainingProgram(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
-    void onPasteTrainingProgramFromClipboard(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
-    void onDeleteTrainingProgram(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
-    void onLoadTrainingPrograms(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
-    void onGetTrainingProgram(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
-    void onTrainingProgramPreview(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
-    void onGetWorkoutPreview(TemplateInfoSender *tempSender);
-    void onTrainingProgramOpen(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
-    void onTrainingProgramAutostart(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
-    void onWorkoutEditorEnv(TemplateInfoSender *tempSender);
-    void onWorkoutEditorStart(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
-    void onWebTranslations(TemplateInfoSender *tempSender);
-    void onAppendActivityDescription(const QJsonValue &msgContent, TemplateInfoSender *tempSender);
-    void onGetSessionArray(TemplateInfoSender *tempSender);
-    void onGetPreviewSessionArray(TemplateInfoSender *tempSender);
-    void onGetLatLon(TemplateInfoSender *tempSender);
-    void onNextInclination300Meters(TemplateInfoSender *tempSender);
-    void onGetGPXBase64(TemplateInfoSender *tempSender);
     void onStart(TemplateInfoSender *tempSender);
     void onPause(TemplateInfoSender *tempSender);
     void onStop(TemplateInfoSender *tempSender);

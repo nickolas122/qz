@@ -1,1 +1,0 @@
-Cesium.Ion.defaultAccessToken = '';

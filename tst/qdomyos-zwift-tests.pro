@@ -36,9 +36,7 @@ SOURCES += \
         Devices/devicenamepatterngroup.cpp \
         Devices/devicetestdataindex.cpp \
         Erg/ergtabletestsuite.cpp \
-        TrainingProgram/trainprogramtestsuite.cpp \
         ToolTests/testsettingstestsuite.cpp \
-        ToolTests/zwiftworkouttestsuite.cpp \
         Tools/testsettings.cpp \
         Tools/typeidgenerator.cpp \
         Devices/TestZwiftRideController.cpp \
@@ -79,10 +77,10 @@ else:unix: LIBS += -L$$OUT_PWD/../src/ -lqdomyos-zwift
 # the tests is linux-x86-build, where neither applies.
 qtHaveModule(httpserver): QT += httpserver
 win32:LIBS += -lbthprops
-# Under msvc the library also carries zwift_messages.pb.obj and trainprogram's use
-# of it, so the test binary needs the same protobuf set the app links. On Qt 6 that
-# set comes from ../defaults.pri, which both projects include precisely so this list
-# cannot drift from the app's again. The -L comes from the build's vcpkg path.
+# Under msvc the library also carries zwift_messages.pb.obj, so the test binary needs
+# the same protobuf set the app links. On Qt 6 that set comes from ../defaults.pri,
+# which both projects include precisely so this list cannot drift from the app's
+# again. The -L comes from the build's vcpkg path.
 win32:!mingw:lessThan(QT_MAJOR_VERSION, 6): LIBS += -llibprotobuf -llibprotoc -labseil_dll -llibprotobuf-lite -ldbghelp
 
 INCLUDEPATH += $$PWD/../src $$PWD/../src/devices
@@ -122,9 +120,7 @@ HEADERS += \
     Erg/ergtabletestsuite.h \
     Erg/TestErgTableSelection.h \
     Erg/TestErgAutoMode.h \
-    TrainingProgram/trainprogramtestsuite.h \
     ToolTests/testsettingstestsuite.h \
-    ToolTests/zwiftworkouttestsuite.h \
     Tools/devicetypeid.h \
     Tools/testsettings.h \
     Tools/typeidgenerator.h

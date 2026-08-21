@@ -19,7 +19,6 @@
 #include "gamepadcontroller.h"
 #endif
 #include "homeform.h"
-#include "mainwindow.h"
 #include <QDir>
 #include <QGuiApplication>
 #include <QOperatingSystemVersion>
@@ -85,7 +84,6 @@ bool zwift_click = false;
 bool zwift_play_emulator = false;
 bool virtual_device_bluetooth = true;
 QString eventGearDevice = QStringLiteral("");
-QString trainProgram;
 QString deviceName = QLatin1String("");
 uint32_t pollDeviceTime = 200;
 int8_t bikeResistanceOffset = 4;
@@ -162,7 +160,6 @@ void displayHelp() {
     printf("  -zwift_click                  Enable Zwift Click\n");
     printf("  -zwift_play_emulator          Enable Zwift Play emulator\n");
     printf("  -smoke-test                   Run smoke test (verify Qt loads, print SMOKE_OK, exit)\n");
-    printf("  -train <program>              Specify training program\n");
 
     printf("\nOther options:\n");
     printf("  -test-resistance              Enable resistance testing\n");
@@ -311,10 +308,6 @@ QCoreApplication *createApplication(int &argc, char *argv[]) {
         if (!qstrcmp(argv[i], "-smoke-test")) {
             smokeTest = true;
             nogui = true;
-        }
-        if (!qstrcmp(argv[i], "-train")) {
-
-            trainProgram = argv[++i];
         }
         if (!qstrcmp(argv[i], "-name")) {
 
@@ -853,19 +846,6 @@ int main(int argc, char *argv[]) {
 #endif
 
 #if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
-    if (qobject_cast<QApplication *>(app.data())) {
-        // start GUI version...
-        MainWindow *W = 0;
-        if (trainProgram.isEmpty()) {
-            W = new MainWindow(&bl);
-        } else {
-            W = new MainWindow(&bl, trainProgram);
-        }
-        W->show();
-    } else {
-        // start non-GUI version...
-    }
-
 #ifdef Q_OS_LINUX
 #ifndef Q_OS_ANDROID
     if(eventGearDevice.length())

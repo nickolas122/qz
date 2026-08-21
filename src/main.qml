@@ -97,17 +97,7 @@ ApplicationWindow {
         }
     }
 
-    signal gpx_open_clicked(url name)
-    signal gpxpreview_open_clicked(url name)
     signal profile_open_clicked(url name)
-    signal trainprogram_open_clicked(url name)
-    signal trainprogram_open_other_folder(url name)
-    signal gpx_open_other_folder(url name)
-    signal trainprogram_preview(url name)
-    signal trainprogram_zwo_loaded(string s)
-    signal trainprogram_autostart_requested()
-    signal gpx_save_clicked()
-    signal fit_save_clicked()
     signal refresh_bluetooth_devices_clicked()
     signal loadSettings(url name)
     signal saveSettings(url name)
@@ -203,13 +193,6 @@ ApplicationWindow {
 
     Store {
         id: iapStore
-    }
-
-    Loader {
-      id: googleMapUI
-      source:"GoogleMap.qml";
-      active: false
-      onLoaded: { console.log("googleMapUI loaded"); stackView.push(googleMapUI.item); }
     }
 
     // here in order to cache everything for the SwagBagView
@@ -514,44 +497,6 @@ ApplicationWindow {
     }
 
     Popup {
-        id: popupWhatsOnZwiftHelper
-         parent: Overlay.overlay
-
-       x: Math.round((parent.width - width) / 2)
-         y: Math.round((parent.height - height) / 2)
-         width: 380
-         height: 130
-         modal: true
-         focus: true
-         palette.text: "white"
-         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-         onClosed: {
-             stackView.push("WebEngineTest.qml")
-             drawer.close()
-             stackView.currentItem.trainprogram_zwo_loaded.connect(trainprogram_zwo_loaded)
-             stackView.currentItem.trainprogram_zwo_loaded.connect(function(s) {
-                 stackView.pop();
-              });
-         }
-
-         enter: Transition
-         {
-             NumberAnimation { property: "opacity"; from: 0.0; to: 1.0 }
-         }
-         exit: Transition
-         {
-             NumberAnimation { property: "opacity"; from: 1.0; to: 0.0 }
-         }
-         Column {
-             anchors.horizontalCenter: parent.horizontalCenter
-         Label {
-             anchors.horizontalCenter: parent.horizontalCenter
-             text: qsTr("Browse the What's on Zwift workout library<br>and choose your workout. It will<br> be automatically loaded on QZ when you will<br>press the load button on the top!<br><br>QZ is not affiliated with Zwift<br>or https://whatsonzwift.com/ website.")
-            }
-         }
-    }
-
-    Popup {
         id: popupLoadSettings
          parent: Overlay.overlay
 
@@ -657,40 +602,6 @@ ApplicationWindow {
         onYesClicked: Qt.callLater(Qt.quit)
         onNoClicked: this.visible = false;
         visible: false
-    }
-
-    MessageDialog {
-        text: "Clipboard Workout"
-        informativeText: "Workout found in clipboard:\n" + rootItem.clipboardWorkoutPromptName +
-                         "\n\nDo you want to open the workout preview?"
-        buttons: (MessageDialog.Yes | MessageDialog.No)
-        onYesClicked: {
-            var workoutUrl = rootItem.clipboard_workout_url()
-            rootItem.clipboard_accept_workout_prompt()
-            var page = CHARTJS
-                    ? stackView.push("TrainingProgramsListJS.qml", { initialWorkoutUrl: workoutUrl })
-                    : stackView.push("TrainingProgramsList.qml", { initialWorkoutUrl: workoutUrl })
-            page.trainprogram_open_clicked.connect(trainprogram_open_clicked)
-            page.trainprogram_open_other_folder.connect(trainprogram_open_other_folder)
-            page.trainprogram_preview.connect(trainprogram_preview)
-            if (page.trainprogram_autostart_requested) {
-                page.trainprogram_autostart_requested.connect(trainprogram_autostart_requested)
-            }
-            page.trainprogram_open_clicked.connect(function(url) {
-                stackView.pop();
-            });
-        }
-        onNoClicked: { rootItem.clipboard_dismiss_workout_prompt(); }
-        visible: rootItem.clipboardWorkoutPromptRequested
-    }
-
-    MessageDialog {
-        text: "Clipboard Workout"
-        informativeText: "The clipboard workout has ended.\n\nDo you want to delete the file?"
-        buttons: (MessageDialog.Yes | MessageDialog.No)
-        onYesClicked: rootItem.clipboard_delete_finished_workout()
-        onNoClicked: rootItem.clipboard_keep_finished_workout()
-        visible: rootItem.clipboardWorkoutDeletePromptRequested
     }
 
     header: ToolBar {
@@ -846,43 +757,6 @@ ApplicationWindow {
         }*/
 
         ToolButton {
-            function loadMaps() {
-                if(rootItem.currentCoordinateValid) {
-                    console.log("coordinate is valid for map");
-                    if(googleMapUI.status === Loader.Ready)
-                        stackView.push(googleMapUI.item);
-                    else
-                        googleMapUI.active = true;
-
-                } else {
-                    console.log("coordinate is NOT valid for map");
-                }
-            }
-            id: toolButtonMaps
-            icon.source: ( "icons/icons/maps-icon-16.png" )
-            onClicked: { loadMaps(); }
-            anchors.right: toolButtonLockTiles.left
-            visible: rootItem.mapsVisible
-        }      
-
-        ToolButton {
-            function loadVideo() {
-                if(rootItem.currentCoordinateValid || rootItem.trainProgramLoadedWithVideo) {
-                    console.log("coordinate is valid for map");
-                    //stackView.push("videoPlayback.qml");
-                    rootItem.videoVisible = !rootItem.videoVisible
-                } else {
-                    console.log("coordinate is NOT valid for map");
-                }
-            }
-            id: toolButtonVideo
-            icon.source: ( "icons/icons/video.png" )
-            onClicked: { loadVideo(); }
-            anchors.right: toolButtonMaps.left
-            visible: rootItem.videoIconVisible
-        }
-
-        ToolButton {
             id: toolButtonLockTiles
             icon.source: ( window.lockTiles ? "icons/icons/unlock.png" : "icons/icons/lock.png")
             onClicked: { window.lockTiles = !window.lockTiles; console.log("lock tiles toggled " + window.lockTiles); popuplockTiles.open(); popuplockTilesAutoClose.running = true; }
@@ -958,88 +832,6 @@ ApplicationWindow {
                 }
 
                 ItemDelegate {
-                    id: gpx_open
-                    text: qsTr("Open GPX")
-                    width: parent.width
-                    onClicked: {
-                        stackView.push("GPXList.qml")
-                        stackView.currentItem.trainprogram_open_clicked.connect(gpx_open_clicked)
-                        stackView.currentItem.trainprogram_open_other_folder.connect(gpx_open_other_folder)
-                        stackView.currentItem.trainprogram_preview.connect(gpxpreview_open_clicked)
-                        stackView.currentItem.trainprogram_open_clicked.connect(function(url) {
-                            stackView.pop();
-                            popup.open();
-                         });
-                        drawer.close()
-                    }
-                }
-                ItemDelegate {
-                    id: trainprogram_open
-                    text: qsTr("Open Train Program")
-                    width: parent.width
-                    onClicked: {
-                        if(CHARTJS)
-                            stackView.push("TrainingProgramsListJS.qml")
-                        else
-                            stackView.push("TrainingProgramsList.qml")
-                        stackView.currentItem.trainprogram_open_clicked.connect(trainprogram_open_clicked)
-                        stackView.currentItem.trainprogram_open_other_folder.connect(trainprogram_open_other_folder)
-                        stackView.currentItem.trainprogram_preview.connect(trainprogram_preview)
-                        stackView.currentItem.trainprogram_autostart_requested.connect(trainprogram_autostart_requested)
-                        stackView.currentItem.trainprogram_open_clicked.connect(function(url) {
-                            stackView.pop();
-                         });
-                        drawer.close()
-                    }
-                }
-                ItemDelegate {
-                    text: qsTr("Workout Editor")
-                    width: parent.width
-                    onClicked: {
-                        var editorPage = stackView.push("WorkoutEditor.qml")
-                        if (editorPage) {
-                            editorPage.closeRequested.connect(function() {
-                                stackView.pop()
-                            })
-                            // Close editor when workout is started from Save & Start
-                            trainprogram_autostart_requested.connect(function() {
-                                console.log("[main.qml] trainprogram_autostart_requested received, closing editor")
-                                editorPage.closeRequested()
-                            })
-                        }
-                        drawer.close()
-                    }
-                }
-                /*
-                ItemDelegate {
-                    text: qsTr("What's On Zwift™")
-                    width: parent.width
-                    onClicked: {
-                        popupWhatsOnZwiftHelper.open()
-                    }
-                }*/
-
-                ItemDelegate {
-                    id: gpx_save
-                    text: qsTr("Save GPX")
-                    width: parent.width
-                    onClicked: {
-                        gpx_save_clicked()
-                        drawer.close()
-                        popupSaveFile.open()
-                    }
-                }
-                ItemDelegate {
-                    id: fit_save
-                    text: qsTr("Save FIT")
-                    width: parent.width
-                    onClicked: {
-                        fit_save_clicked()
-                        drawer.close()
-                        popupSaveFile.open()
-                    }
-                }
-                ItemDelegate {
                     id: wizardItem
                     text: qsTr("Wizard")
                     width: parent.width
@@ -1089,21 +881,6 @@ ApplicationWindow {
                     width: parent.width
                 }
 
-                    FileDialog {
-                        id: fileDialogGPX
-                         title: "Please choose a file"
-                         folder: "file://" + rootItem.getWritableAppDir() + 'gpx'
-                         onAccepted: {
-                             console.log("You chose: " + fileDialogGPX.fileUrl)
-                              gpx_open_clicked(fileDialogGPX.fileUrl)
-                              fileDialogGPX.close()
-                              popup.open()
-                            }
-                         onRejected: {
-                             console.log("Canceled")
-                              fileDialogGPX.close()
-                            }
-                        }
             }
         }
     }

@@ -315,6 +315,32 @@ Follows from "recording: dropped entirely".
 Confirmed independent of the bridge (§4.1), so this is a homeform-only excision despite
 its size.
 
+**Landed 2026-08-21**, and it took four things with it that the list above did not name,
+each because its only remaining reason to exist was a training program:
+
+- `mainwindow.*` and `mainwindow.ui` — the legacy Qt Widgets dialog, reachable only with
+  `forceQml` false. Its content was a training-program table and a metrics readout; the
+  charts half had already gone in phase 2. `main.cpp`'s `-train` flag went with it.
+- `inner_templates/` in full, `webtranslation.*`, and the HTTP static-file half of
+  `webserverinfosender` — the transport phase 4 deferred. Its last three consumers were
+  `WorkoutEditor.qml`, `TrainingProgramsListJS.qml` and `GoogleMap.qml`, all of them here.
+- The second `QZWS` endpoint. `homeform` built two managers, `inner` and `user`; the inner
+  one existed to serve those pages and nothing else. There is one endpoint now.
+- The training-program half of the template protocol — eleven message handlers for the
+  workout editor and browser, plus the GPX, chart and session-array ones that phases 1 and
+  2 had already orphaned. `templateinfosenderbuilder.cpp` went from 1,899 lines to 822.
+
+*Not* taken, though the §8 table implies it: `trainprogram_pid_*`. Despite the names those
+tune the HR-zone PID, which is driven by `treadmill_pid_heart_*` and survives. The PID's
+training-program arm is gone; the setting-driven one is what was always the real feature.
+
+`qthttpserver` and `qHttpServerBin/` also stay, contrary to what §7 Group D predicted. The
+`QZWS` WebSocket is served *through* `QHttpServer` — `httpServer->bind(innerTcpServer)`
+and `newWebSocketConnection()` — so dropping the module means first porting the socket to
+`QWebSocketServer`. That is a rewrite of the one interface two external tools parse, and it
+does not belong in the middle of a deletion phase. It is now the only thing standing
+between the tree and one fewer vendored Qt module.
+
 ### Group D — telemetry, templates and remote control
 
 **Revised 2026-08-21.** The "verify first" note below fired, and the answer split the
@@ -641,10 +667,10 @@ with Rouvy is still the final word, but it is no longer the only evidence availa
 | 0 | Rewrite `FORK.md` §Versioning (§3.1); tag a pre-strip release as the fallback | none | n/a |
 | 1 | Group A — leaf integrations | low | **covered** |
 | 2 | Group B — recording | low | **covered** |
-| 3 | Group C — training programs | medium (homeform surgery) | **none** |
-| 4 | Group D — telemetry | medium (verify RTSS first) | **covered** |
+| 3 | Group C — training programs | medium (homeform surgery) | **none** |  ← landed 2026-08-21, ahead of 6
+| 4 | Group D — telemetry | medium (verify RTSS first) | **covered** |  ← landed 2026-08-21; RTSS check failed, see §7 Group D
 | 5 | Group E — rival trainers, running sensors, `virtualtreadmill` | low, once cscbike is resolved | **covered** |  ← landed 2026-08-20, H1 passed 2026-08-21
-| 6 | Settings consolidation | medium (§3.6 runtime failures) | **covered** |
+| 6 | Settings consolidation | medium (§3.6 runtime failures) | **covered** |  ← moved to after 7c, see below
 | 7a | `RideState` object + `ui_next` flag + new tree under `src/ui/` | medium | **none** |
 | 7b | Ride on the new UI with Rouvy and Zwift; flip the default | low, but needs calendar time | **none** |
 | 7c | Delete Group F — old tree, tile system, `homeform.cpp`, the flag | high | **none** |
@@ -659,6 +685,13 @@ Which argues for taking the covered phases first. The numbering here is from the
 plan and the §11.6 criteria refer to it, so it stays; but **1, 2, 5, 4, 6 before 3 and 7**
 spends the safety net where it exists and arrives at the UI work — the part that has to be
 validated by riding — against a much smaller tree.
+
+**Corrected 2026-08-21.** That order put 6 before 3, and 6 cannot reach its target there.
+§8 sources 361 of the keys it has to delete from the tile system, the shortcuts and TTS
+— all group F, all held until 7c — and §9.6's four groups describe a settings
+*screen* that does not exist until 7a. Phase 6 is a consolidation of what survives, so it
+belongs after the things that do not. The order actually taken is **1, 2, 5, 4, 3**, with 6
+moved to sit after 7c.
 
 Phase 0 matters more than it looks: once phase 1 lands, there is no going back to
 upstream. A tagged release beforehand is the only rollback.
@@ -943,6 +976,26 @@ phase large enough to plausibly disturb the control path, and that test is what 
 skipping a hardware ride defensible.
 *Hardware:* **none, if item 5 exists.** If it does not, this phase needs a ride — which is
 the argument for building it first.
+
+*Landed 2026-08-21.* Taken out of order, ahead of phase 6: §8's under-150 target sources
+361 of its keys from the tile system, the shortcuts and TTS, all of which are group F and
+cannot come out before phase 7c, so phase 6 in its numbered slot could only have produced a
+tidy-up that 7c then deletes. See §7 Group C for the four things this phase took beyond its
+own list.
+
+The criteria held, and the two harnesses §11.6 leans on carried it: the gtest suite ran 180
+green with the same 12 pre-existing skips (192 from 19 suites, down 9 with the two deleted
+ones), and `tools/qzws_smoke.py` was green against the shipped binary on a simulated bike
+before and after — broadcast, `getsettings`, and a shift arriving from outside still move
+the gear. `homeform.cpp` lost 1,000 lines, `settings.qml` 513, and 19 more settings keys
+went in all four places.
+
+One measurement worth keeping: `update()` alone held 80 of the 327 `trainProgram`
+references, spread across the pace, power-zone, HR-PID and peloton tiles. The guards came in
+two shapes — `if (trainProgram)` blocks, which delete, and `if (!trainProgram || …)` guards,
+which are now always true and had to be *unwrapped* rather than removed, keeping the branch
+that used to be the no-program fallback. Getting that backwards would have silently deleted
+the surviving behaviour instead of the dead one.
 
 **Phase 4 — telemetry and templates**
 *Precondition:* **checked 2026-08-21, and it failed.** The overlay does route through the

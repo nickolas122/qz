@@ -533,15 +533,6 @@ import AndroidStatusBar 1.0
 
             property bool technogym_myrun_treadmill_experimental: false
 
-            property bool trainprogram_random: false
-            property int trainprogram_total: 60
-            property real trainprogram_period_seconds: 60
-            property real trainprogram_speed_min: 8
-            property real trainprogram_speed_max: 16
-            property real trainprogram_incline_min: 0
-            property real trainprogram_incline_max: 15
-            property real trainprogram_resistance_min: 1
-            property real trainprogram_resistance_max: 32
 
             property real watt_offset: 0
             property real watt_gain: 1
@@ -730,7 +721,6 @@ import AndroidStatusBar 1.0
             property string sex: "Male"
 
             // from version 2.10.111
-            property string maps_type: "3D"
 
             // from version 2.10.112
 
@@ -750,7 +740,6 @@ import AndroidStatusBar 1.0
             property bool fakedevice_treadmill: false
 
             // from version 2.11.43
-            property int video_playback_window_s: 12 // not used
 
             // from version 2.11.62
             property string horizon_treadmill_profile_user1: "user1"
@@ -867,11 +856,9 @@ import AndroidStatusBar 1.0
             property bool proform_treadmill_cadence_lt: false
 
             // from version 2.12.3
-            property bool trainprogram_stop_at_end: false
 
             // from version 2.12.5
             property bool domyos_elliptical_inclination: true
-            property bool gpx_loop: false
 
             // from version 2.12.6
             property bool android_notification: false
@@ -1477,7 +1464,6 @@ import AndroidStatusBar 1.0
 
 			property bool domyos_treadmill_sync_start: false
 			property real treadmill_speed_min: 0
-			property bool trainprogram_auto_lap_on_segment: false
 
 			property bool power_avg_3s: false
 			property bool tile_power_avg_enabled: false
@@ -1604,12 +1590,7 @@ import AndroidStatusBar 1.0
 
             property string app_language: "auto"
 
-            property bool trainprogram_clipboard_workout_enabled: false
             property string shortcut_stop: ""
-            property real trainprogram_warmup_speed: 420
-            property real trainprogram_cooldown_speed: 420
-            property real trainprogram_rest_speed: 420
-            property bool trainprogram_sound_on_segment: false
             property bool tile_watt_color_enabled: true
             property bool tile_pace_color_enabled: true
             property bool treadmill_force_running_activity: false
@@ -7303,116 +7284,6 @@ import AndroidStatusBar 1.0
                     spacing: 0
 
                     IndicatorOnlySwitch {
-                        id: trainprogramStopAtEndDelegate
-                        text: qsTr("Stop Treadmill at the End")
-                        spacing: 0
-                        bottomPadding: 0
-                        topPadding: 0
-                        rightPadding: 0
-                        leftPadding: 0
-                        clip: false
-                        checked: settings.trainprogram_stop_at_end
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        onClicked: settings.trainprogram_stop_at_end = checked
-                    }
-
-                    Label {
-                        text: qsTr("Treadmill only: enabling this if you want that QZ will stop the tape at the end of the current train program.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    IndicatorOnlySwitch {
-                        text: qsTr("Enable Clipboard Workouts")
-                        spacing: 0
-                        bottomPadding: 0
-                        topPadding: 0
-                        rightPadding: 0
-                        leftPadding: 0
-                        clip: false
-                        checked: settings.trainprogram_clipboard_workout_enabled
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        onClicked: settings.trainprogram_clipboard_workout_enabled = checked
-                    }
-
-                    Label {
-                        text: qsTr("Enable detection of ZWO/XML workouts copied to the clipboard. Default: disabled.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    IndicatorOnlySwitch {
-                        text: qsTr("Sound on Segment Change")
-                        spacing: 0
-                        bottomPadding: 0
-                        topPadding: 0
-                        rightPadding: 0
-                        leftPadding: 0
-                        clip: false
-                        checked: settings.trainprogram_sound_on_segment
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        onClicked: settings.trainprogram_sound_on_segment = checked
-                    }
-
-                    Label {
-                        text: qsTr("Play a short sound when a training program starts a new row. Default: disabled.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    IndicatorOnlySwitch {
-                        id: trainprogramAutoLapOnSegmentDelegate
-                        text: qsTr("Auto Lap on Segment")
-                        spacing: 0
-                        bottomPadding: 0
-                        topPadding: 0
-                        rightPadding: 0
-                        leftPadding: 0
-                        clip: false
-                        checked: settings.trainprogram_auto_lap_on_segment
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        onClicked: settings.trainprogram_auto_lap_on_segment = checked
-                    }
-
-                    Label {
-                        text: qsTr("Automatically trigger a lap when completing each workout segment/row. For ramp segments, lap is triggered only at the end of the ramp to avoid creating a lap every second.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
-
-                    IndicatorOnlySwitch {
                         text: qsTr("Treadmill Auto-adjust speed by power")
                         spacing: 0
                         bottomPadding: 0
@@ -7846,75 +7717,6 @@ import AndroidStatusBar 1.0
                     RowLayout {
                         spacing: 10
                         Label {
-                            id: labelTrainProgramWarmupSpeed
-                            text: qsTr("Warmup Speed (pace):")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: trainProgramWarmupSpeedTextField
-                            text: paceSecondsToTime(settings.trainprogram_warmup_speed)
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okTrainProgramWarmupSpeed
-                            text: "OK"
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.trainprogram_warmup_speed = timeToPaceSeconds(trainProgramWarmupSpeedTextField.text); toast.show("Setting saved!"); }
-                        }
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelTrainProgramCooldownSpeed
-                            text: qsTr("Cooldown Speed (pace):")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: trainProgramCooldownSpeedTextField
-                            text: paceSecondsToTime(settings.trainprogram_cooldown_speed)
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okTrainProgramCooldownSpeed
-                            text: "OK"
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.trainprogram_cooldown_speed = timeToPaceSeconds(trainProgramCooldownSpeedTextField.text); toast.show("Setting saved!"); }
-                        }
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelTrainProgramRestSpeed
-                            text: qsTr("Rest Speed (pace):")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: trainProgramRestSpeedTextField
-                            text: paceSecondsToTime(settings.trainprogram_rest_speed)
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okTrainProgramRestSpeed
-                            text: "OK"
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.trainprogram_rest_speed = timeToPaceSeconds(trainProgramRestSpeedTextField.text); toast.show("Setting saved!"); }
-                        }
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
                             id: labelTreadmillPaceDefault
                             text: qsTr("Default Pace:")
                             Layout.fillWidth: true
@@ -7989,229 +7791,6 @@ import AndroidStatusBar 1.0
                         color: Material.color(Material.Lime)
                     }
 
-                    IndicatorOnlySwitch {
-                        id: trainprogramRandomDelegate
-                        text: qsTr("Training Program Random")
-                        spacing: 0
-                        bottomPadding: 0
-                        topPadding: 0
-                        Layout.fillWidth: true
-                        checked: settings.trainprogram_random
-                        onCheckedChanged: settings.trainprogram_random = checked
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelTrainProgramRandomDuration
-                            text: qsTr("Duration (minutes):")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: trainProgramRandomDurationTextField
-                            text: settings.trainprogram_total
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            inputMethodHints: Qt.ImhDigitsOnly
-                            onAccepted: settings.trainprogram_total = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okTrainProgramRandomDuration
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.trainprogram_total = trainProgramRandomDurationTextField.text; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelTrainProgramRandomPeriod
-                            text: qsTr("Period (seconds):")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: trainProgramRandomPeriodTextField
-                            text: settings.trainprogram_period_seconds
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            inputMethodHints: Qt.ImhDigitsOnly
-                            onAccepted: settings.trainprogram_period_seconds = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okTrainProgramRandomPeriod
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.trainprogram_period_seconds = trainProgramRandomPeriodTextField.text; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelTrainProgramRandomSpeedMin
-                            text: qsTr("Speed min.:")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: trainProgramRandomSpeedMinTextField
-                            text: settings.trainprogram_speed_min
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            //inputMethodHints: Qt.ImhFormattedNumbersOnly
-                            onAccepted: settings.trainprogram_speed_min = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okTrainProgramRandomSpeedMin
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.trainprogram_speed_min = trainProgramRandomSpeedMinTextField.text; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelTrainProgramRandomSpeedMax
-                            text: qsTr("Speed max.:")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: trainProgramRandomSpeedMaxTextField
-                            text: settings.trainprogram_speed_max
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            //inputMethodHints: Qt.ImhFormattedNumbersOnly
-                            onAccepted: settings.trainprogram_speed_max = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okTrainProgramRandomSpeedMax
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.trainprogram_speed_max = trainProgramRandomSpeedMaxTextField.text; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelTrainProgramRandomInclineMin
-                            text: qsTr("Incline min.:")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: trainProgramRandomInclineMinTextField
-                            text: settings.trainprogram_incline_min
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            //inputMethodHints: Qt.ImhFormattedNumbersOnly
-                            onAccepted: settings.trainprogram_incline_min = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okTrainProgramRandomInclineMin
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.trainprogram_incline_min = trainProgramRandomInclineMinTextField.text; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelTrainProgramRandomInclineMax
-                            text: qsTr("Incline max.:")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: trainProgramRandomInclineMaxTextField
-                            text: settings.trainprogram_incline_max
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            //inputMethodHints: Qt.ImhFormattedNumbersOnly
-                            onAccepted: settings.trainprogram_incline_max = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okTrainProgramRandomInclineMax
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.trainprogram_incline_max = trainProgramRandomInclineMaxTextField.text; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelTrainProgramRandomResistanceMin
-                            text: qsTr("Resistance min.:")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: trainProgramRandomResistanceMinTextField
-                            text: settings.trainprogram_resistance_min
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            inputMethodHints: Qt.ImhDigitsOnly
-                            onAccepted: settings.trainprogram_resistance_min = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okTrainProgramRandomResistanceMin
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.trainprogram_resistance_min = trainProgramRandomResistanceMinTextField.text; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelTrainProgramRandomResistanceMax
-                            text: qsTr("Resistance max.:")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: trainProgramRandomResistanceMaxTextField
-                            text: settings.trainprogram_resistance_max
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            inputMethodHints: Qt.ImhDigitsOnly
-                            onAccepted: settings.trainprogram_resistance_max = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okTrainProgramRandomResistanceMax
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.trainprogram_resistance_max = trainProgramRandomResistanceMaxTextField.text; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-
-                    Label {
-                        text: qsTr("Turn on and enter your choices for workout time (in minutes and seconds) and the maximum and minimum speed, incline (treadmill), and resistance (bike) and QZ will randomly change your speed and resistance or incline accordingly for the period of time you have selected.")
-                        font.bold: true
-                        font.italic: true
-                        font.pixelSize: Qt.application.font.pixelSize - 2
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        color: Material.color(Material.Lime)
-                    }
                 }
             }
 
@@ -13125,99 +12704,7 @@ import AndroidStatusBar 1.0
                 accordionContent: "settings-tts.qml"
             }
 
-            AccordionElement {
-                id: mapsAccordion
-                title: qsTr("Maps 🗺️")
-                indicatRectColor: Material.color(Material.Grey)
-                textColor: Material.color(Material.Grey)
-                color: Material.backgroundColor
-                //width: 640
-                //anchors.top: acc1.bottom
-                //anchors.topMargin: 10
-                accordionContent: ColumnLayout {
-                    spacing: 0
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelMapsType
-                            text: qsTr("Maps Type:")
-                            Layout.fillWidth: true
-                        }
-                        ComboBox {
-                            id: mapsTypeTextField
-                            model: [ "2D", "3D" ]
-                            displayText: settings.maps_type
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onActivated: {
-                                console.log("combomodel activated" + mapsTypeTextField.currentIndex)
-                                displayText = mapsTypeTextField.currentValue
-                            }
-
-                        }
-                        Button {
-                            id: okMapsType
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: { settings.maps_type = mapsTypeTextField.displayText; toast.show(qsTr("Setting saved!")); }
-                        }
-                    }
-                    IndicatorOnlySwitch {
-                        id: gpxLoopDelegate
-                        text: qsTr("Loop Start-End-Start")
-                        spacing: 0
-                        bottomPadding: 0
-                        topPadding: 0
-                        rightPadding: 0
-                        leftPadding: 0
-                        clip: false
-                        checked: settings.gpx_loop
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                        Layout.fillWidth: true
-                        onClicked: settings.gpx_loop = checked
-                    }
-                }
-            }
-
             /*
-            AccordionElement {
-                id: videoAccordion
-                title: qsTr("Video 🎥")
-                indicatRectColor: Material.color(Material.Grey)
-                textColor: Material.color(Material.Grey)
-                color: Material.backgroundColor
-                //width: 640
-                //anchors.top: acc1.bottom
-                //anchors.topMargin: 10
-                accordionContent: ColumnLayout {
-                    spacing: 0
-                    RowLayout {
-                        spacing: 10
-                        Label {
-                            id: labelVideoWindow
-                            text: qsTr("Window Time (sec.):")
-                            Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: videoWindowTextField
-                            text: settings.video_playback_window_s
-                            horizontalAlignment: Text.AlignRight
-                            Layout.fillHeight: false
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            inputMethodHints: Qt.ImhDigitsOnly
-                            onAccepted: settings.video_playback_window_s = text
-                            onActiveFocusChanged: if(this.focus) this.cursorPosition = this.text.length
-                        }
-                        Button {
-                            id: okVideoWindow
-                            text: qsTr("OK")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                            onClicked: settings.video_playback_window_s = videoWindowTextField.text
-                        }
-                    }
-                }
-            }*/
-
             // static in order to handle the AccordionCheckElement
             StaticAccordionElement {
                 id: experimentalFeatureAccordion
