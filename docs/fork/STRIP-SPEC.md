@@ -1134,9 +1134,28 @@ survived; settings integrity consistent (283/283, 248/248, 25 QML bindings all r
 Qt 5 `qmllint` clean; the app starts, logs **zero** QML warnings and still restores the
 rider's gear on connect.
 
-**H2 is still owed** and this phase is the reason it exists. Nothing above proves the
-bike still *feels* the same — §11.6's own warning is that settings changes pass every
-automated check and still ride wrong. Gear 7 on the flat should land near resistance 14.
+**H2 passed 2026-08-23**, on the second attempt. The first ride's reading was taken off a
+frozen RTSS overlay and had to be thrown away — see §11.6 phase 7c-2b, which is where that
+regression is recorded.
+
+The re-ride gives better evidence than the criterion asked for. 260 grade/resistance pairs
+out of one 7-minute session, and the whole curve holds, not just the flat:
+
+| Grade | Samples | Mean resistance | `grade × 1.5 + 14` predicts |
+| --- | --- | --- | --- |
+| −2.0 … −0.5 % | 19 | 12.3 | 12.1 |
+| **−0.5 … 0.5 %** | **27** | **14.0** | **14.0** |
+| 0.5 … 2.0 % | 33 | 15.7 | 15.9 |
+| 2.0 … 5.0 % | 40 | 19.0 | 19.3 |
+| 5.0 … 20 % | 75 | 24.7 | — |
+
+The flat lands on **14.0**, 16 of its 27 samples exactly 14, and the slope matches §11.5
+item 2's formula across five bands. So phase 6 did not move the calibration, which is the
+one thing no automated gate could have told us.
+
+Worth noting what the discarded reading actually was: 12.3 is the mean for the −2 … −0.5 %
+band. The frozen frame the rider read "12" from was almost certainly captured on a slight
+descent, which is exactly how a stale overlay misleads — the number is real, just not now.
 
 **Phase 7a — new UI behind the flag**
 *Criteria:* `ui_next` defaults false; the old UI is untouched and still default; new tree
@@ -1509,7 +1528,7 @@ Four sessions for the whole project:
 | | After | Purpose |
 | --- | --- | --- |
 | **H1** | Phase 5 | Trainer connects; gears 1–15 shift; resistance tracks the table. Add any accessory the rider owns to the same session — the kept ones (§7 Group E) have no automated coverage at all |
-| **H2** | Phase 6 | Calibration survived the settings reshuffle |
+| **H2** | Phase 6 | Calibration survived the settings reshuffle — **done 2026-08-23**, flat = 14.0 over 27 samples |
 | **H3** | Phase 7b | New UI, ride with Rouvy |
 | **H4** | Phase 7b | New UI, ride with Zwift |
 

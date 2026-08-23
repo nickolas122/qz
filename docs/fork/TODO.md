@@ -168,6 +168,49 @@ Open question, and a product decision rather than an engineering one: whether th
 clear, grey out, or hold the last value with a marker. Holding a number with no marker is the
 only option that is definitely wrong.
 
+### Both status indicators are latches, not state (found 2026-08-23)
+
+**The tiles this entry was written about no longer exist.** Phase 7c-2b deleted them, and the
+new tree has something the old one did not: a status pill fed by `RideState.trainerConnected`
+and `RideState.appConnected`, which is exactly the place a disconnect should show. So the
+"product decision" above is now narrower - the pill is the marker, and the question is only
+what it says.
+
+It does not work yet, and the reason is worth writing down because it looks like it works.
+
+**The app half latches on the first frame and never clears.**
+`virtualbike::ftmsDeviceConnected()` is:
+
+```cpp
+bool ftmsDeviceConnected() { return lastFTMSFrameReceived != 0 || lastDirconFTMSFrameReceived != 0; }
+```
+
+Both are timestamps, and **neither is ever set back to 0**. Once Zwift has sent a single FTMS
+frame, `appConnected` is true for the life of the process - through the app quitting, the
+network dropping, the DIRCON socket closing. `DirconProcessor` logs the disconnection
+(`"Disconnection from ..."` appears in every ride log) and nothing upstream reads it.
+
+The fix is already half-built: `whenLastFTMSFrameReceived()` returns the timestamp, so the
+question "has a frame arrived recently" is one comparison away. It is a staleness test, not a
+new signal.
+
+**The trainer half latches the same way**, for the reason the original entry gives:
+`RideState::trainerConnected()` is `currentBike() != nullptr`, and `bluetooth` never clears the
+device on a clean `UnconnectedState` because all fourteen `disconnected()` connections are
+commented out. The object outlives the radio link.
+
+So the pill currently answers "has this ever connected", and reads identically to "is this
+connected now". That is the same failure the tiles had, moved somewhere more prominent.
+
+*How it surfaced:* the 14 `TypeError: Cannot read property 'trainerConnected' of null` warnings
+at every QZ exit. Those were a destruction-order bug and are fixed - `RideState` is declared
+before the engine now, so the engine is torn down first - but they were the observation that
+these are the properties which have to degrade honestly, and today they cannot.
+
+*Done looks like, for the pill:* it distinguishes never-connected from connected from
+was-connected-and-is-not, for the trainer and the training app independently, and a rider
+glancing at it mid-ride can tell a live session from a dead one without reading a log.
+
 ---
 
 ## DIRCON on Android needs Wi-Fi, and should not

@@ -774,6 +774,15 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        // The whole of what the UI is allowed to know about a ride. Section 9.2 caps
+        // this surface at 20 members and TestRideState holds it to the list.
+        //
+        // Declared before the engine on purpose. Locals are destroyed in reverse, so
+        // an engine built first is torn down last - and tearing down a QML tree
+        // re-evaluates its bindings, which by then were reading a context property
+        // whose object had already gone. That cost 14 TypeErrors at every exit.
+        RideState rideState(&bl);
+
         QQmlApplicationEngine engine;
         const QUrl url(QStringLiteral("qrc:/ui/Main.qml"));
         QObject::connect(
@@ -803,9 +812,6 @@ int main(int argc, char *argv[]) {
         FileSearcher fileSearcher;
         engine.rootContext()->setContextProperty("fileSearcher", &fileSearcher);
 
-        // The whole of what the UI is allowed to know about a ride. Section 9.2 caps
-        // this surface at 20 members and TestRideState holds it to the list.
-        RideState rideState(&bl);
         engine.rootContext()->setContextProperty("rideState", &rideState);
 
         // Where the bridge posts "battery at 40%", "restart to apply", "another device
