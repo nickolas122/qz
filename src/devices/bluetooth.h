@@ -81,7 +81,11 @@ class bluetooth : public QObject, public SignalHandler {
     bluetoothdevice *heartRateDevice() { return heartRateBelt; }
     QList<QBluetoothDeviceInfo> devices;
     bool onlyDiscover = false;
-    volatile bool homeformLoaded = false;
+    // Set once a UI tree has loaded and connected to deviceConnected. Device
+    // discovery is deferred until then, because a device found before anything is
+    // listening emits into the void. Named for homeform until phase 7c; either tree
+    // sets it now.
+    volatile bool uiLoaded = false;
 
   private:
     bool useDiscovery = false;

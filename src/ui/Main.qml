@@ -40,4 +40,8 @@ ApplicationWindow {
         SetupScreen {}
         SettingsScreen {}
     }
+
+    // Outside the SwipeView on purpose: a message about the bike is worth reading from
+    // whichever tab is up, and it must not swipe away with the page under it.
+    ToastArea {}
 }

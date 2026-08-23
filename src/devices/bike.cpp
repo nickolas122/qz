@@ -1,7 +1,6 @@
 
 #include "devices/bike.h"
 #include "qdebugfixup.h"
-#include "homeform.h"
 #include "mywhooshlink.h"
 #include <QMap>
 #include <QSettings>
@@ -360,9 +359,6 @@ void bike::setGears(double gears) {
     }
 
     m_gears = gears;
-    if(homeform::singleton()) {
-        homeform::singleton()->updateGearsValue();
-    }
 
     
     if (MyWhooshLink::instance() && MyWhooshLink::instance()->isEnabled() &&

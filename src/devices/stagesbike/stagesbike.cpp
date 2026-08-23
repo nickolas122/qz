@@ -2,7 +2,7 @@
 
 #include "qtbluetoothcompat.h"
 #include "virtualdevices/virtualbike.h"
-#include "homeform.h"
+#include "qznotify.h"
 #include <QBluetoothLocalDevice>
 #include <QDateTime>
 #include <QFile>
@@ -181,8 +181,7 @@ void stagesbike::serviceDiscovered(const QBluetoothUuid &gatt) {
         QSettings settings;
         settings.setValue(QZSettings::ftms_bike, bluetoothDevice.name());
         qDebug() << "forcing FTMS bike since it has FTMS";
-        if(homeform::singleton())
-            homeform::singleton()->setToastRequested("FTMS bike found, restart the app to apply the change!");
+        QzNotify::toast("FTMS bike found, restart the app to apply the change!");
     }
 }
 

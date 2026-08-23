@@ -3,7 +3,7 @@
 #include "qtbluetoothcompat.h"
 #include "devices/cscbike/cscbike.h"
 #include "speedracex_defaults.h"
-#include "homeform.h"
+#include "qznotify.h"
 #include "windowsblebond.h"
 #include "virtualdevices/virtualbike.h"
 #include <QBluetoothLocalDevice>
@@ -314,8 +314,7 @@ void ftmsbike::initHandshakeTick() {
                         "has lapsed. Remove the trainer in Bluetooth settings and pair it again.");
                 }
                 qDebug() << QStringLiteral("FTMS handshake: ") << msg;
-                if (homeform::singleton())
-                    homeform::singleton()->setToastRequested(msg);
+                QzNotify::toast(msg);
             } else {
                 // Worth saying out loud: every future diagnosis of this bike has to treat the control
                 // point as write-only, because nothing it is sent is ever confirmed.
@@ -403,8 +402,8 @@ void ftmsbike::enableManualResistancePowerAdjustment(resistance_t resistance) {
     Resistance = clampedResistance;
     emit resistanceRead(Resistance.value());
 
-    if (!manualResistancePowerAdjustmentToastShown && homeform::singleton()) {
-        homeform::singleton()->setToastRequested(
+    if (!manualResistancePowerAdjustmentToastShown) {
+        QzNotify::toast(
             QStringLiteral("Custom CSC power table enabled: power now follows the configured resistance/watt points."));
         manualResistancePowerAdjustmentToastShown = true;
     }
@@ -1046,8 +1045,7 @@ void ftmsbike::handleNotification(const QBluetoothUuid &characteristicUuid, cons
         if(newValue.length() > 0) {
             uint8_t b = (uint8_t)newValue.at(0);
             if(b != battery_level)
-                if(homeform::singleton())
-                    homeform::singleton()->setToastRequested(bluetoothDevice.name() + QStringLiteral(" Battery Level ") + QString::number(b) + " %");
+                QzNotify::toast(bluetoothDevice.name() + QStringLiteral(" Battery Level ") + QString::number(b) + " %");
             battery_level = b;
         }
         return;
@@ -2199,12 +2197,10 @@ void ftmsbike::subscribeToServices() {
 
     if(gattFTMSService == nullptr && DOMYOS) {
         settings.setValue(QZSettings::domyosbike_notfmts, true);
-        if(homeform::singleton())
-            homeform::singleton()->setToastRequested("Domyos bike presents itself like a FTMS but it's not. Restart QZ to apply the fix, thanks.");
+        QzNotify::toast("Domyos bike presents itself like a FTMS but it's not. Restart QZ to apply the fix, thanks.");
     } else if(gattFTMSService == nullptr && PM5) {
         settings.setValue(QZSettings::ftms_rower, bluetoothDevice.name());
-        if(homeform::singleton())
-            homeform::singleton()->setToastRequested("PM5 rower found. Restart QZ to apply the fix, thanks.");
+        QzNotify::toast("PM5 rower found. Restart QZ to apply the fix, thanks.");
     }
 
     // FTMS wants request-control acknowledged before it accepts anything else, and the console
@@ -2860,11 +2856,9 @@ void ftmsbike::controllerStateChanged(QLowEnergyController::ControllerState stat
         // possibility, once per session rather than once per attempt.
         if (consecutiveConnectFailures >= MULTI_CENTRAL_WARN_AFTER && !multiCentralToastShown) {
             multiCentralToastShown = true;
-            if (homeform::singleton()) {
-                homeform::singleton()->setToastRequested(
-                    QStringLiteral("Cannot connect to the bike. Another device may be connected to it - check other "
-                                   "QZ instances."));
-            }
+            QzNotify::toast(
+                QStringLiteral("Cannot connect to the bike. Another device may be connected to it - check other "
+                               "QZ instances."));
         }
 
         qDebug() << QStringLiteral("reconnecting in") << reconnectDelayMs << QStringLiteral("ms, consecutive failures")

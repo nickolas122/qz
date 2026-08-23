@@ -1,4 +1,5 @@
 #include "homeform.h"
+#include "qznotify.h"
 #ifdef Q_OS_IOS
 #include "ios/lockscreen.h"
 #include "ios/ios_liveactivity.h"
@@ -628,6 +629,10 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
     connect(bluetoothManager, &bluetooth::bluetoothDeviceDisconnected, this, &homeform::bluetoothDeviceDisconnected);
     connect(bluetoothManager, &bluetooth::deviceFound, this, &homeform::deviceFound);
     connect(bluetoothManager, &bluetooth::deviceConnected, this, &homeform::deviceConnected);
+    // Devices post toasts to QzNotify now rather than reaching in here for the
+    // property. This is the old tree's end of that: the property still exists and
+    // main.qml still watches it, so nothing about the old UI changed.
+    connect(QzNotify::singleton(), &QzNotify::toastRequested, this, &homeform::setToastRequested);
     // The QZWS WebSocket is what tools/qz-rouvy-rtss reads a ride through and what
     // tools/xbox-mywhoosh-gears shifts back through, from a PC. The control half used to
     // be wired from a second, inner endpoint whose port was ephemeral, so a gears_plus
@@ -880,7 +885,7 @@ homeform::homeform(QQmlApplicationEngine *engine, bluetooth *bl) {
     }
 #endif
 
-    bluetoothManager->homeformLoaded = true;
+    bluetoothManager->uiLoaded = true;
 }
 
 #ifdef Q_OS_ANDROID

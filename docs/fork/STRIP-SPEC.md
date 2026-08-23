@@ -673,7 +673,7 @@ with Rouvy is still the final word, but it is no longer the only evidence availa
 | 6 | Settings consolidation | medium (§3.6 runtime failures) | **covered** |  ← moved to after 7c, see below
 | 7a | `RideState` object + `ui_next` flag + new tree under `src/ui/` | medium | **none** |  ← landed 2026-08-21
 | 7b | Ride on the new UI with Rouvy and Zwift; flip the default | low, but needs calendar time | **none** |  ← default flipped 2026-08-23 on H3; H4 still owed, see §11.6
-| 7c | Delete Group F — old tree, tile system, `homeform.cpp`, the flag | high | **none** |
+| 7c | Delete Group F — old tree, tile system, `homeform.cpp`, the flag | high | **none** |  ← split 7c-1/7c-2; 7c-1 landed 2026-08-23, 7c-2 gated on H4
 | 8 | Group G, Pi build revival | medium | partial |
 
 "Covered" means the end-to-end loop asserts on that phase's blast radius: bike frames in,
@@ -1142,6 +1142,77 @@ upstream layout fault the new tree inherits rather than a strip regression.
 *Tests:* full suite; QML lint; headless smoke. Gate 4 does the heavy lifting.
 *Hardware:* **none** — 7b already validated the replacement, and this phase only removes
 the thing it replaced.
+
+**Split in two, 2026-08-23.** The hardware note above assumed 7b was complete. It is not
+— H4 has not run (§11.6 phase 7b) — and 7c is where the fallback disappears. So the phase
+is now two commits with the ride between them:
+
+- **7c-1, decouple.** Nothing is deleted. Everything in the kept tree that reaches into
+  `homeform` stops doing so, and the old UI keeps working throughout. *Landed 2026-08-23.*
+- **7c-2, delete.** The old tree, the tile system, `homeform.{h,cpp}` and the flag.
+  **Gated on H4** — the "Use the old UI" switch is what makes an unridden Zwift survivable,
+  and this commit removes it.
+
+*7c-1, landed 2026-08-23.* 7a called the QZWS broadcast "the real prerequisite hiding in
+7c". Measuring it found four couplings, not one, and three were smaller than feared:
+
+| Coupling | Sites | What it was, and where it went |
+| --- | --- | --- |
+| `setToastRequested` | 24 | A driver with something to say - a battery level, "restart to apply", "another device has the bike" - reaching for the UI class and null-checking it. Now `QzNotify::toast()`, a sink both trees attach to and neither owns |
+| `updateGearsValue` | 1 | `bike.cpp` poking homeform to refresh the gear *tile*. `RideState` polls `gears()` off the bike, so the poke went with the tile |
+| `*_color` ×11 | 11 | Tile font colours in the broadcast — `pace->valueFontColor()` and friends. No consumer of the socket reads them; deleted |
+| `autoresistance` | 1 | **Kept.** `tools/qz-rouvy-rtss` reads it (§7 Group D). It turned out `bluetoothdevice` has carried the same flag all along, and homeform was already mirroring into it on every toggle, so the broadcast just reads the device now |
+
+The last row is the only one that can report a different number than it did before, and
+it reports a better one. The two flags are not always equal: `ftmsbike.cpp` clears
+`autoResistanceEnable` outright for ICSE bikes, and homeform never hears about it. The
+device's flag is the one `bike::changeResistance` actually gates on, so it is the honest
+answer to "is QZ driving resistance" — which is the question the tool reading this field
+is asking. On an ICSE bike the broadcast used to say true while the bridge ignored every
+resistance request. It no longer does. Not this bike (§1), so nothing here rides on it.
+
+The result: **`src/devices/` no longer references `homeform` at all** — seven driver files
+lost the include outright, four more were including it without using it, and
+`bluetooth.cpp` keeps six mentions that are all comments. `templateinfosenderbuilder.cpp`
+is clean, and its `homeform::singleton()` null-guard — the early return that would have
+silenced the whole broadcast — is gone with the dereferences it protected.
+
+Three things worth recording:
+
+- **`QzNotify` is a sink, not a UI.** `toast()` is static, takes no null check and returns
+  nothing, so a driver posting into a process with no UI loaded — the headless smoke, the
+  gtest suite — costs an `emit` to nobody. That is the property that let 24 call sites lose
+  their guard rather than move it.
+- **The new tree got its own `ToastArea.qml`** rather than importing the old tree's
+  `Toast.qml`/`ToastManager.qml`, which are kept and would have worked. 40 lines against
+  156, and it does not inherit `AndroidStatusBar`, whose height is 0 for the life of the
+  process (TODO.md, 2026-08-23). Without it the new UI would have gone silent on every one
+  of those 24 messages the moment homeform stopped relaying them.
+- **`bluetooth::homeformLoaded` is now `uiLoaded`.** Not a dependency — a name — but
+  leaving it would have left the bridge gating discovery on a flag named for a class that
+  no longer exists.
+
+*Left for 7c-2, found while doing this.* Three things, none of them a deletion:
+
+1. **`uiLoaded` is still set from `homeform.cpp`**, so the desktop discovery gate depends
+   on homeform being constructed even with `ui_next` on. The new tree has to set it
+   itself.
+2. **`autoResistance` has no toggle outside the old UI.** The QZWS command routes through
+   `homeform::toggleAutoResistance`, and after 7c-2 nothing would receive it. `RideState`
+   takes it over — its 17th member, still inside the 20 the contract test allows.
+3. **Three static file-location helpers live on `homeform`** and are called from
+   `main.cpp` before any UI exists: `getWritableAppDir()`, `getProfileDir()` and
+   `loadSettings()`. They are not UI at all — they answer "where does this platform let
+   QZ write" — and they are the last thing in `main.cpp` that needs the class. They move
+   to a kept home rather than being deleted.
+
+`main.cpp` is now the only file outside `homeform.{h,cpp}` and the iOS shims that calls
+into the class at all. Everything else that did is either gone or reading a comment.
+
+*Verified:* mingw debug build clean; suite 189 passed, 12 skipped, unchanged; Qt 5
+`qmllint` clean on all ten new-UI files; settings integrity consistent; the app starts,
+loads the new tree and logs **zero** QML warnings, which is the same signature 7a
+recorded — the old tree logs 51.
 
 **Phase 8 — other machine types, Pi revival**
 *Criteria:* treadmill/rower/elliptical/stairclimber/jumprope gone with no kept driver

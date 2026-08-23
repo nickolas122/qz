@@ -41,5 +41,6 @@
         <file>ui/SettingsGroup.qml</file>
         <file>ui/SettingsSwitch.qml</file>
         <file>ui/SettingsNumber.qml</file>
+        <file>ui/ToastArea.qml</file>
     </qresource>
 </RCC>

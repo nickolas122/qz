@@ -1,6 +1,5 @@
 #include "simulatedbike.h"
 
-#include "homeform.h"
 #include "virtualdevices/virtualbike.h"
 
 #include <QDateTime>

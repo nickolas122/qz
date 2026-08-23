@@ -1,4 +1,3 @@
-#include "homeform.h"
 
 #include "qtbluetoothcompat.h"
 #include "elitesquarecontroller.h"

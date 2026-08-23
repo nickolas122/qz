@@ -180,6 +180,7 @@ mywhooshlink.cpp \
 keepawakehelper.cpp \
 main.cpp \
 metric.cpp \
+qznotify.cpp \
 qzsettings.cpp \
 devices/rower.cpp \
 screencapture.cpp \
@@ -316,6 +317,7 @@ material.h \
 metric.h \
 qdebugfixup.h \
 qmdnsengine_export.h \
+qznotify.h \
 qzsettings.h \
 qzforkversion.h \
 devices/rower.h \

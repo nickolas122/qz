@@ -1,4 +1,4 @@
-#include "homeform.h"
+#include "qznotify.h"
 
 #include "qtbluetoothcompat.h"
 #include "zwiftclickremote.h"
@@ -45,8 +45,7 @@ void zwiftclickremote::update() {
     } else if(initDone) {
         countRxTimeout++;
         if(countRxTimeout == 10) {
-            if(homeform::singleton())
-                homeform::singleton()->setToastRequested("Zwift device: UPGRADE THE FIRMWARE!");
+            QzNotify::toast("Zwift device: UPGRADE THE FIRMWARE!");
         }
     }
 }

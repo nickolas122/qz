@@ -19,6 +19,7 @@
 #include "gamepadcontroller.h"
 #endif
 #include "homeform.h"
+#include "qznotify.h"
 #include <QDir>
 #include <QGuiApplication>
 #include <QOperatingSystemVersion>
@@ -804,6 +805,12 @@ int main(int argc, char *argv[]) {
         RideState rideState(&bl);
         engine.rootContext()->setContextProperty("rideState", &rideState);
 
+        // Where the bridge posts "battery at 40%", "restart to apply", "another device
+        // has the bike". The old tree reaches these through homeform's toastRequested
+        // property; the new one connects to the sink itself, which is the half that
+        // survives group F.
+        engine.rootContext()->setContextProperty("qzNotify", QzNotify::singleton());
+
         engine.load(url);
         homeform *h = new homeform(&engine, &bl);
 
@@ -850,7 +857,7 @@ int main(int argc, char *argv[]) {
     }
 #if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
     else {
-        bl.homeformLoaded = true;
+        bl.uiLoaded = true;
     }
 #endif
 
