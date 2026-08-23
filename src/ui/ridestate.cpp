@@ -13,11 +13,34 @@ RideState::RideState(bluetooth *bl, QObject *parent) : QObject(parent), bluetoot
     // the device by whoever wants them. One second matches the rate the trainer sends
     // Indoor Bike Data at, so a faster poll would only re-read the same frame.
     connect(&poll, &QTimer::timeout, this, &RideState::changed);
+    connect(&poll, &QTimer::timeout, this, &RideState::updateRtssOsd);
     poll.start(1000);
 
     if (bluetoothManager)
         connect(bluetoothManager, &bluetooth::bluetoothDeviceConnected, this,
                 &RideState::restoreGear);
+}
+
+void RideState::updateRtssOsd() {
+    bluetoothdevice *device = bluetoothManager ? bluetoothManager->device() : nullptr;
+    if (!device) {
+        rtssOsd.publish(QStringLiteral("QZ: no device"));
+        return;
+    }
+
+    QSettings settings;
+    const bool erg = settings.value(QZSettings::zwift_erg, QZSettings::default_zwift_erg).toBool();
+
+    // Only a bike carries a gear here. homeform also handled ROWING; group G takes the
+    // rower, and this fork has one bike.
+    QString gearLine;
+    if (device->deviceType() == BIKE) {
+        gearLine = QStringLiteral("Gear: %1\n").arg(static_cast<bike *>(device)->gears());
+    }
+
+    rtssOsd.publish(gearLine + QStringLiteral("ERG: %1\nResistance: %2")
+                                   .arg(erg ? QStringLiteral("ON") : QStringLiteral("OFF"))
+                                   .arg(device->currentResistance().value()));
 }
 
 void RideState::restoreGear(bluetoothdevice *device) {

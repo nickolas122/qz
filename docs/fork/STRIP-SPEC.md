@@ -1335,6 +1335,17 @@ gone from the catalog for good.
   is not answered here.
 - **`main.cpp` needed `<QColor>`, `<QPalette>` and `<QThread>`**, all of which it had been
   getting through `homeform.h`.
+- **The RTSS OSD stopped being drawn, and nothing said so.** `homeform::update()`
+  published QZ's gear, ERG state and resistance into RivaTuner's overlay once a second,
+  and `homeform::aboutToQuit()` released the slot. Both went with the class; `rtssosd.cpp`
+  still compiled and still linked, so there was no error anywhere — the overlay simply
+  kept drawing the last frame it had been given. **Frozen, not blank**, which is the
+  reason no gate caught it and the reason it is dangerous: a stale gear and resistance
+  sitting over the training app look exactly like live ones. Found on the first real
+  ride after the strip, 2026-08-23, and it cost that ride's H2 reading — the rider took
+  gear 7 flat as resistance 12 off a frame that was not current.
+  `RideState::updateRtssOsd()` has it now, on the same 1 Hz poll homeform used; release
+  comes free from `RtssOsd`'s destructor, since `RideState` owns one by value.
 - **CI's deploy guard named three QML modules the tree no longer imports.** The Qt 6
   job asserts that `windeployqt` actually deployed each module the UI needs, because
   windeployqt exits 0 when it silently skips one. `Qt5Compat\GraphicalEffects`,

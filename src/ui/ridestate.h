@@ -5,6 +5,8 @@
 #include <QString>
 #include <QTimer>
 
+#include "rtssosd.h"
+
 class bluetooth;
 
 /**
@@ -84,6 +86,15 @@ class RideState : public QObject {
 
   private slots:
     /**
+     * @brief Redraw QZ's gear and resistance in RivaTuner's overlay.
+     *
+     * The only way to see the gear over a training app running exclusive fullscreen.
+     * homeform drove this from its own once-a-second tick until 7c-2b; the poll below
+     * runs at the same rate, so it inherited the job rather than growing a second timer.
+     */
+    void updateRtssOsd();
+
+    /**
      * @brief Put the rider's gear back when a bike connects.
      *
      * Not part of the section 9.2 surface - a private slot, invisible to QML and to
@@ -104,6 +115,7 @@ class RideState : public QObject {
   private:
     bluetooth *bluetoothManager = nullptr;
     QTimer poll;
+    RtssOsd rtssOsd;
 
     /** @return the connected bike, or nullptr when there is none. */
     class bike *currentBike() const;
