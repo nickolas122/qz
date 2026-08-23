@@ -175,7 +175,6 @@ filedownloader.cpp \
 devices/fitmetria_fanfit/fitmetria_fanfit.cpp \
 devices/ftmsbike/ftmsbike.cpp \
 devices/heartratebelt/heartratebelt.cpp \
-homeform.cpp \
 mywhooshlink.cpp \
 keepawakehelper.cpp \
 main.cpp \
@@ -308,7 +307,6 @@ devices/ftmsbike/ftmscontrolpointhandshake.h \
 devices/ftmsbike/resistanceslewlimiter.h \
 devices/ftmsbike/speedracex_defaults.h \
 devices/heartratebelt/heartratebelt.h \
-homeform.h \
 mywhooshlink.h \
 ios/lockscreen.h \
 keepawakehelper.h \

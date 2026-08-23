@@ -5,7 +5,6 @@
 #import <objc/runtime.h>
 #include <QDebug>
 #include <QMetaObject>
-#include "homeform.h"
 #include "lockscreen.h"
 
 // Qt defines QIOSApplicationDelegate internally as a UIResponder-backed
@@ -50,9 +49,10 @@
 
                 const QString sequence =
                     QString::fromUtf8(key.charactersIgnoringModifiers.UTF8String).trimmed().toUpper();
-                if (homeform::singleton() && homeform::singleton()->handleKeyboardShortcut(sequence)) {
-                    didHandleShortcut = true;
-                }
+                // handleKeyboardShortcut lived on the deleted UI class, and the shortcut system
+                // it dispatched into is group F. Nothing claims the key now, so it falls through
+                // to the OS. See swiftDebug.mm for why nothing replaces it.
+                Q_UNUSED(sequence)
             }
         }
     }
@@ -105,9 +105,10 @@
 
             const QString sequence =
                 QString::fromUtf8(key.charactersIgnoringModifiers.UTF8String).trimmed().toUpper();
-            if (homeform::singleton() && homeform::singleton()->handleKeyboardShortcut(sequence)) {
-                didHandleShortcut = true;
-            }
+            // handleKeyboardShortcut lived on the deleted UI class, and the shortcut system
+            // it dispatched into is group F. Nothing claims the key now, so it falls through
+            // to the OS. See swiftDebug.mm for why nothing replaces it.
+            Q_UNUSED(sequence)
         }
     }
 

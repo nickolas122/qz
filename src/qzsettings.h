@@ -3094,15 +3094,6 @@ class QZSettings {
     static const QString simulated_bike_ride;
     static const QString default_simulated_bike_ride;
 
-    /**
-     *@brief ui_next Selects the new UI tree under src/ui/ instead of main.qml.
-     * Default true since phase 7b: the new tree is the one that rides. The old one
-     * still ships this release, reachable from the new Settings screen, so a bad ride
-     * costs a toggle rather than a rebuild. Both go in 7c.
-     * See STRIP-SPEC.md section 9.9.
-     */
-    static const QString ui_next;
-    static constexpr bool default_ui_next = true;
 
     /**
      * @brief Write the QSettings values using the constants from this namespace.

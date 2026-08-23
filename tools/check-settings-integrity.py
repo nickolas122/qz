@@ -33,6 +33,19 @@ def declared_in_header():
     return set(re.findall(r"^\s*static\s+const\s+QString\s+(\w+)\s*;", text, re.M))
 
 
+def key_strings():
+    """The QSettings key each symbol actually stores under.
+
+    Usually identical to the symbol name, and three times not: CRRGain is
+    "crrGain", CWGain is "cwGain", and gears_current_value is
+    "gears_current_value_f". settings-catalog.json is keyed on the string, so any
+    check against the catalog has to use this set rather than the declarations.
+    """
+    text = (SRC / "qzsettings.cpp").read_text(encoding="utf-8", errors="replace")
+    return set(re.findall(
+        r'const QString QZSettings::\w+\s*=\s*QStringLiteral\("([^"]+)"\)', text))
+
+
 def registered_in_source():
     """(declared count, actual entry count) from qzsettings.cpp."""
     text = (SRC / "qzsettings.cpp").read_text(encoding="utf-8", errors="replace")
@@ -123,31 +136,49 @@ def catalog():
     return data.get("settingCount"), len(entries), keys
 
 
-# settings.qml properties that have no key in qzsettings.h today. Most are QML-local
-# machinery rather than settings - the search box state, the catalog loader, the language
-# list. A few are real settings QML persists on its own: the theme_* colours, osc_ip and
-# osc_port, gears_current_value_f, and crrGain/cwGain, which differ from the C++ CRRGain
-# and CWGain only by case and so are separate QSettings keys entirely.
-#
-# All of this predates the strip. The list is a baseline rather than a target: the check
-# fails when it GROWS, which is what catches a deletion that orphaned a live binding.
-# Shrinking it is welcome and the script says so.
-KNOWN_QML_ONLY = {
-    "appLanguageOptions", "crrGain", "cwGain", "entry", "filteredSettings",
-    "gears_current_value_f", "initialized", "nordictrack_fs5i_treadmill",
-    "searchableSettings", "settingsCatalog", "settingsCatalogError",
-    "settingsCatalogLoaded", "settingsCatalogLoading", "settingsSearchActive",
-    "settingsSearchPending", "settingsSearchVisible", "theme_background_color",
-    "theme_status_bar_background_color", "theme_tile_background_color",
-    "theme_tile_icon_enabled", "theme_tile_secondline_textsize", "theme_tile_shadow_color",
-    "theme_tile_shadow_enabled",
-}
+# Properties bound in QML that have no key in qzsettings.h. This used to be a long
+# baseline of settings.qml's own machinery - search box state, the catalog loader, the
+# language list - none of which was a setting at all. 7c-2b deleted that file, and the
+# new tree under src/ui/ declares nothing QML-local: every property in its Settings
+# blocks is a real key. So the baseline is empty, and any entry appearing here now is a
+# genuine orphan rather than inherited noise.
+KNOWN_QML_ONLY = set()
+
+
+PROPERTY_DECL = re.compile(
+    r"^\s*property\s+(?:int|bool|real|double|string|var|color)\s+(\w+)\s*:", re.M)
+
+
+def settings_blocks(text):
+    """The bodies of each `Settings { ... }` block in one QML file."""
+    bodies = []
+    for m in re.finditer(r"\bSettings\s*\{", text):
+        depth = 0
+        for i in range(m.end() - 1, len(text)):
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    bodies.append(text[m.end():i])
+                    break
+    return bodies
 
 
 def qml_properties():
-    """Property names declared in settings.qml - these are the QML-visible settings."""
-    text = (SRC / "settings.qml").read_text(encoding="utf-8", errors="replace")
-    return set(re.findall(r"^\s*property\s+(?:int|bool|real|double|string|var|color)\s+(\w+)\s*:", text, re.M))
+    """Setting names bound by the UI, across every QML file under src/ui/.
+
+    One file used to answer this: settings.qml was a single enormous Settings block,
+    so every property in it was a setting. The new tree is components, and a
+    component's own API - label, value, decimals - is declared with the same syntax.
+    Only Settings blocks are scanned, which is what binds a name to QSettings.
+    """
+    names = set()
+    for f in sorted((SRC / "ui").glob("*.qml")):
+        text = f.read_text(encoding="utf-8", errors="replace")
+        for body in settings_blocks(text):
+            names |= set(PROPERTY_DECL.findall(body))
+    return names
 
 
 def main():
@@ -189,11 +220,11 @@ def main():
 
     # 4. Catalogued settings must exist. This is the one that catches a deletion that
     #    removed the C++ side and left the catalog describing a setting that is gone.
-    orphan_catalog = sorted(catalog_keys - header - KNOWN_QML_ONLY)
+    orphan_catalog = sorted(catalog_keys - key_strings() - KNOWN_QML_ONLY)
     if orphan_catalog:
         problems.append(
-            f"settings-catalog.json describes {len(orphan_catalog)} setting(s) that no longer exist "
-            f"in qzsettings.h: {', '.join(orphan_catalog[:8])}"
+            f"settings-catalog.json describes {len(orphan_catalog)} setting(s) that no C++ key "
+            f"stores under: {', '.join(orphan_catalog[:8])}"
         )
 
     # 5. The important one: settings.qml binds by name at runtime, so a key deleted from
@@ -204,20 +235,14 @@ def main():
     new_orphans = sorted(orphan_qml - KNOWN_QML_ONLY)
     if new_orphans:
         problems.append(
-            f"settings.qml binds {len(new_orphans)} setting(s) that were deleted from qzsettings.h: "
+            f"src/ui/ binds {len(new_orphans)} setting(s) that do not exist in qzsettings.h: "
             f"{', '.join(new_orphans)}"
-        )
-    healed = sorted(KNOWN_QML_ONLY - orphan_qml)
-    if healed:
-        print(
-            f"\nnote: {len(healed)} baselined QML-only propert(ies) are gone - "
-            f"remove from KNOWN_QML_ONLY: {', '.join(healed[:8])}"
         )
 
     print(f"qzsettings.h        {len(header)} settings declared")
     print(f"qzsettings.cpp      {len(entries)} registered, allSettingsCount = {declared_count}")
     print(f"settings-catalog    {catalog_len} entries, settingCount = {catalog_count}")
-    print(f"settings.qml        {len(qml)} properties bound")
+    print(f"src/ui/*.qml        {len(qml)} properties bound")
 
     if problems:
         print(f"\nFAIL: {len(problems)} problem(s)")

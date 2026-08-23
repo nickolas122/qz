@@ -673,7 +673,7 @@ with Rouvy is still the final word, but it is no longer the only evidence availa
 | 6 | Settings consolidation | medium (§3.6 runtime failures) | **covered** |  ← moved to after 7c, see below
 | 7a | `RideState` object + `ui_next` flag + new tree under `src/ui/` | medium | **none** |  ← landed 2026-08-21
 | 7b | Ride on the new UI with Rouvy and Zwift; flip the default | low, but needs calendar time | **none** |  ← default flipped 2026-08-23 on H3; H4 still owed, see §11.6
-| 7c | Delete Group F — old tree, tile system, `homeform.cpp`, the flag | high | **none** |  ← split 7c-1/7c-2; 7c-1 landed 2026-08-23, 7c-2 gated on H4
+| 7c | Delete Group F — old tree, tile system, `homeform.cpp`, the flag | high | **none** |  ← 7c-1, 7c-2a, 7c-2b all landed 2026-08-23
 | 8 | Group G, Pi build revival | medium | partial |
 
 "Covered" means the end-to-end loop asserts on that phase's blast radius: bike frames in,
@@ -1177,7 +1177,105 @@ is now two commits with the ride between them:
   `homeform` stops doing so, and the old UI keeps working throughout. *Landed 2026-08-23.*
 - **7c-2a, the last decoupling.** *Landed 2026-08-23.* Four prerequisites, not the three
   7c-1 predicted — see below. Still nothing deleted.
-- **7c-2b, delete.** The old tree, the tile system, `homeform.{h,cpp}` and the flag.
+- **7c-2b, delete.** *Landed 2026-08-23.* The old tree, the tile system,
+  `homeform.{h,cpp}` and the flag. **35,623 lines removed**, 226 added.
+
+*7c-2b, landed 2026-08-23.* 28 QML files and `homeform.{h,cpp}` are gone; 39 QML files
+became 11. What survived outside `src/ui/` is `TemplateWebServer.qml` alone, which §7
+Group D keeps. `ui_next` went from all four of its declaration sites and took the "Use
+the old UI" switch with it, so `main.cpp` loads `qrc:/ui/Main.qml` unconditionally.
+
+The largest single files: `settings.qml` 13,704, `homeform.cpp` 7,559,
+`settings-tiles.qml` 5,813, `Wizard.qml` 1,257, `main.qml` 988.
+
+**The gamepad had to be re-pointed, and its rule changed.** It reached the bike through
+`keyboardPlus("gears")` and friends — the same entry points the shortcuts and the gear
+tile used, all three now deleted — and calls `RideState` directly instead. One behaviour
+moved with it: `homeform::gearUp()` checked auto-resistance and refused to shift with it
+off, and `RideState::gearUp()` shifts unconditionally. Auto resistance still decides
+whether the trainer acts on the resistance the new gear implies. `tools/xbox-mywhoosh-gears`
+documented the old rule and now documents this one.
+
+### The regression this phase actually had
+
+`qzws_smoke.py` failed after the deletion: `gears_plus` moved the gear 1 → 1. The cause
+was three steps back from the symptom.
+
+`bike::setGears` persists the gear to `gears_current_value` on every shift, and
+**`homeform` was the only thing that ever read it back** — restoring the gear when a
+device connected. Deleting the class kept the save and lost the restore, so every launch
+started at `m_gears` 0. That is below the minimum of 1, and `bike::gears()` clamps the
+*reported* value up to 1 regardless, so the broadcast said 1 before the shift and 1
+after: the first `gears_plus` was really moving 0 → 1 and looked like nothing.
+
+It is now `RideState::restoreGear`, a private slot on `bluetooth::bluetoothDeviceConnected`
+— deliberately not part of the §9.2 surface, since it is bridge bookkeeping rather than
+something the UI asks for, and so the contract test still sees 18 members. `setGears 7`
+on connect, and the smoke test back to 7 → 8 → 7.
+
+**This is the phase's argument for the harness in one paragraph.** The gate that caught
+it was not the build, not the 189 tests and not QML lint — all three were green with the
+gear silently broken. It was the one script that drives the socket a rider's PC actually
+reads.
+
+### Two more found by moving the settings check
+
+`settings.qml` was the only QML that bound settings, so `tools/check-settings-integrity.py`
+read that one file. It now scans the `Settings` blocks in `src/ui/*.qml` — blocks
+specifically, because a component's own API (`label`, `value`, `decimals`) is declared
+with the same syntax and would otherwise count as orphaned settings.
+
+- **`SettingsScreen.qml` bound `rouvy`, and the setting is `rouvy_compatibility`.** The
+  "Rouvy compatibility" switch had been writing a key nothing reads since 7a. Fixed.
+  Nothing in the QML would ever have failed: this is exactly the runtime-only failure
+  §3.6 says a binding sweep exists to catch, and the first sweep after the tree changed
+  is what found it.
+- **The catalog was compared against the wrong set, and it cost three real settings.**
+  Check 4 matched catalog keys against *symbol names* in `qzsettings.h`, but the catalog
+  is keyed on the string a setting stores under, and three differ: `CRRGain` stores as
+  `crrGain`, `CWGain` as `cwGain`, and `gears_current_value` as `gears_current_value_f`.
+  All three were reported as orphans and **all three were deleted before the mistake was
+  caught** — by the gear regression above, which led back to `gears_current_value_f`.
+  Restored, and the check now compares against the key strings from `qzsettings.cpp`.
+  Doing so immediately found a fourth thing: a phantom `gears_current_value` entry,
+  `visible: false`, keyed on the symbol name rather than the string, that no C++ key ever
+  stored under. Pre-existing; removed.
+
+The baseline of QML-only properties is empty now. It held 23 names that were
+`settings.qml`'s own machinery — search box state, the catalog loader, the language list
+— and none of them was a setting. The new tree declares no such thing, so any name
+appearing there now is a genuine orphan rather than inherited noise. Eight of the eleven
+originally flagged really were orphans (`theme_*`, `nordictrack_fs5i_treadmill`) and are
+gone from the catalog for good.
+
+### Consequences recorded rather than fixed
+
+- **iOS lost two shims.** `ios_app_delegate.mm` dispatched keyboard shortcuts into
+  `homeform`, and `swiftDebug.mm` shifted gears through its singleton. Both are gutted
+  with a comment rather than re-pointed: there is no global handle on the bridge any more
+  — `main()` owns `RideState` — and iOS is not a host this fork supports (§2). No route
+  was invented for a platform that is not a target.
+- **Warnings that had nowhere to go.** `homeform` toasted "Bluetooth name too long" when
+  an Android device name would not fit in the advertisement. That warning is gone with no
+  replacement, so the symptom now arrives unexplained. `QzNotify` is where it should be
+  re-posted; recorded in [VIRTUAL-BIKE.md](VIRTUAL-BIKE.md).
+- **Settings with no control at all.** `template_user_QZWS_enabled` and its port had a
+  UI in `settings.qml`; the QZWS smoke test now needs them set in QSettings directly.
+  Same for `mywhooshlink`'s OpenBikeControl toggle. This is phase 6's whole question and
+  is not answered here.
+- **`main.cpp` needed `<QColor>`, `<QPalette>` and `<QThread>`**, all of which it had been
+  getting through `homeform.h`.
+
+*Verified:* mingw debug build clean; suite 189 passed, 12 skipped, unchanged; Qt 5
+`qmllint` clean across all 11 remaining QML files; settings integrity consistent
+(904/904, 868/868); the app starts on the only tree there is and logs **zero** QML
+warnings; `qzws_smoke.py` all checks passed with the shift moving 7 → 8 → 7. Gate 4:
+no `homeform::`, `new homeform` or `ui_next` anywhere in `src/`, `tst/` or `tools/`
+outside historical prose.
+
+*Operational note for whoever runs the suite next:* the six `DirconDiscovery` cases fail
+if a QZ instance is running, because both bind the same mDNS sockets. That is the test rig
+colliding with a live app, not a regression — stop the app first.
 
 *The H4 gate was lifted 2026-08-23, by the rider, on the simulated-bike Zwift session
 above rather than on a ride.* Recorded as a decision and not as evidence: the reasoning

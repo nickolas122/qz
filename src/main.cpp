@@ -18,9 +18,13 @@
 #ifdef Q_OS_WIN
 #include "gamepadcontroller.h"
 #endif
-#include "homeform.h"
 #include "qznotify.h"
 #include "qzpaths.h"
+// Reached through homeform.h until 7c-2b deleted it. The dark-palette block below has
+// always needed these.
+#include <QColor>
+#include <QPalette>
+#include <QThread>
 #include "templateinfosenderbuilder.h"
 #include <QDir>
 #include <QGuiApplication>
@@ -771,10 +775,7 @@ int main(int argc, char *argv[]) {
         }
 
         QQmlApplicationEngine engine;
-        // Section 9.9: both trees ship for one release, chosen by a flag that defaults
-        // off. A bad ride on the new UI costs a settings toggle, not a rebuild.
-        const bool uiNext = settings.value(QZSettings::ui_next, QZSettings::default_ui_next).toBool();
-        const QUrl url(uiNext ? QStringLiteral("qrc:/ui/Main.qml") : QStringLiteral("qrc:/main.qml"));
+        const QUrl url(QStringLiteral("qrc:/ui/Main.qml"));
         QObject::connect(
             &engine, &QQmlApplicationEngine::objectCreated, qobject_cast<QGuiApplication *>(app.data()),
             [url](QObject *obj, const QUrl &objUrl) {
@@ -802,23 +803,19 @@ int main(int argc, char *argv[]) {
         FileSearcher fileSearcher;
         engine.rootContext()->setContextProperty("fileSearcher", &fileSearcher);
 
-        // The whole of what the new UI is allowed to know about a ride. QML must not
-        // talk to homeform - see STRIP-SPEC.md section 9.2.
+        // The whole of what the UI is allowed to know about a ride. Section 9.2 caps
+        // this surface at 20 members and TestRideState holds it to the list.
         RideState rideState(&bl);
         engine.rootContext()->setContextProperty("rideState", &rideState);
 
         // Where the bridge posts "battery at 40%", "restart to apply", "another device
-        // has the bike". The old tree reaches these through homeform's toastRequested
-        // property; the new one connects to the sink itself, which is the half that
-        // survives group F.
+        // has the bike". Drivers emit into QzNotify and ToastArea.qml shows what lands.
         engine.rootContext()->setContextProperty("qzNotify", QzNotify::singleton());
 
         // The QZWS WebSocket: the only way a PC reads this ride, and what
-        // tools/qz-rouvy-rtss and tools/xbox-mywhoosh-gears both talk to. Section 6
-        // keeps it, but homeform built it in its constructor and started it from its
-        // own slot - a kept component living inside the class 7c deletes. It is built
-        // here now. getInstance() is keyed on the id, so homeform's own call returns
-        // this same object for as long as homeform still exists.
+        // tools/qz-rouvy-rtss and tools/xbox-mywhoosh-gears both talk to (section 6).
+        // It was built in homeform's constructor until 7c-2a moved it here, which is
+        // the only reason deleting that class did not take the socket with it.
         const QString qzTemplatePath = QzPaths::getWritableAppDir() + QStringLiteral("QZTemplates");
         TemplateInfoSenderBuilder *qzws = TemplateInfoSenderBuilder::getInstance(
             QStringLiteral("user"), QStringList({qzTemplatePath}), app.data());
@@ -840,13 +837,9 @@ int main(int argc, char *argv[]) {
 
         engine.load(url);
 
-        // A UI tree exists from here, and RideState is already connected to the
-        // bridge, so discovery may announce to somebody. homeform sets this too, at
-        // the end of its own construction; whichever runs first is correct and the
-        // second is a no-op. This is the one that survives 7c.
+        // A UI tree exists from here and RideState is connected to the bridge, so
+        // discovery may announce to somebody. Until 7c-2b homeform set this too.
         bl.uiLoaded = true;
-
-        homeform *h = new homeform(&engine, &bl);
 
         // Bring the DIRCON endpoint up now rather than when a bike connects. A client
         // that caches discovery results and does not retry a failed connect will
@@ -854,21 +847,16 @@ int main(int argc, char *argv[]) {
         DirconManager::startIdleEndpoint();
 
 #ifdef Q_OS_WIN
-        // A gamepad is the only shifter that still works once the training app owns the screen:
-        // QZ's keyboard shortcuts are declared Qt.WindowShortcut, so they need QZ in front. These
-        // are the same three entry points the shortcuts and the on-screen tiles go through, so the
-        // pad shifts exactly what the gear tile shifts.
-        gamepadcontroller *pad = new gamepadcontroller(h);
-        QObject::connect(pad, &gamepadcontroller::gearUp, h,
-                         [h]() { h->keyboardPlus(QStringLiteral("gears")); });
-        QObject::connect(pad, &gamepadcontroller::gearDown, h,
-                         [h]() { h->keyboardMinus(QStringLiteral("gears")); });
-        QObject::connect(pad, &gamepadcontroller::ergToggle, h,
-                         [h]() { h->keyboardLargeButton(QStringLiteral("erg_mode")); });
+        // A gamepad is the only shifter that works once the training app owns the
+        // screen. It used to reach the bike through homeform's keyboard entry points,
+        // which were the same ones the shortcuts and the gear tile used; all three are
+        // gone, and RideState carries the same three actions straight to the device.
+        gamepadcontroller *pad = new gamepadcontroller(&rideState);
+        QObject::connect(pad, &gamepadcontroller::gearUp, &rideState, &RideState::gearUp);
+        QObject::connect(pad, &gamepadcontroller::gearDown, &rideState, &RideState::gearDown);
+        QObject::connect(pad, &gamepadcontroller::ergToggle, &rideState, &RideState::toggleErg);
 #endif
 
-        QObject::connect(app.data(), &QCoreApplication::aboutToQuit, h,
-                         &homeform::aboutToQuit); // NOTE: clazy-unneeded-cast
 
         {
 #ifdef Q_OS_ANDROID

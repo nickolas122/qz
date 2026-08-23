@@ -6,10 +6,9 @@ import QtQuick.Controls.Material 2.12
 // has the bike". They arrive on QzNotify, which is where the device drivers post now
 // that they no longer reach into homeform for it.
 //
-// The old tree has Toast.qml and ToastManager.qml and they are kept, but this is 40
-// lines against their 156 and it does not drag in AndroidStatusBar, whose height is 0
-// for the life of the process on Android (see TODO.md). Reaching across into the old
-// tree for a rounded rectangle was not worth inheriting that.
+// Written rather than reusing the old tree's Toast.qml/ToastManager.qml pair: 40 lines
+// against their 156, and no dependency on AndroidStatusBar, whose height is 0 for the
+// life of the process on Android (see TODO.md). That pair went with group F in 7c-2b.
 Item {
     id: toastArea
 

@@ -70,12 +70,14 @@ denominators; QZ does not publish either maximum.
 
 `gears` and `resistance` ride along in the periodic `workout` broadcast
 (`templateinfosenderbuilder.cpp`). **ERG does not.** QZ's ERG state is the
-`zwift_erg` setting — the value the ERG tile reads to colour itself green or red
-(`homeform.cpp`) — and it never enters the broadcast. The bridge therefore polls
-it over the `getsettings` channel every two seconds.
+`zwift_erg` setting — read by `RideState::ergMode()` for the ride screen, and by the
+ERG tile before phase 7c-2b deleted the tiles — and it never enters the broadcast.
+The bridge therefore polls it over the `getsettings` channel every two seconds.
 
 The `autoresistance` field that *is* in the broadcast is a different thing: it
-is the master switch for automatic resistance control, not ERG mode.
+is the master switch for automatic resistance control, not ERG mode. Since phase
+7c-1 it is read straight off `bluetoothdevice`, which is the flag
+`bike::changeResistance` actually gates on, rather than off a UI object mirroring it.
 
 The same poll asks for `gears_zwift_ratio` and `gears_custom_table_enabled`,
 because when either is on `bike::gears()` clamps the gear to 1..24, which makes

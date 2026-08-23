@@ -185,8 +185,9 @@ install.
 This route did not actually work before 2026-08-21, and the description above was
 written from the code rather than from a ride. QZ parsed the message and emitted the
 shift, but `homeform` connected the control signals from the *inner* endpoint only, so
-nothing arriving on 6666 reached a gear. Both endpoints are wired now
-(`src/homeform.cpp`), and `tools/qzws_smoke.py` asserts the shift end to end.
+nothing arriving on 6666 reached a gear. That is wired now, and since phase 7c-2a the
+connection is made in `src/main.cpp` and lands on `RideState::gearUp()` rather than on
+the deleted UI class. `tools/qzws_smoke.py` asserts the shift end to end.
 
 QZ setup:
 
@@ -198,13 +199,18 @@ QZ setup:
    `_openbikecontrol._tcp` on port **36867** and MyWhoosh discovers it. Enable
    *override local gears* if the shift should go only to MyWhoosh instead of
    also moving QZ's local gear.
-3. Start the workout with auto resistance on — `homeform::gearUp()` is a no-op
-   otherwise (`src/homeform.cpp:2073`).
+3. Start the workout with auto resistance on. This used to matter because
+   `homeform::gearUp()` refused to shift with it off; phase 7c-2b deleted that class,
+   and a `gears_plus` now runs `RideState::gearUp()`, which shifts the bike
+   unconditionally (`src/ui/ridestate.cpp`). Auto resistance still governs whether the
+   trainer acts on the resistance that shift implies, so the advice stands - the
+   mechanism behind it does not.
 
-Note: the settings screen still describes the OpenBikeControl server as being on
-"port 21587" (`src/settings.qml:3481`). That label predates commit `e55e4b3`,
-which moved the server to the OpenBikeControl port 36867
-(`src/mywhooshlink.h:109`). Trust the code, not the label.
+Note: the old settings screen described this server as being on "port 21587", a label
+that predated commit `e55e4b3` moving it to 36867 (`src/mywhooshlink.h:109`). That
+screen went with `settings.qml` in phase 7c-2b, so the wrong label is gone - and so is
+any UI for this toggle. It is a settings key with no control on it until phase 6
+decides whether the new Settings screen should carry one.
 
 ### Topology: QZ on a tablet, MyWhoosh on a Windows PC
 
@@ -270,13 +276,15 @@ Shifting repeats while held, after `gamepad_repeat_delay` (400 ms) and then ever
 ERG never repeats, whatever those two say — a toggle that repeated would just
 flicker the mode on and off under a resting thumb.
 
-The pad goes to the same three entry points the keyboard shortcuts and the
-on-screen tiles use — `keyboardPlus("gears")`, `keyboardMinus("gears")` and
-`keyboardLargeButton("erg_mode")` (`src/main.cpp`, wired where `homeform` is
-constructed) — so it inherits their rules exactly:
+The pad used to go through the same three entry points as the keyboard shortcuts
+and the on-screen tiles — `keyboardPlus("gears")` and friends. All three are gone
+with phase 7c-2b, and the pad now calls `RideState::gearUp()`, `gearDown()` and
+`toggleErg()` directly (`src/main.cpp`). One rule changed with the move:
 
-- **Gear changes need auto resistance on.** With it off the gear tile does
-  nothing either.
+- **Gear changes no longer need auto resistance on.** `homeform::gearUp()` checked
+  that flag and refused; `RideState::gearUp()` shifts unconditionally. Auto
+  resistance still decides whether the trainer acts on the resistance the new gear
+  implies, so it is still worth having on — it just no longer swallows the shift.
 - **ERG needs a bike connected.** The toggle flips `zwift_erg`, the same setting
   the ERG tile and the Zwift ERG switch write.
 

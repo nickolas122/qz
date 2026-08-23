@@ -44,10 +44,11 @@ Worth stating plainly, because two of these are traps:
 else"), along with the synthetic `deviceDiscovered()` in `bluetooth::finished()` that used
 to bring them up and the 15-second discovery watchdog that unstuck them.
 
-**The "Fake Device" toggle is still in the UI and does nothing.** `settings.qml:16324`
-still offers it, and `applewatch_fakedevice` still round-trips to `QSettings` — but no
-code path in this tree instantiates a device from it. Its only surviving effect is that
-`homeform::firstRun()` (`homeform.h:412`) stops offering the wizard. The treadmill,
+**The "Fake Device" toggle did nothing, and no longer exists.** `settings.qml` offered
+it and `applewatch_fakedevice` still round-trips to `QSettings`, but no code path in
+this tree ever instantiated a device from it; its only effect was suppressing the
+first-run wizard. Phase 7c-2b deleted the screen, the wizard and the class that read
+it, so the key survives with nothing reading or writing it — one for phase 6. The treadmill,
 elliptical and rower variants below it are in the same state. Someone following
 `docs/android-testing/README.md`, which records the emulator as configured with "Fake
 Device and Android Notification enabled", will turn it on and watch nothing happen. That
@@ -464,13 +465,12 @@ flag — something of the shape `-simulated-bike -ride <file> -ride-report <json
 runs the device without QML and writes the resulting metrics out. It exercises the device
 and the metric plumbing, not the tiles.
 
-**Tile assertions are deliberately out of scope for now.** `homeform` cannot be
-constructed without a loaded QML engine — `homeform.cpp:974` reaches straight for
-`engine->rootObjects().constFirst()` — so there is no headless `homeform` to query, and
-the cheapest route to one is running the real QML under `QT_QPA_PLATFORM=offscreen` (the
-job already has Xvfb) rather than refactoring `homeform`. Worth doing eventually; not
-worth blocking this on. Until then the tiles are verified by looking at them, which is
-what Layer A is for.
+**Tile assertions were deliberately out of scope, and the question has since gone away.**
+`homeform` could not be constructed without a loaded QML engine, so there was no headless
+object to query and the tiles were verified by looking at them, which is what Layer A is
+for. Phase 7c-2b deleted the tiles altogether. What replaced them is `RideState`, which
+is a plain QObject that constructs with a null bridge and is asserted directly by
+`tst/UI/TestRideState.cpp` — no QML engine, no offscreen platform, no Xvfb.
 
 ## Phases and acceptance
 
@@ -547,9 +547,11 @@ Android's `AdvertiseCallback` code 1 is `ADVERTISE_FAILED_DATA_TOO_LARGE`. The c
 **adapter's own name**: a BLE advertisement is 31 bytes, and Qt's Android backend includes
 the device name rather than the `setLocalName("QZ")` that `virtualbike.cpp:89` asks for.
 The emulator ships as `sdk_gphone64_x86_64` — 19 characters, 21 bytes with its header —
-and with flags, TX power and the service UUID there is no room left. QZ already knows this:
-`homeform.cpp:1086` toasts *"Bluetooth name too long, change it to a 4 letters one in the
-android settings"* whenever the name exceeds nine characters or leaves `[A-Za-z0-9 ]`.
+and with flags, TX power and the service UUID there is no room left. QZ used to say so:
+`homeform.cpp` toasted *"Bluetooth name too long, change it to a 4 letters one in the
+android settings"* whenever the name exceeded nine characters or left `[A-Za-z0-9 ]`.
+**That warning went with the class in phase 7c-2b and has no replacement**, so the
+symptom now arrives with no explanation attached. Worth re-posting through `QzNotify`.
 
 Renaming the device to `QZ1` produced, on the next launch:
 
@@ -922,11 +924,11 @@ Worth being exact, because "CI runs the loop and asserts" is easy to hear as "CI
   it is a bench instrument rather than a CI job. See the section below.
 - **The real training apps.** See the end of Layer C: their undocumented rules are not
   knowable from here.
-- **The tiles.** `homeform` cannot be constructed without a loaded QML engine
-  (`homeform.cpp:974`), so the loop asserts on the metrics and the wire, not on what is
-  drawn. The cheapest route to that is running the QML under `QT_QPA_PLATFORM=offscreen`
-  and querying homeform's properties; the runner already has Xvfb. Worth doing once the
-  loop is green, and not before.
+- **What is drawn.** The loop asserts on the metrics and the wire, not on the screen.
+  This used to be a statement about `homeform` being unconstructable headlessly; since
+  phase 7c-2b it is a smaller gap, because `RideState` is what the screen reads and
+  `tst/UI/TestRideState.cpp` asserts on it directly. What remains unasserted is the QML
+  itself — whether a bound value reaches a label — which still wants an offscreen run.
 - **`ftmsbike`, until Phase 6.** With `simulatedbike` as the bike end, the real device
   driver is not in the loop at all. This is the sharpest limit of the endgoal as stated:
   a green loop says nothing about the code that talks to your trainer until the second

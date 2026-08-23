@@ -19,9 +19,13 @@ Check 3 is the one that regressed silently before: the control signals were conn
 `homeform` from the inner endpoint only, so a shift arriving here was parsed, dispatched,
 emitted and then dropped.
 
-**QZ must be running with its UI.** The template managers are built in the homeform
-constructor, so `-no-gui` has no QZWS at all. And the endpoint must be switched on:
-Settings > Template Settings > user_QZWS > Enabled, port 6666.
+**QZ must be running with its UI.** The template manager is constructed alongside the
+QML engine (`src/main.cpp`), so `-no-gui` has no QZWS at all. It was built in the
+homeform constructor until phase 7c-2a moved it out, which is the only reason deleting
+that class in 7c-2b did not take this socket with it. And the endpoint must be switched
+on - which since 7c-2b has no UI either, so set `template_user_QZWS_enabled` and
+`template_user_QZWS_port` (6666) directly in QSettings until phase 6 gives them a
+control.
 
     python tools/qzws_smoke.py                       # localhost:6666
     python tools/qzws_smoke.py --host 192.168.1.50   # QZ on the tablet

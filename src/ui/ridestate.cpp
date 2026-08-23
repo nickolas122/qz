@@ -14,6 +14,26 @@ RideState::RideState(bluetooth *bl, QObject *parent) : QObject(parent), bluetoot
     // Indoor Bike Data at, so a faster poll would only re-read the same frame.
     connect(&poll, &QTimer::timeout, this, &RideState::changed);
     poll.start(1000);
+
+    if (bluetoothManager)
+        connect(bluetoothManager, &bluetooth::bluetoothDeviceConnected, this,
+                &RideState::restoreGear);
+}
+
+void RideState::restoreGear(bluetoothdevice *device) {
+    // bike::setGears persists the gear on every shift, but nothing put it back: the
+    // restore half lived in homeform and went with it in 7c-2b, so every launch started
+    // at m_gears 0 - below the minimum of 1, which made the first shift look like it did
+    // nothing because gears() clamps the reported value up to 1 either way.
+    if (!device || device->deviceType() != BIKE)
+        return;
+    QSettings settings;
+    if (!settings.value(QZSettings::gears_restore_value, QZSettings::default_gears_restore_value).toBool() &&
+        !settings.value(QZSettings::restore_specific_gear, QZSettings::default_restore_specific_gear).toBool())
+        return;
+    static_cast<bike *>(device)->setGears(
+        settings.value(QZSettings::gears_current_value, QZSettings::default_gears_current_value).toDouble());
+    emit changed();
 }
 
 bike *RideState::currentBike() const {

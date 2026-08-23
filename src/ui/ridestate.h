@@ -82,6 +82,16 @@ class RideState : public QObject {
     /** @brief Also a slot: the QZWS `autoResistance` command lands here. */
     Q_INVOKABLE void toggleAutoResistance();
 
+  private slots:
+    /**
+     * @brief Put the rider's gear back when a bike connects.
+     *
+     * Not part of the section 9.2 surface - a private slot, invisible to QML and to
+     * the contract test, because it is bridge bookkeeping rather than something the
+     * UI asks for.
+     */
+    void restoreGear(class bluetoothdevice *device);
+
   signals:
     /**
      * @brief One signal for the lot.
