@@ -1727,9 +1727,30 @@ void ftmsbike::characteristicChanged(const QLowEnergyCharacteristic &characteris
             if (!ensureBytesAvailable(2, QStringLiteral("resistance")))
                 return;
 
-            if(!TITAN_7000 && !FS_YK && !SMARTBIKE_3DIGIT) {
+                       if(!TITAN_7000 && !FS_YK && !SMARTBIKE_3DIGIT) {
                 Resistance = ((double)(((uint16_t)((uint8_t)newValue.at(index + 1)) << 8) |
                                        (uint16_t)((uint8_t)newValue.at(index))));
+
+                // Se a bike reportou uma resistência diferente da última que o QZ
+                // mandou, foi o ciclista quem mudou (ex: gatilho no guidão). Em vez
+                // de deixar isso ser sobrescrito no próximo ciclo, tratamos como
+                // troca de marcha manual.
+                QSettings manualGearSettings;
+                if (manualGearSettings.value(QZSettings::ftms_bike_manual_resistance_as_gear,
+                                              QZSettings::default_ftms_bike_manual_resistance_as_gear).toBool() &&
+                    resistanceSlew.primed()) {
+                    const int32_t delta = (int32_t)Resistance.value() - (int32_t)resistanceSlew.lastCommanded();
+                    if (delta != 0) {
+                        emit debug(QStringLiteral("Manual resistance change detected (handlebar shifter), delta: ") +
+                                   QString::number(delta) + QStringLiteral(" - treating as gear change"));
+                        if (delta > 0) {
+                            for (int32_t i = 0; i < delta; ++i) gearUp();
+                        } else {
+                            for (int32_t i = 0; i < -delta; ++i) gearDown();
+                        }
+                    }
+                }
+
                 emit resistanceRead(Resistance.value());
                 resistance_received = true;
                 native_resistance_received = true;

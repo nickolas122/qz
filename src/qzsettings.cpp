@@ -739,6 +739,7 @@ const QString QZSettings::garmin_companion = QStringLiteral("garmin_companion");
 const QString QZSettings::iconcept_elliptical = QStringLiteral("iconcept_elliptical");
 const QString QZSettings::gears_gain = QStringLiteral("gears_gain");
 const QString QZSettings::gears_custom_table_enabled = QStringLiteral("gears_custom_table_enabled");
+const QString QZSettings::ftms_bike_manual_resistance_as_gear = QStringLiteral("ftms_bike_manual_resistance_as_gear");
 const QString QZSettings::gears_custom_table = QStringLiteral("gears_custom_table");
 const QString QZSettings::default_gears_custom_table = QStringLiteral(
     "1|1\n2|2\n3|3\n4|4\n5|5\n6|6\n7|7\n8|8\n9|9\n10|10\n11|11\n12|12\n"
