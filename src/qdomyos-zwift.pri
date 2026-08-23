@@ -181,6 +181,7 @@ keepawakehelper.cpp \
 main.cpp \
 metric.cpp \
 qznotify.cpp \
+qzpaths.cpp \
 qzsettings.cpp \
 devices/rower.cpp \
 screencapture.cpp \
@@ -318,6 +319,7 @@ metric.h \
 qdebugfixup.h \
 qmdnsengine_export.h \
 qznotify.h \
+qzpaths.h \
 qzsettings.h \
 qzforkversion.h \
 devices/rower.h \

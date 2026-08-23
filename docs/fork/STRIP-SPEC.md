@@ -1136,6 +1136,32 @@ Outstanding new-UI tweaks are not blockers and are not tracked here; they are in
 [TODO.md](TODO.md), including the display-cutout entry from 2026-08-23, which is an
 upstream layout fault the new tree inherits rather than a strip regression.
 
+**Zwift session 2026-08-23, on the simulated bike.** Not H4, and recorded separately so
+the two are not confused later. H4 is a *ride* — hardware, §11.7 — and this had no
+trainer in it: QZ ran `-simulated-bike` against `steady.ride`, so every number Zwift saw
+was scripted.
+
+What it does establish, which is not nothing and is the half that had never been seen
+together before:
+
+- Zwift on Windows discovers QZ **with the new tree loaded** and completes the DIRCON
+  handshake — FTMS `0x1826`, Cycling Power `0x1818` and CSC `0x1816` all enumerated,
+  `0x2ACC` answering `01010a020401` rather than the zero mask of §3.3's fourth bug.
+- Numbers reach Zwift and the rider confirmed readings.
+- The new UI survives a full session: one QML message in the whole log, a Qt 6
+  deprecation notice about `Qt.labs.settings` in `SettingsScreen.qml`, and no warning
+  from any other file.
+- §3.2.1 held exactly as written. The BLE peripheral attempt logged
+  `QLowEnergyControllerPrivateWinRT ... Unimplemented code` and carried on; the peripheral
+  role stayed inert on Windows and DIRCON served the session alone.
+
+What it does **not** establish, and what H4 still owes: gear shifting through the new
+tree's `GearButton` under load, the ERG toggle, readability from the bars, and every
+question that needs a trainer on the other end — whether resistance is actually applied,
+whether the gear table tracks. A `mode power` scenario reports its scripted watts whatever
+resistance is asked for, so a Zwift ERG target moves nothing and the sim cannot answer
+those by construction.
+
 **Phase 7c — delete the old UI**
 *Criteria:* `homeform.cpp`, the tile system, `settings.qml`'s 88 sections and the
 `ui_next` flag all gone; no QML references a deleted component.
@@ -1149,9 +1175,67 @@ is now two commits with the ride between them:
 
 - **7c-1, decouple.** Nothing is deleted. Everything in the kept tree that reaches into
   `homeform` stops doing so, and the old UI keeps working throughout. *Landed 2026-08-23.*
-- **7c-2, delete.** The old tree, the tile system, `homeform.{h,cpp}` and the flag.
-  **Gated on H4** — the "Use the old UI" switch is what makes an unridden Zwift survivable,
-  and this commit removes it.
+- **7c-2a, the last decoupling.** *Landed 2026-08-23.* Four prerequisites, not the three
+  7c-1 predicted — see below. Still nothing deleted.
+- **7c-2b, delete.** The old tree, the tile system, `homeform.{h,cpp}` and the flag.
+
+*The H4 gate was lifted 2026-08-23, by the rider, on the simulated-bike Zwift session
+above rather than on a ride.* Recorded as a decision and not as evidence: the reasoning
+was that DIRCON discovery, the handshake and live readings all working end to end make a
+trainer-side failure unlikely, and a Zwift trial is not worth starting for the remainder.
+What that leaves unproven is listed under phase 7b and does not shrink because the gate
+moved.
+
+*7c-2a, landed 2026-08-23.* 7c-1 left three things for this phase. Measuring found a
+fourth, and it was the serious one:
+
+**The QZWS socket was built by the class being deleted.** §6 keeps that socket — it is
+the only way a PC reads the ride, and both `tools/qz-rouvy-rtss` and
+`tools/xbox-mywhoosh-gears` speak to it — but `TemplateInfoSenderBuilder::getInstance()`
+was called from the `homeform` constructor, `start(b)` from a homeform slot and `stop()`
+from another. Deleting homeform would have taken a kept component with it, silently: the
+socket would simply never open, and the failure would look like a network problem.
+
+It is built in `main.cpp` now, driven off the same two `bluetooth` signals homeform's
+slots rode on. `getInstance()` is keyed on the id and idempotent, so homeform's own call
+returns the same pointer and the old UI is unaffected until it goes.
+
+The **control half** moved with it, and only partly. `gears_Plus`, `gears_Minus` and
+`autoResistance` route to `RideState`; homeform's connections to those three were removed
+in the same commit rather than left, because two receivers on one command means a single
+`gears_plus` shifts two gears. `lap`, `Start`/`Pause`/`Stop`, the peloton offsets and the
+treadmill `speed_*`/`inclination_*` pairs are not re-routed: they name recording and
+machines this fork no longer has. Parsed and dropped is the right answer for a concept
+that no longer exists — which is not the silent failure §7 Group D found, where the
+concept was alive and the wire was not.
+
+The other three:
+
+- **`QzPaths`.** Seven statics on homeform answered "where does this platform let QZ
+  write" and "read a saved profile back into QSettings", and `main.cpp` calls three of
+  them from argument parsing, before any UI exists. They are now `src/qzpaths.{h,cpp}`,
+  moved verbatim by line range rather than retyped. homeform keeps one-line forwarders,
+  because it calls `getWritableAppDir` 22 times internally and has to compile until 7c-2b.
+  Two things did not travel: `getAndroidDataAppDir` lived inside an `#if defined(Q_OS_ANDROID)`
+  and needed that guard moved inside the function, since its declaration is unconditional;
+  and `loadSettings` ended by emitting `userProfileChanged` on the UI, which stayed behind
+  in the forwarder so `QzPaths` has no UI in it at all.
+- **`uiLoaded`** is set from `main.cpp` immediately after `engine.load()`. homeform still
+  sets it too; whichever runs first wins and the second is a no-op.
+- **`RideState` gained `autoResistance` and `toggleAutoResistance()`** — 18 members, still
+  under the 20 the contract test allows. The property is exposed rather than just the
+  invokable because the flag can be cleared from outside the UI entirely: the QZWS command
+  carries it, and `ftmsbike` clears it outright for ICSE consoles. A rider whose trainer
+  has quietly stopped responding needs somewhere to see why. **Nothing displays it yet** —
+  that is a UI tweak, not a contract question.
+
+*Verified:* mingw debug build clean; suite 189 passed, 12 skipped, unchanged, with the
+contract test 9/9 against the two new members. And the socket was tested rather than
+assumed — `tools/qzws_smoke.py` run against a `-simulated-bike` process, **all checks
+passed**: the broadcast arrives carrying `gears`, `resistance` and `autoresistance`,
+`getsettings` answers, and `gears_plus`/`gears_minus` moved the gear 7 → 8 → 7 through
+`RideState` rather than through homeform. That last line is the whole of 7c-2a in one
+assertion.
 
 *7c-1, landed 2026-08-23.* 7a called the QZWS broadcast "the real prerequisite hiding in
 7c". Measuring it found four couplings, not one, and three were smaller than feared:

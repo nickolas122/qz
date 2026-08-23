@@ -51,11 +51,12 @@ const QSet<QString> kProperties = {
     QStringLiteral("gear"), QStringLiteral("resistance"), QStringLiteral("power"),
     QStringLiteral("cadence"), QStringLiteral("speed"), QStringLiteral("heartRate"),
     QStringLiteral("ergMode"),
+    QStringLiteral("autoResistance"),
 };
 
 const QSet<QString> kInvokables = {
     QStringLiteral("gearUp"), QStringLiteral("gearDown"), QStringLiteral("setGear"),
-    QStringLiteral("toggleErg"),
+    QStringLiteral("toggleErg"), QStringLiteral("toggleAutoResistance"),
 };
 
 class RideStateContractTest : public ::testing::Test {

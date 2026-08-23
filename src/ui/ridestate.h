@@ -36,6 +36,15 @@ class RideState : public QObject {
     Q_PROPERTY(double speed READ speed NOTIFY changed)
     Q_PROPERTY(double heartRate READ heartRate NOTIFY changed)
     Q_PROPERTY(bool ergMode READ ergMode NOTIFY changed)
+    /**
+     * @brief Whether QZ is applying the training app's resistance requests.
+     *
+     * Exposed rather than left to the invokable alone because it can be switched off
+     * from outside the UI entirely - the QZWS socket carries the toggle, and ftmsbike
+     * clears it outright for some consoles. A rider whose trainer has quietly stopped
+     * responding needs somewhere to see why.
+     */
+    Q_PROPERTY(bool autoResistance READ autoResistance NOTIFY changed)
 
   public:
     explicit RideState(bluetooth *bl, QObject *parent = nullptr);
@@ -63,11 +72,15 @@ class RideState : public QObject {
     double speed() const;
     double heartRate() const;
     bool ergMode() const;
+    bool autoResistance() const;
 
     Q_INVOKABLE void gearUp();
     Q_INVOKABLE void gearDown();
     Q_INVOKABLE void setGear(int gear);
     Q_INVOKABLE void toggleErg();
+
+    /** @brief Also a slot: the QZWS `autoResistance` command lands here. */
+    Q_INVOKABLE void toggleAutoResistance();
 
   signals:
     /**

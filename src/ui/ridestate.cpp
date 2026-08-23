@@ -105,6 +105,22 @@ void RideState::setGear(int gear) {
     }
 }
 
+bool RideState::autoResistance() const {
+    // The device owns this flag, not the UI and not a setting: it is what
+    // bike::changeResistance actually gates on. No device means nothing is being
+    // driven, which reads as off.
+    if (bluetoothManager && bluetoothManager->device())
+        return bluetoothManager->device()->autoResistance();
+    return false;
+}
+
+void RideState::toggleAutoResistance() {
+    if (bluetoothdevice *d = (bluetoothManager ? bluetoothManager->device() : nullptr)) {
+        d->setAutoResistance(!d->autoResistance());
+        emit changed();
+    }
+}
+
 void RideState::toggleErg() {
     QSettings settings;
     settings.setValue(QZSettings::zwift_erg,

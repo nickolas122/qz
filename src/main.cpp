@@ -20,6 +20,8 @@
 #endif
 #include "homeform.h"
 #include "qznotify.h"
+#include "qzpaths.h"
+#include "templateinfosenderbuilder.h"
 #include <QDir>
 #include <QGuiApplication>
 #include <QOperatingSystemVersion>
@@ -333,10 +335,10 @@ QCoreApplication *createApplication(int &argc, char *argv[]) {
         }
         if (!qstrcmp(argv[i], "-profile")) {
             QString profileName = argv[++i];
-            if (QFile::exists(homeform::getProfileDir() + "/" + profileName + ".qzs")) {
-                profileToLoad = QUrl::fromLocalFile(homeform::getProfileDir() + "/" + profileName + ".qzs");
+            if (QFile::exists(QzPaths::getProfileDir() + "/" + profileName + ".qzs")) {
+                profileToLoad = QUrl::fromLocalFile(QzPaths::getProfileDir() + "/" + profileName + ".qzs");
             } else {
-                qDebug() << homeform::getProfileDir() + "/" + profileName << "not found!";
+                qDebug() << QzPaths::getProfileDir() + "/" + profileName << "not found!";
             }
         }
         if (!qstrcmp(argv[i], "-power-sensor-name")) {
@@ -436,7 +438,7 @@ void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QS
 
     if (logs == true || logdebug == true) {
 
-        QString path = homeform::getWritableAppDir();
+        QString path = QzPaths::getWritableAppDir();
 
         // Ensure thread is initialized
         initializeLogThread();
@@ -506,7 +508,7 @@ int main(int argc, char *argv[]) {
     lockscreen::nslog(QString("quick_action profile " + profileName).toLatin1());
 #endif
 #else
-    QAndroidJniObject javaPath = QAndroidJniObject::fromString(homeform::getWritableAppDir());
+    QAndroidJniObject javaPath = QAndroidJniObject::fromString(QzPaths::getWritableAppDir());
     QAndroidJniObject r = QAndroidJniObject::callStaticObjectMethod("org/cagnulen/qdomyoszwift/Shortcuts", "getProfileExtras",
                                                 "(Landroid/content/Context;)Ljava/lang/String;", QtAndroid::androidContext().object());
     profileName = r.toString();
@@ -516,16 +518,16 @@ int main(int argc, char *argv[]) {
     profileName = pp.baseName();
     
     if(profileName.count()) {
-        if (QFile::exists(homeform::getProfileDir() + "/" + profileName + ".qzs")) {
-            profileToLoad = QUrl::fromLocalFile(homeform::getProfileDir() + "/" + profileName + ".qzs");
+        if (QFile::exists(QzPaths::getProfileDir() + "/" + profileName + ".qzs")) {
+            profileToLoad = QUrl::fromLocalFile(QzPaths::getProfileDir() + "/" + profileName + ".qzs");
         } else {
-            qDebug() << homeform::getProfileDir() + "/" + profileName << "not found!";
+            qDebug() << QzPaths::getProfileDir() + "/" + profileName << "not found!";
         }
     }
 #endif
 
     if (!profileToLoad.isEmpty()) {
-        homeform::loadSettings(profileToLoad);
+        QzPaths::loadSettings(profileToLoad);
     }
 
 #if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
@@ -811,7 +813,39 @@ int main(int argc, char *argv[]) {
         // survives group F.
         engine.rootContext()->setContextProperty("qzNotify", QzNotify::singleton());
 
+        // The QZWS WebSocket: the only way a PC reads this ride, and what
+        // tools/qz-rouvy-rtss and tools/xbox-mywhoosh-gears both talk to. Section 6
+        // keeps it, but homeform built it in its constructor and started it from its
+        // own slot - a kept component living inside the class 7c deletes. It is built
+        // here now. getInstance() is keyed on the id, so homeform's own call returns
+        // this same object for as long as homeform still exists.
+        const QString qzTemplatePath = QzPaths::getWritableAppDir() + QStringLiteral("QZTemplates");
+        TemplateInfoSenderBuilder *qzws = TemplateInfoSenderBuilder::getInstance(
+            QStringLiteral("user"), QStringList({qzTemplatePath}), app.data());
+        QObject::connect(&bl, &bluetooth::bluetoothDeviceConnected, qzws,
+                         [qzws](bluetoothdevice *b) { qzws->start(b); });
+        QObject::connect(&bl, &bluetooth::bluetoothDeviceDisconnected, qzws,
+                         [qzws]() { qzws->stop(); });
+
+        // The control half. Only the commands that still mean something on a bike are
+        // routed: a shift, and the auto-resistance toggle whose state the broadcast
+        // already reports. Lap, Start/Pause/Stop and the treadmill pair refer to
+        // recording and to machines this fork no longer has, so they are parsed and
+        // dropped - which for a concept that no longer exists is the correct answer,
+        // not the silent failure section 7 group D complained about.
+        QObject::connect(qzws, &TemplateInfoSenderBuilder::gears_Plus, &rideState, &RideState::gearUp);
+        QObject::connect(qzws, &TemplateInfoSenderBuilder::gears_Minus, &rideState, &RideState::gearDown);
+        QObject::connect(qzws, &TemplateInfoSenderBuilder::autoResistance, &rideState,
+                         &RideState::toggleAutoResistance);
+
         engine.load(url);
+
+        // A UI tree exists from here, and RideState is already connected to the
+        // bridge, so discovery may announce to somebody. homeform sets this too, at
+        // the end of its own construction; whichever runs first is correct and the
+        // second is a no-op. This is the one that survives 7c.
+        bl.uiLoaded = true;
+
         homeform *h = new homeform(&engine, &bl);
 
         // Bring the DIRCON endpoint up now rather than when a bike connects. A client
