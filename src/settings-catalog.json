@@ -12353,14 +12353,14 @@
     {
       "key": "ui_next",
       "name": "New UI",
-      "description": "Selects the new UI tree under src/ui/ instead of the old one. Both ship for one release; the default flips once the new UI has ridden with Rouvy and Zwift.",
+      "description": "Selects the new UI tree under src/ui/ instead of the old one. Default since phase 7b; turn it off to fall back to the old tree for the one release both still ship.",
       "parent": "Experimental",
       "type": "bool",
       "qmlType": "bool",
       "control": "switch",
       "visible": true,
-      "defaultValue": false,
-      "defaultExpression": "false",
+      "defaultValue": true,
+      "defaultExpression": "true",
       "options": null
     }
   ]

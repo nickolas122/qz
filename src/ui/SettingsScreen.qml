@@ -26,6 +26,7 @@ Item {
         property bool dircon_yes: true
         property bool virtual_device_bluetooth: true
         property bool rouvy: false
+        property bool ui_next: true
     }
 
     Flickable {
@@ -104,6 +105,15 @@ Item {
 
             SettingsGroup { title: qsTr("Display") }
 
+            // The way back. Section 9.9 promises a bad ride costs a toggle rather than a
+            // rebuild, and since 7b flipped the default this screen is the only place
+            // that toggle is reachable from. It goes in 7c, with the tree it returns to.
+            SettingsSwitch {
+                label: qsTr("Use the old UI")
+                checked: !qzSettings.ui_next
+                onToggled: qzSettings.ui_next = !checked
+            }
+
             Label {
                 Layout.fillWidth: true
                 Layout.bottomMargin: unit
@@ -111,7 +121,7 @@ Item {
                 font.pixelSize: unit * 1.2
                 opacity: 0.7
                 color: Material.foreground
-                text: qsTr("Changes to the connection settings take effect when QZ restarts.")
+                text: qsTr("Changes to the connection settings, and to which UI loads, take effect when QZ restarts.")
             }
         }
     }

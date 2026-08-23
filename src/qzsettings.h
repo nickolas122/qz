@@ -3096,11 +3096,13 @@ class QZSettings {
 
     /**
      *@brief ui_next Selects the new UI tree under src/ui/ instead of main.qml.
-     * Default false: both trees ship for one release, so a bad ride costs a toggle
-     * rather than a rebuild. See STRIP-SPEC.md section 9.9.
+     * Default true since phase 7b: the new tree is the one that rides. The old one
+     * still ships this release, reachable from the new Settings screen, so a bad ride
+     * costs a toggle rather than a rebuild. Both go in 7c.
+     * See STRIP-SPEC.md section 9.9.
      */
     static const QString ui_next;
-    static constexpr bool default_ui_next = false;
+    static constexpr bool default_ui_next = true;
 
     /**
      * @brief Write the QSettings values using the constants from this namespace.

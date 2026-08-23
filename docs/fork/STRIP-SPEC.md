@@ -672,7 +672,7 @@ with Rouvy is still the final word, but it is no longer the only evidence availa
 | 5 | Group E — rival trainers, running sensors, `virtualtreadmill` | low, once cscbike is resolved | **covered** |  ← landed 2026-08-20, H1 passed 2026-08-21
 | 6 | Settings consolidation | medium (§3.6 runtime failures) | **covered** |  ← moved to after 7c, see below
 | 7a | `RideState` object + `ui_next` flag + new tree under `src/ui/` | medium | **none** |  ← landed 2026-08-21
-| 7b | Ride on the new UI with Rouvy and Zwift; flip the default | low, but needs calendar time | **none** |
+| 7b | Ride on the new UI with Rouvy and Zwift; flip the default | low, but needs calendar time | **none** |  ← default flipped 2026-08-23 on H3; H4 still owed, see §11.6
 | 7c | Delete Group F — old tree, tile system, `homeform.cpp`, the flag | high | **none** |
 | 8 | Group G, Pi build revival | medium | partial |
 
@@ -1114,6 +1114,27 @@ than before phase 3. Android is unverified locally — §3.5's wall — and is C
 *Tests:* no automated substitute exists. This is an acceptance test by definition.
 *Hardware:* **yes — H3 and H4.** One ride per app. Gear display and shifting correct,
 connection status accurate, ERG toggle behaves, nothing unreadable from the bars.
+
+*Default flipped 2026-08-23, on H3 alone.* `default_ui_next`, `settings.qml` and the
+catalog entry all now say true, and the new tree is what loads on a fresh install. The
+Rouvy ride passed; **H4 has not been run**, so the criterion above is half met and this
+phase is not closed. The flip is still the right move on half the evidence — it is what
+puts the new tree in front of the next ride rather than behind a toggle nobody
+remembers to set — but that argument only holds while the toggle back exists.
+
+So it was made reachable. §9.9 promises a bad ride costs a settings toggle rather than a
+rebuild, and with the default flipped the *new* Settings screen was the one place that
+promise could still be kept from; the old tree's Experimental page is no use to a rider
+who can no longer get to it. `SettingsScreen.qml` grew a "Use the old UI" switch under
+Display, inverted against `ui_next` so the label reads as the thing it does.
+
+**This is the gate on 7c.** That phase deletes the flag and the tree the switch returns
+to, and at that moment Zwift has no fallback left. H4 runs before the deletion commit
+lands, not before its preparation — the 7c entry below says which half is which.
+
+Outstanding new-UI tweaks are not blockers and are not tracked here; they are in
+[TODO.md](TODO.md), including the display-cutout entry from 2026-08-23, which is an
+upstream layout fault the new tree inherits rather than a strip regression.
 
 **Phase 7c — delete the old UI**
 *Criteria:* `homeform.cpp`, the tile system, `settings.qml`'s 88 sections and the
