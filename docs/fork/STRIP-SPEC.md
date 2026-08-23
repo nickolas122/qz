@@ -1388,6 +1388,16 @@ The other three:
   and needed that guard moved inside the function, since its declaration is unconditional;
   and `loadSettings` ended by emitting `userProfileChanged` on the UI, which stayed behind
   in the forwarder so `QzPaths` has no UI in it at all.
+
+  **And it broke the Android build, which is §3.5's wall doing exactly what it says.**
+  The bodies that moved call two helpers, `clearAndroidJniException` and
+  `fallbackFileNameFromUri`, that were file-static in `homeform.cpp` inside *its* own
+  `Q_OS_ANDROID` block. Seven call sites, seven errors, and none of them reachable by a
+  Windows compiler — so the move looked clean through three local builds, the full
+  suite and `qzws_smoke.py`, and failed on the runner. The helpers now live in
+  `qzpaths.cpp` beside the code that needs them. Worth stating plainly: for anything
+  moved out of a platform-guarded block, a green local build is not evidence, and CI
+  is the only check that exists.
 - **`uiLoaded`** is set from `main.cpp` immediately after `engine.load()`. homeform still
   sets it too; whichever runs first wins and the second is a no-op.
 - **`RideState` gained `autoResistance` and `toggleAutoResistance()`** — 18 members, still

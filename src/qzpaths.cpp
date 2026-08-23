@@ -22,6 +22,46 @@
 #include <jni.h>
 #endif
 
+#ifdef Q_OS_ANDROID
+namespace {
+
+// Both of these were file-static in homeform.cpp, inside its own Q_OS_ANDROID block,
+// and the seven call sites that need them are in the bodies that moved here. Windows
+// never compiled either side of that, which is why the move looked clean locally and
+// broke only on the Android runner.
+
+/** @return true if a JNI call left an exception pending; clears it either way. */
+bool clearAndroidJniException(const char *context) {
+    QAndroidJniEnvironment env;
+    if (!env->ExceptionCheck()) {
+        return false;
+    }
+
+    env->ExceptionDescribe();
+    env->ExceptionClear();
+    qWarning() << "Android JNI exception cleared during" << context;
+    return true;
+}
+
+/** @return a usable file name when the content resolver will not give one up. */
+QString fallbackFileNameFromUri(const QString &uriString) {
+    QUrl url(uriString);
+    QString fileName = url.fileName();
+    if (!fileName.isEmpty()) {
+        return fileName;
+    }
+
+    const QString lastSegment = url.path().section('/', -1);
+    if (!lastSegment.isEmpty()) {
+        return lastSegment;
+    }
+
+    return QStringLiteral("imported_file");
+}
+
+} // namespace
+#endif
+
 QString QzPaths::getWritableAppDir() {
     QString path = QLatin1String("");
 #if defined(Q_OS_ANDROID)
