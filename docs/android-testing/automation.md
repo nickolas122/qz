@@ -161,7 +161,7 @@ $key=$value" /tmp/qz_cfg.conf
 
 # Examples.
 set_qz_setting android_notification true
-set_qz_setting applewatch_fakedevice true
+set_qz_setting simulated_bike true
 ```
 
 ## Verify Real-Time Data
@@ -209,7 +209,7 @@ echo "Configuring QZ..."
 $ADB shell am force-stop org.cagnulen.qdomyoszwift
 $ADB shell "run-as org.cagnulen.qdomyoszwift sh -c '
   mkdir -p \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola\"
-  printf \"[General]\nandroid_notification=true\napplewatch_fakedevice=true\n\" \
+  printf \"[General]\nandroid_notification=true\nsimulated_bike=true\n\" \
     > \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola/qDomyos-Zwift.conf\"
 '"
 

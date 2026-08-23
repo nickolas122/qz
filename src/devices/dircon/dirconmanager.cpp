@@ -6,6 +6,11 @@
 #include <QSettings>
 #include <chrono>
 
+#ifdef Q_OS_ANDROID
+#include <QAndroidJniObject>
+#include <QtAndroid>
+#endif
+
 // The one endpoint for the process. A QPointer so that teardown of the application
 // object clears it instead of leaving a dangling pointer behind.
 static QPointer<DirconManager> sharedDirconManager;
@@ -48,7 +53,9 @@ using namespace std::chrono_literals;
 #define DM_BT(A) QByteArrayLiteral(A)
 
 #define DM_CHAR_OP(OP, P1, P2, P3, ZWIFT_ENABLED)                                                                     \
-    OP(FITNESS_MACHINE_CYCLE, 0x2ACC, DPKT_CHAR_PROP_FLAG_READ, DM_BT("\x83\x14\x00\x00\x0C\xE0\x00\x00"),             \
+    /* 0x5483 adds bit 14, power measurement. 0x2AD2 always carried power (flags bit 6); \
+       clients that trust this field - MyWhoosh does, Rouvy does not - saw 0 W. */       \
+    OP(FITNESS_MACHINE_CYCLE, 0x2ACC, DPKT_CHAR_PROP_FLAG_READ, DM_BT("\x83\x54\x00\x00\x0C\xE0\x00\x00"),             \
        DP_PROCESS_WRITE_NULL, P1, P2, P3)                                                                              \
     OP(FITNESS_MACHINE_CYCLE, 0x2AD6, DPKT_CHAR_PROP_FLAG_READ, DM_BT("\x0A\x00\x96\x00\x0A\x00"),                     \
        DP_PROCESS_WRITE_NULL, P1, P2, P3)                                                                              \
@@ -257,6 +264,28 @@ DirconManager::DirconManager(bluetoothdevice *Bike, int8_t bikeResistanceOffset,
     if (bt) {
         bikeTimer.start(bikeTimerInterval);
     }
+
+#ifdef Q_OS_ANDROID
+    // The mDNS half of DIRCON cannot receive anything without this. Android filters
+    // incoming multicast at the Wi-Fi driver, so the socket joined to 224.0.0.251 hears
+    // nothing and QZ answers a query it was never given - which is what "Rouvy cannot
+    // find it" looks like from the inside: announcements going out, no queries coming in,
+    // no error anywhere. Taken here rather than at launch because it costs battery and
+    // only matters while there is an endpoint to discover.
+    const bool multicastLockHeld = QAndroidJniObject::callStaticMethod<jboolean>(
+        "org/cagnulen/qdomyoszwift/MulticastLockHelper", "acquire", "(Landroid/content/Context;)Z",
+        QtAndroid::androidContext().object());
+    qDebug() << "Dircon multicast lock" << (multicastLockHeld ? "held" : "NOT held - discovery will fail");
+#endif
+}
+
+DirconManager::~DirconManager() {
+#ifdef Q_OS_ANDROID
+    // Symmetric with the constructor: the filtering goes back on when there is nothing
+    // left to discover, so a QZ sitting idle is not paying for multicast reception.
+    QAndroidJniObject::callStaticMethod<void>("org/cagnulen/qdomyoszwift/MulticastLockHelper",
+                                             "release", "()V");
+#endif
 }
 
 #define DM_CHAR_NOTIF_SETDEVICE_OP(UUID, P1, P2, P3)                                                                   \

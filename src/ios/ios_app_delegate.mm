@@ -5,9 +5,7 @@
 #import <objc/runtime.h>
 #include <QDebug>
 #include <QMetaObject>
-#include "homeform.h"
 #include "lockscreen.h"
-#include "authutils.h"
 
 // Qt defines QIOSApplicationDelegate internally as a UIResponder-backed
 // UIApplicationDelegate.  Keep the local declaration aligned with that shape
@@ -51,9 +49,10 @@
 
                 const QString sequence =
                     QString::fromUtf8(key.charactersIgnoringModifiers.UTF8String).trimmed().toUpper();
-                if (homeform::singleton() && homeform::singleton()->handleKeyboardShortcut(sequence)) {
-                    didHandleShortcut = true;
-                }
+                // handleKeyboardShortcut lived on the deleted UI class, and the shortcut system
+                // it dispatched into is group F. Nothing claims the key now, so it falls through
+                // to the OS. See swiftDebug.mm for why nothing replaces it.
+                Q_UNUSED(sequence)
             }
         }
     }
@@ -106,9 +105,10 @@
 
             const QString sequence =
                 QString::fromUtf8(key.charactersIgnoringModifiers.UTF8String).trimmed().toUpper();
-            if (homeform::singleton() && homeform::singleton()->handleKeyboardShortcut(sequence)) {
-                didHandleShortcut = true;
-            }
+            // handleKeyboardShortcut lived on the deleted UI class, and the shortcut system
+            // it dispatched into is group F. Nothing claims the key now, so it falls through
+            // to the OS. See swiftDebug.mm for why nothing replaces it.
+            Q_UNUSED(sequence)
         }
     }
 
@@ -169,37 +169,5 @@ performFetchWithCompletionHandler:(void (^)(UIBackgroundFetchResult result))comp
 {
 }
 
-- (BOOL)application:(UIApplication *)application
- continueUserActivity:(NSUserActivity *)userActivity
-   restorationHandler:(void (^)(NSArray * _Nullable))restorationHandler
-{
-    Q_UNUSED(application)
-    Q_UNUSED(restorationHandler)
-
-    qDebug() << "QZ iOS continueUserActivity called: activityType="
-             << QString::fromUtf8(userActivity.activityType.UTF8String);
-
-    if ([userActivity.activityType isEqualToString:NSUserActivityTypeBrowsingWeb]) {
-        NSURL *url = userActivity.webpageURL;
-        qDebug() << "QZ iOS continueUserActivity webpageURL="
-                 << (url ? sanitizedOAuthCallbackUrl(QString::fromUtf8(url.absoluteString.UTF8String))
-                         : QStringLiteral("(null)"));
-        if (url != nil && homeform::singleton()) {
-            const QString callbackUrl = QString::fromUtf8(url.absoluteString.UTF8String);
-            const QUrl qUrl(callbackUrl);
-            if (qUrl.isValid() && qUrl.host() == QStringLiteral("www.qzfitness.com") &&
-                qUrl.path().startsWith(QStringLiteral("/peloton/callback"))) {
-                qDebug() << "QZ iOS continueUserActivity matched Peloton callback";
-                QMetaObject::invokeMethod(homeform::singleton(), "handleOAuthCallbackUrl", Qt::QueuedConnection,
-                                          Q_ARG(QString, callbackUrl));
-                return YES;
-            }
-            qDebug() << "QZ iOS continueUserActivity ignored URL";
-        }
-    }
-
-    qDebug() << "QZ iOS continueUserActivity returning NO";
-    return NO;
-}
 @end
 #endif

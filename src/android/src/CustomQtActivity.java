@@ -25,35 +25,12 @@ public class CustomQtActivity extends QtActivity {
     private static native void onInsetsChanged(int top, int bottom, int left, int right,
                                                int waterfallTop, int waterfallBottom,
                                                int waterfallLeft, int waterfallRight);
-    private static native void nativeOnOAuthCallback(String callbackUrl);
     private static native void nativeOnDocumentPicked(int requestCode, int resultCode, String localPath);
-
-    private void dispatchOAuthCallback(Intent intent) {
-        if (intent == null) {
-            return;
-        }
-
-        Uri data = intent.getData();
-        if (data == null) {
-            return;
-        }
-
-        String url = data.toString();
-        if (url.startsWith("https://www.qzfitness.com/peloton/callback")) {
-            Log.d(TAG, "dispatchOAuthCallback: https://www.qzfitness.com/peloton/callback?code=XXXX&state=XXXX");
-            try {
-                nativeOnOAuthCallback(url);
-            } catch (UnsatisfiedLinkError e) {
-                Log.w(TAG, "Qt not ready yet for OAuth callback, ignoring: " + e.getMessage());
-            }
-        }
-    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "onCreate: CustomQtActivity initialized");
-        dispatchOAuthCallback(getIntent());
         AgeSignalsHelper.requestAgeSignals(this);
         HealthConnectHelper.initialize(this);
 
@@ -153,7 +130,6 @@ public class CustomQtActivity extends QtActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        dispatchOAuthCallback(intent);
     }
 
     @Override

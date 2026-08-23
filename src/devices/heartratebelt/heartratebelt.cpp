@@ -1,7 +1,7 @@
 #include "heartratebelt.h"
 
 #include "qtbluetoothcompat.h"
-#include "homeform.h"
+#include "qznotify.h"
 #include <QBluetoothLocalDevice>
 #include <QDateTime>
 #include <QEventLoop>
@@ -82,8 +82,7 @@ void heartratebelt::characteristicChanged(const QLowEnergyCharacteristic &charac
         if(newValue.length() > 0) {
             uint8_t battery = (uint8_t)newValue.at(0);
             if(battery != battery_level) {
-                if(homeform::singleton())
-                    homeform::singleton()->setToastRequested(bluetoothDevice.name() + QStringLiteral(" Battery Level ") + QString::number(battery) + " %");
+                QzNotify::toast(bluetoothDevice.name() + QStringLiteral(" Battery Level ") + QString::number(battery) + " %");
             }
             battery_level = battery;
             qDebug() << QStringLiteral("battery: ") << battery;
@@ -252,8 +251,7 @@ void heartratebelt::deviceDiscovered(const QBluetoothDeviceInfo &device) {
     emit debug(QStringLiteral("Found new device: ") + device.name() + QStringLiteral(" (") +
                device.address().toString() + ')');
 
-    if(homeform::singleton())
-        homeform::singleton()->setToastRequested(device.name() + QStringLiteral(" connected!"));
+    QzNotify::toast(device.name() + QStringLiteral(" connected!"));
 
     // if(device.name().startsWith(heartRateBeltName))
     {

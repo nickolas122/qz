@@ -1,4 +1,4 @@
-#include "homeform.h"
+#include "qznotify.h"
 
 #include "qtbluetoothcompat.h"
 #include "wahookickrheadwind.h"
@@ -323,8 +323,7 @@ void wahookickrheadwind::deviceDiscovered(const QBluetoothDeviceInfo &device) {
     emit debug(QStringLiteral("Found new device: ") + device.name() + QStringLiteral(" (") +
                device.address().toString() + ')');
 
-    if(homeform::singleton())
-        homeform::singleton()->setToastRequested(device.name() + QStringLiteral(" connected!"));
+    QzNotify::toast(device.name() + QStringLiteral(" connected!"));
 
     {
         bluetoothDevice = device;

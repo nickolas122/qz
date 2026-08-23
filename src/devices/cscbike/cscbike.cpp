@@ -15,7 +15,7 @@
 #include <QLowEnergyConnectionParameters>
 #endif
 #include <chrono>
-#include "homeform.h"
+#include "qznotify.h"
 
 using namespace std::chrono_literals;
 
@@ -43,8 +43,8 @@ void cscbike::enableManualResistancePowerAdjustment(resistance_t resistance) {
     Resistance = clampedResistance;
     emit resistanceRead(Resistance.value());
 
-    if (!manualResistancePowerAdjustmentToastShown && homeform::singleton()) {
-        homeform::singleton()->setToastRequested(
+    if (!manualResistancePowerAdjustmentToastShown) {
+        QzNotify::toast(
             jorotoBike
                 ? QStringLiteral(
                       "Manual resistance power adjustment enabled: power now scales with the Resistance tile value.")
@@ -288,8 +288,7 @@ void cscbike::characteristicChanged(const QLowEnergyCharacteristic &characterist
     if (characteristic.uuid() == QBluetoothUuid((quint16)0x2A19)) {
         battery = newValue.at(0);
         if(battery != battery_level)
-            if(homeform::singleton())
-                homeform::singleton()->setToastRequested(bluetoothDevice.name() + QStringLiteral(" Battery Level ") + QString::number(battery) + " %");
+            QzNotify::toast(bluetoothDevice.name() + QStringLiteral(" Battery Level ") + QString::number(battery) + " %");
         battery_level = battery;
         qDebug() << QStringLiteral("battery: ") << battery;
         return;

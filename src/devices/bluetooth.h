@@ -41,14 +41,12 @@
 
 #include "devices/ftmsbike/ftmsbike.h"
 #include "devices/heartratebelt/heartratebelt.h"
-#include "devices/moxy5sensor/moxy5sensor.h"
 #include "signalhandler.h"
-#include "devices/smartspin2k/smartspin2k.h"
+#include "devices/simulatedbike/simulatedbike.h"
 // Kept for the generic BLE power meter: a bike paired with a separate power
 // sensor gets a stagesbike as the sensor, not as the bike. See the
 // power_sensor_name branch in bluetooth::connectedAndDiscovered().
 #include "devices/stagesbike/stagesbike.h"
-#include "devices/strydrunpowersensor/strydrunpowersensor.h"
 
 
 #include "devices/sramAXSController/sramAXSController.h"
@@ -83,25 +81,25 @@ class bluetooth : public QObject, public SignalHandler {
     bluetoothdevice *heartRateDevice() { return heartRateBelt; }
     QList<QBluetoothDeviceInfo> devices;
     bool onlyDiscover = false;
-    volatile bool homeformLoaded = false;
+    // Set once a UI tree has loaded and connected to deviceConnected. Device
+    // discovery is deferred until then, because a device found before anything is
+    // listening emits into the void. Named for homeform until phase 7c; either tree
+    // sets it now.
+    volatile bool uiLoaded = false;
 
   private:
     bool useDiscovery = false;
     QFile *debugCommsLog = nullptr;
     QBluetoothDeviceDiscoveryAgent *discoveryAgent = nullptr;
     coresensor* coreSensor = nullptr;
-    moxy5sensor *moxy5Sensor = nullptr;
     cscbike *cscBike = nullptr;
     ftmsbike *ftmsBike = nullptr;
+    // The bike that is not there. Built in the constructor when simulated_bike is set, in
+    // place of discovery rather than as a result of it - see the note there.
+    simulatedbike *simulatedBike = nullptr;
     heartratebelt *heartRateBelt = nullptr;
-    smartspin2k *ftmsAccessory = nullptr;
     cscbike *cadenceSensor = nullptr;
-    // power_sensor_as_bike: the power meter drives the session on its own, the
-    // mirror image of powerTreadmill below.
-    stagesbike *powerBike = nullptr;
     stagesbike *powerSensor = nullptr;
-    strydrunpowersensor *powerSensorRun = nullptr;
-    strydrunpowersensor *powerTreadmill = nullptr;
     eliterizer *eliteRizer = nullptr;
     elitesterzosmart *eliteSterzoSmart = nullptr;
     QList<fitmetria_fanfit *> fitmetriaFanfit;
@@ -141,7 +139,6 @@ class bluetooth : public QObject, public SignalHandler {
     void stateFileUpdate();
     void stateFileRead();
     bool heartRateBeltAvaiable();
-    bool ftmsAccessoryAvaiable();
     bool cscSensorAvaiable();
     bool powerSensorAvaiable();
     bool eliteRizerAvaiable();
@@ -180,7 +177,6 @@ class bluetooth : public QObject, public SignalHandler {
     void deviceConnected(QBluetoothDeviceInfo b);
     void deviceFound(QString name);
     void searchingStop();
-    void ftmsAccessoryConnected(smartspin2k *d);
 
     void bluetoothDeviceConnected(bluetoothdevice *b);
     void bluetoothDeviceDisconnected();

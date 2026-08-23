@@ -131,17 +131,13 @@ void treadmill::update_metrics(bool watt_calc, const double watts, const bool fr
     QDateTime current = QDateTime::currentDateTime();
     double deltaTime = (((double)_lastTimeUpdate.msecsTo(current)) / ((double)1000.0));
     QSettings settings;
-    bool power_as_treadmill =
-        settings.value(QZSettings::power_sensor_as_treadmill, QZSettings::default_power_sensor_as_treadmill).toBool();
-
     simulateInclinationWithSpeed();
     if(!from_accessory)
         followPowerBySpeed();
 
     if (settings.value(QZSettings::power_sensor_name, QZSettings::default_power_sensor_name)
                 .toString()
-                .startsWith(QStringLiteral("Disabled")) == false &&
-        !power_as_treadmill)
+                .startsWith(QStringLiteral("Disabled")) == false)
         watt_calc = false;
 
     if (!_firstUpdate && !paused) {

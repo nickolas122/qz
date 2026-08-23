@@ -18,14 +18,16 @@
 #ifdef Q_OS_WIN
 #include "gamepadcontroller.h"
 #endif
-#include "homeform.h"
-#include "mainwindow.h"
-#include "qfit.h"
-#include "virtualdevices/virtualtreadmill.h"
+#include "qznotify.h"
+#include "qzpaths.h"
+// Reached through homeform.h until 7c-2b deleted it. The dark-palette block below has
+// always needed these.
+#include <QColor>
+#include <QPalette>
+#include <QThread>
+#include "templateinfosenderbuilder.h"
 #include <QDir>
 #include <QGuiApplication>
-#include <QFileOpenEvent>
-#include <QEvent>
 #include <QOperatingSystemVersion>
 #include <QQmlApplicationEngine>
 #include <QSettings>
@@ -42,7 +44,6 @@
 #define QZ_GIT_SHA "unknown"
 #endif
 
-#include "mqttpublisher.h"
 #include "androidstatusbar.h"
 #include "fontmanager.h"
 #include "filesearcher.h"
@@ -60,57 +61,16 @@
 #include "ios/lockscreen.h"
 #endif
 
-#include "osc.h"
 
+#include "ui/ridestate.h"
 #include "handleurl.h"
 #include "mywhooshlink.h"
-#include "authutils.h"
-
-class OAuthCallbackEventFilter : public QObject {
-  public:
-    bool eventFilter(QObject *watched, QEvent *event) override {
-#ifdef Q_OS_IOS
-        Q_UNUSED(watched)
-        if (event->type() == QEvent::FileOpen) {
-            auto *fileEvent = static_cast<QFileOpenEvent *>(event);
-            const QUrl url = fileEvent->url();
-            qDebug() << "QZ iOS FileOpen event received" << sanitizedOAuthCallbackUrl(url);
-            if (url.isValid() && url.host() == QStringLiteral("www.qzfitness.com") &&
-                url.path().startsWith(QStringLiteral("/peloton/callback")) && homeform::singleton()) {
-                qDebug() << "QZ iOS FileOpen matched Peloton callback";
-                QMetaObject::invokeMethod(homeform::singleton(), "handleOAuthCallbackUrl", Qt::QueuedConnection,
-                                          Q_ARG(QString, url.toString()));
-            } else {
-                qDebug() << "QZ iOS FileOpen ignored";
-            }
-        }
-#else
-        Q_UNUSED(watched)
-        Q_UNUSED(event)
-#endif
-        return false;
-    }
-};
 
 bool logs = true;
 bool noWriteResistance = false;
 bool noHeartService = true;
 bool noConsole = false;
 bool onlyVirtualBike = false;
-bool onlyVirtualTreadmill = false;
-bool testPeloton = false;
-bool testHomeFitnessBudy = false;
-bool testPowerZonePack = false;
-QString peloton_username = "";
-QString peloton_password = "";
-QString pzp_username = "";
-QString pzp_password = "";
-bool fit_file_saved_on_quit = false;
-QString mqtt_host = "";
-int mqtt_port = -1;
-QString mqtt_username = "";
-QString mqtt_password = "";
-QString mqtt_deviceid = "";
 bool testResistance = false;
 bool forceQml = true;
 bool miles = false;
@@ -132,14 +92,16 @@ bool zwift_click = false;
 bool zwift_play_emulator = false;
 bool virtual_device_bluetooth = true;
 QString eventGearDevice = QStringLiteral("");
-QString trainProgram;
 QString deviceName = QLatin1String("");
 uint32_t pollDeviceTime = 200;
 int8_t bikeResistanceOffset = 4;
 double bikeResistanceGain = 1.0;
 QString power_sensor_name = QStringLiteral("Disabled");
-bool power_sensor_as_treadmill = false;
 bool smokeTest = false;
+// The bike that is not there - docs/fork/VIRTUAL-BIKE.md. Flags rather than settings-only so a
+// simulated session can be started from a shortcut without touching a saved profile.
+bool simulatedBike = false;
+QString simulatedBikeRide = QLatin1String("");
 QString logfilename = QStringLiteral("debug-") +
                       QDateTime::currentDateTime()
                           .toString()
@@ -169,6 +131,8 @@ void displayHelp() {
 
     printf("\nDevice configuration:\n");
     printf("  -name <device_name>           Set device name\n");
+    printf("  -simulated-bike               Run against a simulated bike instead of a real one\n");
+    printf("  -ride <file.ride>             Ride scenario for -simulated-bike\n");
     printf("  -poll-device-time <ms>        Set device polling time in milliseconds\n");
     printf("  -no-write-resistance          Disable resistance writing\n");
     printf("  -no-heart-service             Disable heart rate service\n");
@@ -183,10 +147,8 @@ void displayHelp() {
     printf("  -bike-power-sensor            Enable bike power sensor\n");
     printf("  -bike-wheel-revs              Enable bike wheel revolution tracking\n");
     printf("  -power-sensor-name <name>     Set power sensor name\n");
-    printf("  -power-sensor-as-treadmill    Use power sensor as treadmill\n");
 
     printf("\nTreadmill specific options:\n");
-    printf("  -only-virtualtreadmill        Run only virtual treadmill mode\n");
     printf("  -run-cadence-sensor           Enable run cadence sensor\n");
     printf("  -horizon-treadmill-7-8        Enable Horizon 7.8 treadmill support\n");
     printf("  -horizon-treadmill-force-ftms Force FTMS for Horizon treadmill\n");
@@ -205,30 +167,10 @@ void displayHelp() {
     printf("  -zwift_play                   Enable Zwift Play\n");
     printf("  -zwift_click                  Enable Zwift Click\n");
     printf("  -zwift_play_emulator          Enable Zwift Play emulator\n");
-    printf("  -test-peloton                 Enable Peloton test mode\n");
-    printf("  -test-hfb                     Enable Home Fitness Buddy test mode\n");
-    printf("  -test-pzp                     Enable Power Zone Pack test mode\n");
     printf("  -smoke-test                   Run smoke test (verify Qt loads, print SMOKE_OK, exit)\n");
-    printf("  -train <program>              Specify training program\n");
-
-    printf("\nPeloton options:\n");
-    printf("  -peloton-username <username>  Set Peloton username\n");
-    printf("  -peloton-password <password>  Set Peloton password\n");
-
-    printf("\nPower Zone Pack options:\n");
-    printf("  -pzp-username <username>      Set Power Zone Pack username\n");
-    printf("  -pzp-password <password>      Set Power Zone Pack password\n");
-
-    printf("\nMQTT options:\n");
-    printf("  -mqtt-host <hostname>         Set MQTT broker hostname\n");
-    printf("  -mqtt-port <port>             Set MQTT broker port (default: 1883)\n");
-    printf("  -mqtt-username <username>     Set MQTT username\n");
-    printf("  -mqtt-password <password>     Set MQTT password\n");
-    printf("  -mqtt-deviceid <deviceid>     Set MQTT device ID\n");
 
     printf("\nOther options:\n");
     printf("  -test-resistance              Enable resistance testing\n");
-    printf("  -fit-file-saved-on-quit       Save FIT file on application quit\n");
 
     exit(0);
 }
@@ -321,6 +263,12 @@ QCoreApplication *createApplication(int &argc, char *argv[]) {
             noConsole = true;
         if (!qstrcmp(argv[i], "-test-resistance"))
             testResistance = true;
+        if (!qstrcmp(argv[i], "-simulated-bike"))
+            simulatedBike = true;
+        if (!qstrcmp(argv[i], "-ride")) {
+            simulatedBikeRide = argv[++i];
+            simulatedBike = true;
+        }
         if (!qstrcmp(argv[i], "-no-virtual-device-bluetooth"))
             virtual_device_bluetooth = false;
         if (!qstrcmp(argv[i], "-no-log"))
@@ -333,8 +281,6 @@ QCoreApplication *createApplication(int &argc, char *argv[]) {
             noHeartService = false;
         if (!qstrcmp(argv[i], "-only-virtualbike"))
             onlyVirtualBike = true;
-        if (!qstrcmp(argv[i], "-only-virtualtreadmill"))
-            onlyVirtualTreadmill = true;
         if (!qstrcmp(argv[i], "-no-reconnection"))
             bluetooth_no_reconnection = true;
         if (!qstrcmp(argv[i], "-bluetooth_relaxed"))
@@ -367,19 +313,9 @@ QCoreApplication *createApplication(int &argc, char *argv[]) {
             zwift_click = true;
         if (!qstrcmp(argv[i], "-zwift_play_emulator"))
             zwift_play_emulator = true;
-        if (!qstrcmp(argv[i], "-test-peloton"))
-            testPeloton = true;
-        if (!qstrcmp(argv[i], "-test-hfb"))
-            testHomeFitnessBudy = true;
-        if (!qstrcmp(argv[i], "-test-pzp"))
-            testPowerZonePack = true;
         if (!qstrcmp(argv[i], "-smoke-test")) {
             smokeTest = true;
             nogui = true;
-        }
-        if (!qstrcmp(argv[i], "-train")) {
-
-            trainProgram = argv[++i];
         }
         if (!qstrcmp(argv[i], "-name")) {
 
@@ -388,22 +324,6 @@ QCoreApplication *createApplication(int &argc, char *argv[]) {
         if (!qstrcmp(argv[i], "-bluetooth-event-gear-device")) {
 
             eventGearDevice = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-peloton-username")) {
-
-            peloton_username = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-peloton-password")) {
-
-            peloton_password = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-pzp-username")) {
-
-            pzp_username = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-pzp-password")) {
-
-            pzp_password = argv[++i];
         }
         if (!qstrcmp(argv[i], "-poll-device-time")) {
 
@@ -417,37 +337,16 @@ QCoreApplication *createApplication(int &argc, char *argv[]) {
 
             bikeResistanceOffset = atoi(argv[++i]);
         }
-        if (!qstrcmp(argv[i], "-fit-file-saved-on-quit")) {
-            fit_file_saved_on_quit = true;
-        }
         if (!qstrcmp(argv[i], "-profile")) {
             QString profileName = argv[++i];
-            if (QFile::exists(homeform::getProfileDir() + "/" + profileName + ".qzs")) {
-                profileToLoad = QUrl::fromLocalFile(homeform::getProfileDir() + "/" + profileName + ".qzs");
+            if (QFile::exists(QzPaths::getProfileDir() + "/" + profileName + ".qzs")) {
+                profileToLoad = QUrl::fromLocalFile(QzPaths::getProfileDir() + "/" + profileName + ".qzs");
             } else {
-                qDebug() << homeform::getProfileDir() + "/" + profileName << "not found!";
+                qDebug() << QzPaths::getProfileDir() + "/" + profileName << "not found!";
             }
         }
         if (!qstrcmp(argv[i], "-power-sensor-name")) {
             power_sensor_name = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-power-sensor-as-treadmill")) {
-            power_sensor_as_treadmill = true;
-        }
-        if (!qstrcmp(argv[i], "-mqtt-host")) {
-            mqtt_host = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-mqtt-port")) {
-            mqtt_port = atoi(argv[++i]);
-        }
-        if (!qstrcmp(argv[i], "-mqtt-username")) {
-            mqtt_username = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-mqtt-password")) {
-            mqtt_password = argv[++i];
-        }
-        if (!qstrcmp(argv[i], "-mqtt-deviceid")) {
-            mqtt_deviceid = argv[++i];
         }
     }
 
@@ -543,7 +442,7 @@ void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QS
 
     if (logs == true || logdebug == true) {
 
-        QString path = homeform::getWritableAppDir();
+        QString path = QzPaths::getWritableAppDir();
 
         // Ensure thread is initialized
         initializeLogThread();
@@ -579,15 +478,13 @@ int main(int argc, char *argv[]) {
     QScopedPointer<QApplication> app(new QApplication(argc, argv));
 #endif
 
-    OAuthCallbackEventFilter oauthCallbackEventFilter;
-    app->installEventFilter(&oauthCallbackEventFilter);
 #ifdef CHARTJS
     QtWebView::initialize();
 #endif
 
 #ifdef Q_OS_LINUX
 #ifndef Q_OS_ANDROID
-    if (getuid() && !testPeloton && !testHomeFitnessBudy && !testPowerZonePack && !smokeTest) {
+    if (getuid() && !smokeTest) {
 
         printf("Runme as root!\n");
         return -1;
@@ -615,7 +512,7 @@ int main(int argc, char *argv[]) {
     lockscreen::nslog(QString("quick_action profile " + profileName).toLatin1());
 #endif
 #else
-    QAndroidJniObject javaPath = QAndroidJniObject::fromString(homeform::getWritableAppDir());
+    QAndroidJniObject javaPath = QAndroidJniObject::fromString(QzPaths::getWritableAppDir());
     QAndroidJniObject r = QAndroidJniObject::callStaticObjectMethod("org/cagnulen/qdomyoszwift/Shortcuts", "getProfileExtras",
                                                 "(Landroid/content/Context;)Ljava/lang/String;", QtAndroid::androidContext().object());
     profileName = r.toString();
@@ -625,25 +522,19 @@ int main(int argc, char *argv[]) {
     profileName = pp.baseName();
     
     if(profileName.count()) {
-        if (QFile::exists(homeform::getProfileDir() + "/" + profileName + ".qzs")) {
-            profileToLoad = QUrl::fromLocalFile(homeform::getProfileDir() + "/" + profileName + ".qzs");
+        if (QFile::exists(QzPaths::getProfileDir() + "/" + profileName + ".qzs")) {
+            profileToLoad = QUrl::fromLocalFile(QzPaths::getProfileDir() + "/" + profileName + ".qzs");
         } else {
-            qDebug() << homeform::getProfileDir() + "/" + profileName << "not found!";
+            qDebug() << QzPaths::getProfileDir() + "/" + profileName << "not found!";
         }
     }
 #endif
 
     if (!profileToLoad.isEmpty()) {
-        homeform::loadSettings(profileToLoad);
+        QzPaths::loadSettings(profileToLoad);
     }
 
 #if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
-
-    if (fit_file_saved_on_quit) {
-        settings.setValue(QZSettings::fit_file_saved_on_quit, true);
-        qDebug() << "fit_file_saved_on_quit"
-                 << settings.value(QZSettings::fit_file_saved_on_quit, QZSettings::default_fit_file_saved_on_quit);
-    }
 
     if (forceQml)
 #endif
@@ -683,22 +574,6 @@ int main(int argc, char *argv[]) {
         settings.setValue(QZSettings::zwift_play_emulator, zwift_play_emulator);
         settings.setValue(QZSettings::virtual_device_bluetooth, virtual_device_bluetooth);
         settings.setValue(QZSettings::power_sensor_name, power_sensor_name);
-        settings.setValue(QZSettings::power_sensor_as_treadmill, power_sensor_as_treadmill);
-        if (mqtt_host.length() > 0) {
-            settings.setValue(QZSettings::mqtt_host, mqtt_host);
-        }
-        if (mqtt_port != -1) {
-            settings.setValue(QZSettings::mqtt_port, mqtt_port);
-        }
-        if (mqtt_username.length() > 0) {
-            settings.setValue(QZSettings::mqtt_username, mqtt_username);
-        }
-        if (mqtt_password.length() > 0) {
-            settings.setValue(QZSettings::mqtt_password, mqtt_password);
-        }
-        if (mqtt_deviceid.length() > 0) {
-            settings.setValue(QZSettings::mqtt_deviceid, mqtt_deviceid);
-        }
     }
 #endif
 
@@ -714,7 +589,6 @@ int main(int argc, char *argv[]) {
     qRegisterMetaType<QList<SessionLine>>("QList<SessionLine>");
     qRegisterMetaType<BLUETOOTH_TYPE>("BLUETOOTH_TYPE");
     qRegisterMetaType<uint32_t>("uint32_t");
-    qRegisterMetaType<FIT_SPORT>("FIT_SPORT");
 
     qInstallMessageHandler(myMessageOutput);
     qDebug() << QStringLiteral("version ") << app->applicationVersion();
@@ -726,7 +600,7 @@ int main(int argc, char *argv[]) {
     qDebug() << QStringLiteral("QZ build") << QStringLiteral(QZ_GIT_SHA) << QStringLiteral("Qt")
              << qVersion() << QStringLiteral("on") << QSysInfo::prettyProductName();
     foreach (QString s, settings.allKeys()) {
-        if (!s.contains(QStringLiteral("password")) && !s.contains("user_email") && !s.contains("username") && !s.contains("token") && !s.contains("garmin_device_serial") && !s.contains("garmin_email")) {
+        if (!s.contains(QStringLiteral("password")) && !s.contains("user_email") && !s.contains("username") && !s.contains("token")) {
 
             qDebug() << s << settings.value(s);
         }
@@ -739,18 +613,6 @@ int main(int argc, char *argv[]) {
     qDebug() << "-";
 #endif
 
-#if 0 // test gpx or fit export
-    QList<SessionLine> l;
-    for(int i =0; i< 500; i++)
-    {
-        QDateTime d = QDateTime::currentDateTime();
-        l.append(SessionLine(i%20,i%10,i,i%300,i%10,i%180,i%6,i%120,i,i, d));
-    }
-    QString path = homeform::getWritableAppDir();
-    qfit::save(path + QDateTime::currentDateTime().toString().replace(":", "_") + ".fit", l, BIKE);
-    return 0;
-#endif
-
 #if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
     if (!forceQml) {
         if (onlyVirtualBike) {
@@ -758,58 +620,6 @@ int main(int argc, char *argv[]) {
                           noHeartService); // FIXED: clang-analyzer-cplusplus.NewDeleteLeaks - potential leak
 
             Q_UNUSED(V)
-            return app->exec();
-        } else if (onlyVirtualTreadmill) {
-            virtualtreadmill V(new treadmill(),
-                               noHeartService); // FIXED: clang-analyzer-cplusplus.NewDeleteLeaks - potential leak
-
-            Q_UNUSED(V)
-            return app->exec();
-        } else if (testPeloton) {
-            settings.setValue(QZSettings::peloton_username, peloton_username);
-            settings.setValue(QZSettings::peloton_password, peloton_password);
-            peloton *p = new peloton(0, 0);
-            p->setTestMode(true);
-            QObject::connect(p, &peloton::loginState, [&](bool ok) {
-                if (ok) {
-                } else {
-                    exit(1);
-                }
-            });
-            QObject::connect(p, &peloton::workoutStarted,
-                             [&](QString workout_name, QString instructor) { app->exit(0); });
-            return app->exec();
-        } else if (testHomeFitnessBudy) {
-            homefitnessbuddy *h = new homefitnessbuddy(0, 0);
-            QObject::connect(h, &homefitnessbuddy::loginState, [&](bool ok) {
-                if (ok) {
-                    h->searchWorkout(QDate(2021, 8, 21), "Matt Wilpers", 2700, "");
-                    QObject::connect(h, &homefitnessbuddy::workoutStarted, [&](QList<trainrow> *list) {
-                        if (list->length() > 0)
-                            app->exit(0);
-                        else
-                            app->exit(2);
-                    });
-                } else {
-                    exit(1);
-                }
-            });
-            return app->exec();
-        } else if (testPowerZonePack) {
-            powerzonepack *h = new powerzonepack(0, 0);
-            QObject::connect(h, &powerzonepack::loginState, [&](bool ok) {
-                if (ok) {
-                    h->searchWorkout("d6a54e1ce634437bb172f61eb1588b27");
-                    QObject::connect(h, &powerzonepack::workoutStarted, [&](QList<trainrow> *list) {
-                        if (list->length() > 0)
-                            app->exit(0);
-                        else
-                            app->exit(2);
-                    });
-                } else {
-                    exit(1);
-                }
-            });
             return app->exec();
         }
     }
@@ -889,22 +699,21 @@ int main(int argc, char *argv[]) {
     virtualbike* V = new virtualbike(new bike(), noWriteResistance, noHeartService);
     Q_UNUSED(V)
     return app->exec();*/
+    // Written here rather than in the non-QML settings block below, because the desktop build
+    // this fork ships *is* the QML one and that block never runs for it. Only ever written when
+    // the flag was actually given: an absent -simulated-bike must not silently turn off a
+    // simulated session the user switched on in the settings.
+    if (simulatedBike) {
+        settings.setValue(QZSettings::simulated_bike, true);
+        if (!simulatedBikeRide.isEmpty())
+            settings.setValue(QZSettings::simulated_bike_ride, simulatedBikeRide);
+    }
+
     bluetooth bl(logs, deviceName, noWriteResistance, noHeartService, pollDeviceTime, noConsole, testResistance,
                  bikeResistanceOffset,
                  bikeResistanceGain); // FIXED: clang-analyzer-cplusplus.NewDeleteLeaks - potential leak
 
-    QString mqtt_host = settings.value(QZSettings::mqtt_host, QZSettings::default_mqtt_host).toString();
-    int mqtt_port = settings.value(QZSettings::mqtt_port, QZSettings::default_mqtt_port).toInt();
-    QString mqtt_username = settings.value(QZSettings::mqtt_username, QZSettings::default_mqtt_username).toString();
-    QString mqtt_password = settings.value(QZSettings::mqtt_password, QZSettings::default_mqtt_password).toString();
-    if(mqtt_host.length() > 0) {
-        new MQTTPublisher(mqtt_host, mqtt_port, mqtt_username, mqtt_password, &bl, &bl);
-    }
 
-    QString OSC_ip = settings.value(QZSettings::OSC_ip, QZSettings::default_OSC_ip).toString();
-    if(OSC_ip.length() > 0) {
-        OSC* osc = new OSC(&bl);
-    }
 
     // MyWhoosh Link integration
     bool mywhoosh_link_enabled = settings.value(QZSettings::mywhoosh_link_enabled, QZSettings::default_mywhoosh_link_enabled).toBool();
@@ -966,7 +775,7 @@ int main(int argc, char *argv[]) {
         }
 
         QQmlApplicationEngine engine;
-        const QUrl url(QStringLiteral("qrc:/main.qml"));
+        const QUrl url(QStringLiteral("qrc:/ui/Main.qml"));
         QObject::connect(
             &engine, &QQmlApplicationEngine::objectCreated, qobject_cast<QGuiApplication *>(app.data()),
             [url](QObject *obj, const QUrl &objUrl) {
@@ -994,8 +803,43 @@ int main(int argc, char *argv[]) {
         FileSearcher fileSearcher;
         engine.rootContext()->setContextProperty("fileSearcher", &fileSearcher);
 
+        // The whole of what the UI is allowed to know about a ride. Section 9.2 caps
+        // this surface at 20 members and TestRideState holds it to the list.
+        RideState rideState(&bl);
+        engine.rootContext()->setContextProperty("rideState", &rideState);
+
+        // Where the bridge posts "battery at 40%", "restart to apply", "another device
+        // has the bike". Drivers emit into QzNotify and ToastArea.qml shows what lands.
+        engine.rootContext()->setContextProperty("qzNotify", QzNotify::singleton());
+
+        // The QZWS WebSocket: the only way a PC reads this ride, and what
+        // tools/qz-rouvy-rtss and tools/xbox-mywhoosh-gears both talk to (section 6).
+        // It was built in homeform's constructor until 7c-2a moved it here, which is
+        // the only reason deleting that class did not take the socket with it.
+        const QString qzTemplatePath = QzPaths::getWritableAppDir() + QStringLiteral("QZTemplates");
+        TemplateInfoSenderBuilder *qzws = TemplateInfoSenderBuilder::getInstance(
+            QStringLiteral("user"), QStringList({qzTemplatePath}), app.data());
+        QObject::connect(&bl, &bluetooth::bluetoothDeviceConnected, qzws,
+                         [qzws](bluetoothdevice *b) { qzws->start(b); });
+        QObject::connect(&bl, &bluetooth::bluetoothDeviceDisconnected, qzws,
+                         [qzws]() { qzws->stop(); });
+
+        // The control half. Only the commands that still mean something on a bike are
+        // routed: a shift, and the auto-resistance toggle whose state the broadcast
+        // already reports. Lap, Start/Pause/Stop and the treadmill pair refer to
+        // recording and to machines this fork no longer has, so they are parsed and
+        // dropped - which for a concept that no longer exists is the correct answer,
+        // not the silent failure section 7 group D complained about.
+        QObject::connect(qzws, &TemplateInfoSenderBuilder::gears_Plus, &rideState, &RideState::gearUp);
+        QObject::connect(qzws, &TemplateInfoSenderBuilder::gears_Minus, &rideState, &RideState::gearDown);
+        QObject::connect(qzws, &TemplateInfoSenderBuilder::autoResistance, &rideState,
+                         &RideState::toggleAutoResistance);
+
         engine.load(url);
-        homeform *h = new homeform(&engine, &bl);
+
+        // A UI tree exists from here and RideState is connected to the bridge, so
+        // discovery may announce to somebody. Until 7c-2b homeform set this too.
+        bl.uiLoaded = true;
 
         // Bring the DIRCON endpoint up now rather than when a bike connects. A client
         // that caches discovery results and does not retry a failed connect will
@@ -1003,21 +847,16 @@ int main(int argc, char *argv[]) {
         DirconManager::startIdleEndpoint();
 
 #ifdef Q_OS_WIN
-        // A gamepad is the only shifter that still works once the training app owns the screen:
-        // QZ's keyboard shortcuts are declared Qt.WindowShortcut, so they need QZ in front. These
-        // are the same three entry points the shortcuts and the on-screen tiles go through, so the
-        // pad shifts exactly what the gear tile shifts.
-        gamepadcontroller *pad = new gamepadcontroller(h);
-        QObject::connect(pad, &gamepadcontroller::gearUp, h,
-                         [h]() { h->keyboardPlus(QStringLiteral("gears")); });
-        QObject::connect(pad, &gamepadcontroller::gearDown, h,
-                         [h]() { h->keyboardMinus(QStringLiteral("gears")); });
-        QObject::connect(pad, &gamepadcontroller::ergToggle, h,
-                         [h]() { h->keyboardLargeButton(QStringLiteral("erg_mode")); });
+        // A gamepad is the only shifter that works once the training app owns the
+        // screen. It used to reach the bike through homeform's keyboard entry points,
+        // which were the same ones the shortcuts and the gear tile used; all three are
+        // gone, and RideState carries the same three actions straight to the device.
+        gamepadcontroller *pad = new gamepadcontroller(&rideState);
+        QObject::connect(pad, &gamepadcontroller::gearUp, &rideState, &RideState::gearUp);
+        QObject::connect(pad, &gamepadcontroller::gearDown, &rideState, &RideState::gearDown);
+        QObject::connect(pad, &gamepadcontroller::ergToggle, &rideState, &RideState::toggleErg);
 #endif
 
-        QObject::connect(app.data(), &QCoreApplication::aboutToQuit, h,
-                         &homeform::aboutToQuit); // NOTE: clazy-unneeded-cast
 
         {
 #ifdef Q_OS_ANDROID
@@ -1040,24 +879,11 @@ int main(int argc, char *argv[]) {
     }
 #if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
     else {
-        bl.homeformLoaded = true;
+        bl.uiLoaded = true;
     }
 #endif
 
 #if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
-    if (qobject_cast<QApplication *>(app.data())) {
-        // start GUI version...
-        MainWindow *W = 0;
-        if (trainProgram.isEmpty()) {
-            W = new MainWindow(&bl);
-        } else {
-            W = new MainWindow(&bl, trainProgram);
-        }
-        W->show();
-    } else {
-        // start non-GUI version...
-    }
-
 #ifdef Q_OS_LINUX
 #ifndef Q_OS_ANDROID
     if(eventGearDevice.length())

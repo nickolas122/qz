@@ -1,0 +1,14 @@
+# steady.ride - 200 W at 90 rpm for two minutes.
+#
+# The baseline every other scenario is a deviation from. Nothing here changes except heart
+# rate, which drifts up the way it does on a fixed effort, so anything that moves in a player
+# running this file is the player's doing and not the ride's.
+
+mode        power
+resistance  12
+
+t=0     watts=200  cadence=90  hr=120
+t=30    watts=200  cadence=90  hr=134
+t=60    watts=200  cadence=90  hr=141
+t=90    watts=200  cadence=90  hr=144
+t=120   watts=200  cadence=90  hr=145

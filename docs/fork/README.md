@@ -7,6 +7,14 @@ wrong — not user documentation. Upstream's docs are in the folder above.
 They are kept because the expensive part of this work was the evidence, and a note that
 says "this was tested and it is not the cause" is worth more later than the fix itself.
 
+## Current work
+
+| | |
+| --- | --- |
+| [TODO.md](TODO.md) | Things worth doing that are not being done yet, with the evidence attached so picking one up does not mean re-deriving why it matters. |
+| [STRIP-SPEC.md](STRIP-SPEC.md) | **Draft.** Reducing QZ to a trainer bridge for Rouvy, Zwift, Kinomap and MyWhoosh: what is deleted, in what order, and the platform constraints that decide the shape. |
+| [VIRTUAL-BIKE.md](VIRTUAL-BIKE.md) | **Draft.** Testing without the trainer in the room: a simulated bike the app runs against, a harness that feeds the real `ftmsbike` byte-exact FTMS frames, and the one scenario format both play. |
+
 ## Windows Bluetooth: the move to WinRT
 
 | | |

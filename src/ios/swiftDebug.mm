@@ -6,7 +6,6 @@
 //
 #import "swiftDebug.h"
 #import "swiftDebugBridge.h"
-#import "homeform.h"
 #import "bike.h"
 #include <QDebug>
 #include <stdarg.h>
@@ -18,12 +17,15 @@
     qDebug() << inputString;
 }
 
+// These reached the bike through the homeform singleton, which 7c-2b deleted. There
+// is no global handle on the bridge any more - RideState owns that and main() owns
+// RideState - and iOS is not a host this fork supports (STRIP-SPEC.md section 2), so
+// no route is invented here for it. Shifting from the watch does nothing until iOS is
+// either brought back as a target or removed outright.
 - (void)gearUp {
-    ((bike*)(homeform::singleton()->bluetoothManager->device()))->gearUp();
 }
 
 - (void)gearDown {
-    ((bike*)(homeform::singleton()->bluetoothManager->device()))->gearDown();
 }
 
 @end

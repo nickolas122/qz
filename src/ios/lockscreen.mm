@@ -21,7 +21,6 @@
 @class virtualbike_ios_swift;
 @class virtualbike_zwift;
 @class virtualrower_zwift;
-@class virtualtreadmill_zwift;
 @class healthkit;
 @class WorkoutTracking;
 
@@ -29,7 +28,6 @@ static healthkit* h = 0;
 static virtualbike_ios_swift* _virtualbike = nil;
 static virtualbike_zwift* _virtualbike_zwift = nil;
 static virtualrower_zwift* _virtualrower = nil;
-static virtualtreadmill_zwift* _virtualtreadmill_zwift = nil;
 static WorkoutTracking* workoutTracking = nil;
 
 static GarminConnect* Garmin = 0;
@@ -302,70 +300,6 @@ void lockscreen::virtualrower_setPM5Mode(bool enabled)
         [_virtualrower setPM5ModeWithEnabled:enabled];
 }
 
-
-// virtual treadmill
-void lockscreen::virtualtreadmill_zwift_ios(bool garmin_bluetooth_compatibility, bool bike_cadence_sensor)
-{
-    _virtualtreadmill_zwift = [[virtualtreadmill_zwift alloc] initWithGarmin_bluetooth_compatibility:garmin_bluetooth_compatibility bike_cadence_sensor:bike_cadence_sensor];
-}
-
-void lockscreen::virtualtreadmill_setHeartRate(unsigned char heartRate)
-{
-    if(_virtualtreadmill_zwift != nil)
-        [_virtualtreadmill_zwift updateHeartRateWithHeartRate:heartRate];
-}
-
-double lockscreen::virtualtreadmill_getCurrentSlope()
-{
-    if(_virtualtreadmill_zwift != nil)
-    {
-        return [_virtualtreadmill_zwift readCurrentSlope];
-    }
-    return 0;
-}
-
-uint64_t lockscreen::virtualtreadmill_lastChangeCurrentSlope()
-{
-    if(_virtualtreadmill_zwift != nil)
-    {
-        return [_virtualtreadmill_zwift lastChangeCurrentSlope];
-    }
-    return 0;
-}
-
-double lockscreen::virtualtreadmill_getPowerRequested()
-{
-    if(_virtualtreadmill_zwift != nil)
-    {
-        return [_virtualtreadmill_zwift readPowerRequested];
-    }
-    return 0;
-}
-
-double lockscreen::virtualtreadmill_getRequestedSpeed()
-{
-    if(_virtualtreadmill_zwift != nil)
-    {
-        return [_virtualtreadmill_zwift readRequestedSpeed];
-    }
-    return 0;
-}
-
-uint64_t lockscreen::virtualtreadmill_lastChangeRequestedSpeed()
-{
-    if(_virtualtreadmill_zwift != nil)
-    {
-        return [_virtualtreadmill_zwift lastChangeRequestedSpeed];
-    }
-    return 0;
-}
-
-bool lockscreen::virtualtreadmill_updateFTMS(UInt16 normalizeSpeed, UInt8 currentResistance, UInt16 currentCadence, UInt16 currentWatt, UInt16 currentInclination, UInt64 currentDistance, double elevationGain, unsigned short currentCalories, qint32 currentSteps,  unsigned short elapsedSeconds, UInt8 deviceType)
-{
-    if(_virtualtreadmill_zwift != nil)
-        return [_virtualtreadmill_zwift updateFTMSWithNormalizeSpeed:normalizeSpeed currentCadence:currentCadence currentResistance:currentResistance currentWatt:currentWatt currentInclination:currentInclination currentDistance:currentDistance elapsedTimeSeconds:elapsedSeconds];
-    return 0;
-}
 
 int lockscreen::virtualbike_getLastFTMSMessage(unsigned char* message) {
     if(message) {

@@ -21,6 +21,33 @@ class bike : public bluetoothdevice {
     metric lastRequestedPelotonResistance();
     metric lastRequestedCadence();
     metric lastRequestedPower();
+
+    /**
+     * @brief Which of the app's two control modes last spoke to this bike.
+     *
+     * An app drives a trainer one of two ways: a target power (FTMS `0x05`, ERG) or a road
+     * gradient (`0x11`, simulation). They are alternatives, never both, and the app does not
+     * announce the switch - it simply stops sending one kind of packet and starts sending
+     * the other. Anything that reads `lastRequestedPower()` to decide whether the rider is
+     * in ERG has to know which of the two is current, because the metric itself never
+     * expires. See controlledBySimulation().
+     */
+    enum class control_mode { unknown, erg, simulation };
+    control_mode lastControlMode() const { return m_controlMode; }
+
+    /**
+     * @brief Record that a simulation packet arrived, and retire any power target with it.
+     *
+     * A single stray `0x05` used to pin `RequestedPower` for the rest of the session: nothing
+     * on the simulation path touched it, and the session reset that was meant to be its one
+     * escape calls metric::clear(), which resets the accumulators and leaves the value. In a
+     * measured 61-minute ride one 100 W packet at 19:48 left ftmsbike's continuous-ERG loop
+     * chasing that target across 2,507 simulation packets, overwriting the gradient
+     * resistance about once a second - 253 large resistance drops against zero in the
+     * half-hour before it. A gradient packet means the app is not in ERG any more, so the
+     * target it belonged to is stale by definition.
+     */
+    void controlledBySimulation();
     metric currentResistance() override;
     uint8_t fanSpeed() override;
     double currentCrankRevolutions() override;
@@ -33,7 +60,6 @@ class bike : public bluetoothdevice {
     virtual resistance_t pelotonToBikeResistance(int pelotonResistance);
     virtual resistance_t resistanceFromPowerRequest(uint16_t power);
     virtual uint16_t powerFromResistanceRequest(resistance_t requestResistance);
-    virtual bool ergManagedBySS2K() { return false; }
     BLUETOOTH_TYPE deviceType() override;
     metric pelotonResistance();
     void clearStats() override;
@@ -85,7 +111,6 @@ class bike : public bluetoothdevice {
     void powerSensor(uint16_t power) override;
     void changeInclination(double grade, double percentage) override;
     virtual void changeSteeringAngle(double angle) { m_steeringAngle = angle; }
-    virtual void resistanceFromFTMSAccessory(resistance_t res) { Q_UNUSED(res); }
     void gearUp() {
         QSettings settings;
         bool gears_zwift_ratio = settings.value(QZSettings::gears_zwift_ratio, QZSettings::default_gears_zwift_ratio).toBool();
@@ -119,6 +144,8 @@ class bike : public bluetoothdevice {
     metric RequestedResistance;
     metric RequestedPelotonResistance;
     metric RequestedCadence;
+
+    control_mode m_controlMode = control_mode::unknown;
 
     resistance_t requestResistance = -1;
     double requestInclination = -100;

@@ -20,6 +20,12 @@ CONFIG += androidextras
 # must not either: the two halves of the link have to keep agreeing.
 win32:lessThan(QT_MAJOR_VERSION, 6): DEFINES += _ITERATOR_DEBUG_LEVEL=0
 
+# The .ride fixtures are found by absolute path rather than relative to the working
+# directory: the CI job runs the binary from tst/, Qt Creator runs it from the build
+# directory, and a test that only passes from one of them is a trap for whoever runs it
+# from the other.
+DEFINES += QZ_RIDE_FIXTURES=\\\"$$PWD/fixtures/rides\\\"
+
 SOURCES += \
         Devices/bluetoothdevicetestdata.cpp \
         Devices/bluetoothdevicetestdatabuilder.cpp \
@@ -30,20 +36,25 @@ SOURCES += \
         Devices/devicenamepatterngroup.cpp \
         Devices/devicetestdataindex.cpp \
         Erg/ergtabletestsuite.cpp \
-        GarminConnect/garminconnecttestsuite.cpp \
-        TrainingProgram/trainprogramtestsuite.cpp \
-        ToolTests/qfittestsuite.cpp \
         ToolTests/testsettingstestsuite.cpp \
-        ToolTests/testtrainingloadtestsuite.cpp \
-        ToolTests/zwiftworkouttestsuite.cpp \
         Tools/testsettings.cpp \
         Tools/typeidgenerator.cpp \
         Devices/TestZwiftRideController.cpp \
         Devices/TestResistanceSlewLimiter.cpp \
+        Devices/TestGearTable.cpp \
+        Devices/TestGradeToResistance.cpp \
         Devices/TestFtmsControlPointHandshake.cpp \
         Devices/TestServiceSubscriptionPlan.cpp \
+        Devices/TestRideScenario.cpp \
+        Devices/TestSimulatedBikeAnnouncement.cpp \
+        Devices/TestDirconFakeApp.cpp \
+        Devices/TestDirconRideLoop.cpp \
+        Devices/TestDirconDiscovery.cpp \
+        Devices/TestFtmsFrameHarness.cpp \
+        Devices/TestErgSimConflict.cpp \
         Erg/TestErgTableSelection.cpp \
         Erg/TestErgAutoMode.cpp \
+        UI/TestRideState.cpp \
         main.cpp
 
 # Avoid the "File too big" error building in Windows. This has happened when a template class is used with Google Test / typed tests
@@ -67,13 +78,13 @@ else:unix: LIBS += -L$$OUT_PWD/../src/ -lqdomyos-zwift
 # the tests is linux-x86-build, where neither applies.
 qtHaveModule(httpserver): QT += httpserver
 win32:LIBS += -lbthprops
-# Under msvc the library also carries zwift_messages.pb.obj and trainprogram's use
-# of it, so the test binary needs the same protobuf set the app links. On Qt 6 that
-# set comes from ../defaults.pri, which both projects include precisely so this list
-# cannot drift from the app's again. The -L comes from the build's vcpkg path.
+# Under msvc the library also carries zwift_messages.pb.obj, so the test binary needs
+# the same protobuf set the app links. On Qt 6 that set comes from ../defaults.pri,
+# which both projects include precisely so this list cannot drift from the app's
+# again. The -L comes from the build's vcpkg path.
 win32:!mingw:lessThan(QT_MAJOR_VERSION, 6): LIBS += -llibprotobuf -llibprotoc -labseil_dll -llibprotobuf-lite -ldbghelp
 
-INCLUDEPATH += $$PWD/../src $$PWD/../src/devices $$PWD/../src/fit-sdk
+INCLUDEPATH += $$PWD/../src $$PWD/../src/devices
 DEPENDPATH += $$PWD/../src $$PWD/../src/devices
 
 win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../src/release/libqdomyos-zwift.a
@@ -92,17 +103,25 @@ HEADERS += \
     Devices/devicenamepatterngroup.h \
     Devices/devicetestdataindex.h \
     Devices/TestResistanceSlewLimiter.h \
+    Devices/TestGearTable.h \
+    Devices/TestGradeToResistance.h \
     Devices/TestFtmsControlPointHandshake.h \
     Devices/TestServiceSubscriptionPlan.h \
+    Devices/TestRideScenario.h \
+    Devices/TestSimulatedBikeAnnouncement.h \
+    Devices/DirconTestClient.h \
+    Devices/MdnsTestClient.h \
+    Devices/TestDirconFakeApp.h \
+    Devices/TestDirconRideLoop.h \
+    Devices/TestDirconDiscovery.h \
+    Devices/ftmsframes.h \
+    Devices/simulatedftmsbike.h \
+    Devices/TestFtmsFrameHarness.h \
+    Devices/TestErgSimConflict.h \
     Erg/ergtabletestsuite.h \
     Erg/TestErgTableSelection.h \
     Erg/TestErgAutoMode.h \
-    GarminConnect/garminconnecttestsuite.h \
-    TrainingProgram/trainprogramtestsuite.h \
-    ToolTests/qfittestsuite.h \
     ToolTests/testsettingstestsuite.h \
-    ToolTests/testtrainingloadtestsuite.h \
-    ToolTests/zwiftworkouttestsuite.h \
     Tools/devicetypeid.h \
     Tools/testsettings.h \
     Tools/typeidgenerator.h

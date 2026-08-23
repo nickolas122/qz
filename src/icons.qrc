@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/icons">
+        <file>icons/qzlogo.png</file>
         <file>icons/bluetooth-icon.png</file>
         <file>icons/fan.png</file>
         <file>icons/speed.png</file>
@@ -32,9 +33,5 @@
         <file>icons/maps-icon-16.png</file>
         <file>icons/video.png</file>
         <file>icons/mini-display.png</file>
-        <file>icons/btn_strava_connectwith_orange.png</file>
-        <file>icons/Button_Connect_Rect_DarkMode.png</file>
-        <file>icons/garmin-connect-badge.png</file>
-        <file>icons/intervals-logo-with-name.png</file>
     </qresource>
 </RCC>

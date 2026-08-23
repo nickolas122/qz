@@ -205,6 +205,20 @@ do not own" mode.
    as written the service set is never rebuilt, so nothing else is required here — the
    goodbye fires once, at quit.
 
+   **Corrected 2026-08-18: the destructor half of that was a use-after-free**, found by the
+   Layer C phase 3 tests (`docs/fork/VIRTUAL-BIKE.md`) and fixed in
+   `DirconProcessor::~DirconProcessor()`. The server, hostname and provider are all children
+   of the processor and `initAdvertising()` adds them in that order, so QObject destroyed
+   the server first and `~ProviderPrivate()` then sent its goodbye through a freed object.
+
+   Two things hid it. The provider only says goodbye once a probe has confirmed its name, a
+   second or two after the endpoint comes up, so anything short-lived never reached the
+   path; and on quit `aboutToQuit` sets `saidGoodbye` first, which makes the destructor's
+   call return early. What was left is exactly the case the paragraph below describes — the
+   mid-session rebuild — where it crashed, and where the goodbye it exists to send went into
+   freed memory instead of onto the wire. The destructor now takes the three down in
+   dependency order rather than leaving it to child order.
+
    It is still worth understanding why any future rebuild must send a goodbye *before*
    probing the new records, in case the treadmill case is ever revisited: the service
    name comes from `dircon_id`, not from the instance (`dirconmanager.cpp:133-143`), so

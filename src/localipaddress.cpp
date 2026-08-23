@@ -3,6 +3,7 @@
 
 #ifdef Q_OS_ANDROID
 #include <QAndroidJniEnvironment>
+#include <QAndroidJniObject>
 #include <QtAndroid>
 #include <QtEndian>
 #endif
@@ -176,6 +177,24 @@ QHostAddress localipaddress::getIP(const QHostAddress &srcAddress) {
         }
     }
 #ifdef Q_OS_ANDROID
+    // Java first, because neither of the two paths below works on a modern Android any more:
+    // QNetworkInterface cannot enumerate anything (netlink logs "found unknown interface with
+    // index N" for every one of them and returns nothing), and WifiInfo.getIpAddress() has
+    // returned 0.0.0.0 since Android 10. Between them they left the mDNS A record with no
+    // address in it, which is what "Rouvy cannot find QZ on Android" turned out to be.
+    const QString javaAddress = QAndroidJniObject::callStaticObjectMethod(
+                                    "org/cagnulen/qdomyoszwift/NetworkAddressHelper", "getLocalIpv4",
+                                    "(Landroid/content/Context;)Ljava/lang/String;",
+                                    QtAndroid::androidContext().object())
+                                    .toString();
+    if (!javaAddress.isEmpty()) {
+        const QHostAddress fromJava(javaAddress);
+        if (!fromJava.isNull()) {
+            qDebug() << "getIP from Java" << fromJava;
+            return fromJava;
+        }
+    }
+
     QAndroidJniEnvironment env;
     jobject wifiManagerObj = getWifiManagerObj(env, QtAndroid::androidContext().object());
     jobject wifiInfoObj = getWifiInfoObj(env, wifiManagerObj);

@@ -66,6 +66,11 @@ void CharacteristicWriteProcessor::changeSlope(int16_t iresistance, uint8_t crr,
 
     if (dt == BIKE) {
 
+        // The app is steering by gradient, so it is not in ERG: any power target still on
+        // record belongs to a mode that ended. Retiring it here, at the packet that proves
+        // the switch, is what stops ftmsbike's continuous-ERG loop fighting the gradient.
+        ((bike *)Bike)->controlledBySimulation();
+
         // if the bike doesn't have the inclination by hardware, i'm simulating inclination with the value received
         // from Zwift
         if (!((bike *)Bike)->inclinationAvailableByHardware()) {

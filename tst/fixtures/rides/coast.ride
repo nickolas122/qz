@@ -1,0 +1,18 @@
+# coast.ride - stop pedalling mid-ride, then pick it up again.
+#
+# The zero-cadence path. The bike keeps reporting throughout - this is not a dropout - it just
+# reports zeroes, which is the distinction that matters: cadence=0 is a value the rider
+# produced and every player has to reproduce it exactly rather than treating it as "no reading"
+# and holding the last one. Tiles must go to zero and must not go stale, NaN or negative.
+#
+# The one-second gap between the last pedal stroke and the zero is how the format expresses a
+# fast transition: samples close together, not a special interpolation mode.
+
+mode        power
+
+t=0     watts=210  cadence=91  hr=150
+t=20    watts=210  cadence=91  hr=152
+t=21    watts=0    cadence=0   hr=152
+t=35    watts=0    cadence=0   hr=138
+t=36    watts=195  cadence=88  hr=137
+t=60    watts=205  cadence=90  hr=149

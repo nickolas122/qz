@@ -49,6 +49,14 @@ class DirconManager : public QObject {
                            QObject *parent = nullptr);
 
     /**
+     * @brief Drops the Android multicast lock the constructor took.
+     *
+     * Everything else here is a QObject child and cleans itself up. On any other
+     * platform this is empty.
+     */
+    ~DirconManager() override;
+
+    /**
      * @brief Rebind every consumer of the bound device in one pass.
      *
      * The device pointer is copied into three places when the manager is built:
@@ -113,8 +121,9 @@ class DirconManager : public QObject {
      * advertisement.
      *
      * Only for callers that need to build a DIRCON endpoint with a different service
-     * profile - today that means `virtualtreadmill`, whose machine type maps to the
-     * same base port. Destroying the manager sends the mDNS goodbye through
+     * profile. `virtualtreadmill` was the last such caller and went with Group E, so
+     * today this is reached only from shared() itself, when the machine type changes
+     * under a live endpoint. Destroying the manager sends the mDNS goodbye through
      * `~ProviderPrivate()`, so clients are told before the socket disappears.
      */
     static void releaseShared();

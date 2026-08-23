@@ -1,7 +1,7 @@
 #include "coresensor.h"
 
 #include "qtbluetoothcompat.h"
-#include "homeform.h"
+#include "qznotify.h"
 #include <QBluetoothLocalDevice>
 #include <QDateTime>
 #include <QEventLoop>
@@ -67,8 +67,7 @@ void coresensor::deviceDiscovered(const QBluetoothDeviceInfo &device) {
     qDebug() << QStringLiteral("Found new device: ") + device.name() + QStringLiteral(" (") +
                device.address().toString() + ')';
 
-    if(homeform::singleton())
-        homeform::singleton()->setToastRequested(device.name() + QStringLiteral(" connected!"));
+    QzNotify::toast(device.name() + QStringLiteral(" connected!"));
 
     // We might filter the device name if needed
     // For example: if (device.name().contains("CORE") || device.name().contains("CoreTemp"))

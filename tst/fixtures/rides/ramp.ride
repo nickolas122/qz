@@ -1,0 +1,15 @@
+# ramp.ride - soft-pedal to threshold over 60 seconds, then hold.
+#
+# For tile update rate, the chart, and ERG tracking: every value is moving at once and none of
+# them jumps, so a player that snaps to sample points instead of interpolating shows up as a
+# staircase rather than a ramp.
+
+mode        power
+resistance  10
+
+t=0     watts=80   cadence=85  hr=110
+t=15    watts=140  cadence=88  hr=128
+t=30    watts=200  cadence=90  hr=147
+t=45    watts=260  cadence=92  hr=161
+t=60    watts=260  cadence=92  hr=168
+t=90    watts=260  cadence=92  hr=172

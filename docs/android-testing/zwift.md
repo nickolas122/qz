@@ -11,7 +11,7 @@ This also works when both apps run on the **same device**, either an emulator or
 ### QZ Configured
 
 1. `android_notification = true` enables the foreground service that publishes the sensor notification.
-2. `applewatch_fakedevice = true` simulates a bike when no real bike is connected.
+2. `simulated_bike = true` rides a `.ride` scenario when no real bike is connected. (`applewatch_fakedevice` is dead in this fork — see the README.)
 
 Quick setup while QZ is stopped:
 ```bash
@@ -19,7 +19,7 @@ ADB=~/Library/Android/sdk/platform-tools/adb
 $ADB shell am force-stop org.cagnulen.qdomyoszwift
 $ADB shell "run-as org.cagnulen.qdomyoszwift sh -c '
   mkdir -p \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola\"
-  printf \"[General]\nandroid_notification=true\napplewatch_fakedevice=true\n\" \
+  printf \"[General]\nandroid_notification=true\nsimulated_bike=true\n\" \
     > \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola/qDomyos-Zwift.conf\"
 '"
 $ADB shell am start -n org.cagnulen.qdomyoszwift/.CustomQtActivity
@@ -100,7 +100,7 @@ On the Zwift sensor pairing screen:
 
 ### 4. Verify Data
 
-With `applewatch_fakedevice=true`, QZ generates synthetic data. In Zwift, you should see:
+With `simulated_bike=true`, QZ rides the scenario. In Zwift, you should see:
 - Power: a simulated value, based on heart rate if available
 - Cadence: 0 when no real sensor is connected
 
@@ -149,7 +149,7 @@ setup_qz_for_zwift() {
   $ADB shell am force-stop org.cagnulen.qdomyoszwift
   $ADB shell "run-as org.cagnulen.qdomyoszwift sh -c '
     mkdir -p \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola\"
-    printf \"[General]\nandroid_notification=true\napplewatch_fakedevice=true\n\" \
+    printf \"[General]\nandroid_notification=true\nsimulated_bike=true\n\" \
       > \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola/qDomyos-Zwift.conf\"
   '"
   $ADB shell am start -n org.cagnulen.qdomyoszwift/.CustomQtActivity

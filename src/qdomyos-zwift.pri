@@ -1,5 +1,5 @@
 include(../defaults.pri)
-QT += bluetooth widgets xml positioning quick networkauth websockets texttospeech location multimedia
+QT += bluetooth widgets xml positioning quick websockets texttospeech location multimedia
 QTPLUGIN += qavfmediaplayer
 QT+= charts core-private sql concurrent
 
@@ -117,31 +117,12 @@ SOURCES += \
     $$PWD/devices/coresensor/coresensor.cpp \
     $$PWD/devices/elitesquarecontroller/elitesquarecontroller.cpp \
     $$PWD/devices/jumprope.cpp \
-    $$PWD/devices/moxy5sensor/moxy5sensor.cpp \
     $$PWD/devices/cycplusbc2controller/cycplusbc2controller.cpp \
     $$PWD/devices/sramAXSController/sramAXSController.cpp \
     $$PWD/devices/thinkridercontroller/thinkridercontroller.cpp \
     $$PWD/devices/stairclimber.cpp \
-    $$PWD/fitdatabaseprocessor.cpp \
     $$PWD/logwriter.cpp \
-    $$PWD/fitbackupwriter.cpp \
     $$PWD/filesearcher.cpp \
-    $$PWD/mqtt/qmqttauthenticationproperties.cpp \
-    $$PWD/mqtt/qmqttclient.cpp \
-    $$PWD/mqtt/qmqttconnection.cpp \
-    $$PWD/mqtt/qmqttconnectionproperties.cpp \
-    $$PWD/mqtt/qmqttcontrolpacket.cpp \
-    $$PWD/mqtt/qmqttmessage.cpp \
-    $$PWD/mqtt/qmqttpublishproperties.cpp \
-    $$PWD/mqtt/qmqttsubscription.cpp \
-    $$PWD/mqtt/qmqttsubscriptionproperties.cpp \
-    $$PWD/mqtt/qmqtttopicfilter.cpp \
-    $$PWD/mqtt/qmqtttopicname.cpp \
-    $$PWD/mqtt/qmqtttype.cpp \
-    $$PWD/osc.cpp \
-    $$PWD/workoutloaderworker.cpp \
-    $$PWD/workoutmodel.cpp \
-QTelnet.cpp \
 devices/eliteariafan/eliteariafan.cpp \
 virtualdevices/virtualdevice.cpp \
 androidactivityresultreceiver.cpp \
@@ -154,7 +135,6 @@ rtssosd.cpp \
 devices/wahookickrheadwind/wahookickrheadwind.cpp \
 windows_zwift_workout_paddleocr_thread.cpp \
 zwift_play/zwiftclickremote.cpp \
-PathController.cpp \
 characteristics/characteristicnotifier2a53.cpp \
 characteristics/characteristicnotifier2a5b.cpp \
 characteristics/characteristicnotifier2acc.cpp \
@@ -193,85 +173,33 @@ devices/elitesterzosmart/elitesterzosmart.cpp \
 devices/elliptical.cpp \
 filedownloader.cpp \
 devices/fitmetria_fanfit/fitmetria_fanfit.cpp \
-fit-sdk/fit.cpp \
-fit-sdk/fit_accumulated_field.cpp \
-fit-sdk/fit_accumulator.cpp \
-fit-sdk/fit_buffer_encode.cpp \
-fit-sdk/fit_buffered_mesg_broadcaster.cpp \
-fit-sdk/fit_buffered_record_mesg_broadcaster.cpp \
-fit-sdk/fit_crc.cpp \
-fit-sdk/fit_date_time.cpp \
-fit-sdk/fit_decode.cpp \
-fit-sdk/fit_developer_field.cpp \
-fit-sdk/fit_developer_field_definition.cpp \
-fit-sdk/fit_developer_field_description.cpp \
-fit-sdk/fit_encode.cpp \
-fit-sdk/fit_factory.cpp \
-fit-sdk/fit_field.cpp \
-fit-sdk/fit_field_base.cpp \
-fit-sdk/fit_field_definition.cpp \
-fit-sdk/fit_mesg.cpp \
-fit-sdk/fit_mesg_broadcaster.cpp \
-fit-sdk/fit_mesg_definition.cpp \
-fit-sdk/fit_mesg_with_event_broadcaster.cpp \
-fit-sdk/fit_profile.cpp \
-fit-sdk/fit_protocol_validator.cpp \
-fit-sdk/fit_unicode.cpp \
 devices/ftmsbike/ftmsbike.cpp \
-gpx.cpp \
 devices/heartratebelt/heartratebelt.cpp \
-homefitnessbuddy.cpp \
-homeform.cpp \
 mywhooshlink.cpp \
-garminconnect.cpp \
 keepawakehelper.cpp \
 main.cpp \
 metric.cpp \
-peloton.cpp \
-powerzonepack.cpp \
-qfit.cpp \
+qznotify.cpp \
+qzpaths.cpp \
 qzsettings.cpp \
 devices/rower.cpp \
 screencapture.cpp \
 sessionline.cpp \
 signalhandler.cpp \
 simplecrypt.cpp \
-devices/smartspin2k/smartspin2k.cpp \
+devices/simulatedbike/ridescenario.cpp \
+devices/simulatedbike/simulatedbike.cpp \
 devices/stagesbike/stagesbike.cpp \
-smtpclient/src/emailaddress.cpp \
-smtpclient/src/mimeattachment.cpp \
-smtpclient/src/mimebase64encoder.cpp \
-smtpclient/src/mimebase64formatter.cpp \
-smtpclient/src/mimebytearrayattachment.cpp \
-smtpclient/src/mimecontentencoder.cpp \
-smtpclient/src/mimecontentformatter.cpp \
-smtpclient/src/mimefile.cpp \
-smtpclient/src/mimehtml.cpp \
-smtpclient/src/mimeinlinefile.cpp \
-smtpclient/src/mimemessage.cpp \
-smtpclient/src/mimemultipart.cpp \
-smtpclient/src/mimepart.cpp \
-smtpclient/src/mimeqpencoder.cpp \
-smtpclient/src/mimeqpformatter.cpp \
-smtpclient/src/mimetext.cpp \
-smtpclient/src/quotedprintable.cpp \
-smtpclient/src/smtpclient.cpp \
-devices/strydrunpowersensor/strydrunpowersensor.cpp \
-tcpclientinfosender.cpp \
 templateinfosender.cpp \
 templateinfosenderbuilder.cpp \
-webtranslation.cpp \
 devices/treadmill.cpp \
 virtualdevices/virtualrower.cpp \
-trainprogram.cpp \
 virtualdevices/virtualbike.cpp \
-virtualdevices/virtualtreadmill.cpp \
 scanrecordresult.cpp \
 windows_zwift_incline_paddleocr_thread.cpp \
-zwiftworkout.cpp
+ui/ridestate.cpp
    
 macx: SOURCES += macos/lockscreen.mm
-!ios: SOURCES += mainwindow.cpp charts.cpp
 
 #zwift api
 msvc {
@@ -283,61 +211,26 @@ qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
-INCLUDEPATH += fit-sdk/ devices/
+INCLUDEPATH += devices/
 
 HEADERS += \
     $$PWD/EventHandler.h \
     $$PWD/characteristics/characteristicnotifier0002.h \
     $$PWD/characteristics/characteristicnotifier0004.h \
     $$PWD/characteristics/characteristicwriteprocessor0003.h \
-    $$PWD/OAuth2.h \
     $$PWD/devices/coresensor/coresensor.h \
     $$PWD/devices/elitesquarecontroller/elitesquarecontroller.h \
     $$PWD/devices/jumprope.h \
-    $$PWD/devices/moxy5sensor/moxy5sensor.h \
     $$PWD/devices/cycplusbc2controller/cycplusbc2controller.h \
     $$PWD/devices/sramAXSController/sramAXSController.h \
     $$PWD/devices/thinkridercontroller/thinkridercontroller.h \
     $$PWD/devices/stairclimber.h \
     $$PWD/ergtable.h \
-    $$PWD/fitdatabaseprocessor.h \
     $$PWD/inclinationresistancetable.h \
     $$PWD/logwriter.h \
-    $$PWD/fitbackupwriter.h \
     $$PWD/filesearcher.h \
-    $$PWD/osc.h \
-    $$PWD/oscpp/client.hpp \
-    $$PWD/oscpp/detail/endian.hpp \
-    $$PWD/oscpp/detail/host.hpp \
-    $$PWD/oscpp/detail/stream.hpp \
-    $$PWD/oscpp/error.hpp \
-    $$PWD/oscpp/print.hpp \
-    $$PWD/oscpp/server.hpp \
-    $$PWD/oscpp/types.hpp \
-    $$PWD/oscpp/util.hpp \
-    $$PWD/mqtt/qmqttauthenticationproperties.h \
-    $$PWD/mqtt/qmqttclient.h \
-    $$PWD/mqtt/qmqttclient_p.h \
-    $$PWD/mqtt/qmqttconnection_p.h \
-    $$PWD/mqtt/qmqttconnectionproperties.h \
-    $$PWD/mqtt/qmqttconnectionproperties_p.h \
-    $$PWD/mqtt/qmqttcontrolpacket_p.h \
-    $$PWD/mqtt/qmqttglobal.h \
-    $$PWD/mqtt/qmqttmessage.h \
-    $$PWD/mqtt/qmqttmessage_p.h \
-    $$PWD/mqtt/qmqttpublishproperties.h \
-    $$PWD/mqtt/qmqttpublishproperties_p.h \
-    $$PWD/mqtt/qmqttsubscription.h \
-    $$PWD/mqtt/qmqttsubscription_p.h \
-    $$PWD/mqtt/qmqttsubscriptionproperties.h \
-    $$PWD/mqtt/qmqtttopicfilter.h \
-    $$PWD/mqtt/qmqtttopicname.h \
-    $$PWD/mqtt/qmqtttype.h \
     $$PWD/treadmillErgTable.h \
     $$PWD/wheelcircumference.h \
-    $$PWD/workoutloaderworker.h \
-    $$PWD/workoutmodel.h \
-QTelnet.h \
 devices/eliteariafan/eliteariafan.h \
 windows_zwift_workout_paddleocr_thread.h \
 zwift-api/PlayerStateWrapper.h \
@@ -357,7 +250,6 @@ windowsblebond.h \
 gamepadcontroller.h \
 rtssosd.h \
 devices/wahookickrheadwind/wahookickrheadwind.h \
-PathController.h \
 characteristics/characteristicnotifier2a53.h \
 characteristics/characteristicnotifier2a5b.h \
 characteristics/characteristicnotifier2acc.h \
@@ -410,243 +302,22 @@ devices/elitesterzosmart/elitesterzosmart.h \
 devices/elliptical.h \
 filedownloader.h \
 devices/fitmetria_fanfit/fitmetria_fanfit.h \
-homefitnessbuddy.h \
-fit-sdk/FitDecode.h \
-fit-sdk/FitDeveloperField.h \
-fit-sdk/FitEncode.h \
-fit-sdk/FitField.h \
-fit-sdk/FitFieldDefinition.h \
-fit-sdk/FitMesg.h \
-fit-sdk/FitMesgDefinition.h \
-fit-sdk/fit.hpp \
-fit-sdk/fit_accelerometer_data_mesg.hpp \
-fit-sdk/fit_accelerometer_data_mesg_listener.hpp \
-fit-sdk/fit_accumulated_field.hpp \
-fit-sdk/fit_accumulator.hpp \
-fit-sdk/fit_activity_mesg.hpp \
-fit-sdk/fit_activity_mesg_listener.hpp \
-fit-sdk/fit_ant_channel_id_mesg.hpp \
-fit-sdk/fit_ant_channel_id_mesg_listener.hpp \
-fit-sdk/fit_ant_rx_mesg.hpp \
-fit-sdk/fit_ant_rx_mesg_listener.hpp \
-fit-sdk/fit_ant_tx_mesg.hpp \
-fit-sdk/fit_ant_tx_mesg_listener.hpp \
-fit-sdk/fit_aviation_attitude_mesg.hpp \
-fit-sdk/fit_aviation_attitude_mesg_listener.hpp \
-fit-sdk/fit_barometer_data_mesg.hpp \
-fit-sdk/fit_barometer_data_mesg_listener.hpp \
-fit-sdk/fit_bike_profile_mesg.hpp \
-fit-sdk/fit_bike_profile_mesg_listener.hpp \
-fit-sdk/fit_blood_pressure_mesg.hpp \
-fit-sdk/fit_blood_pressure_mesg_listener.hpp \
-fit-sdk/fit_buffer_encode.hpp \
-fit-sdk/fit_buffered_mesg_broadcaster.hpp \
-fit-sdk/fit_buffered_record_mesg.hpp \
-fit-sdk/fit_buffered_record_mesg_broadcaster.hpp \
-fit-sdk/fit_buffered_record_mesg_listener.hpp \
-fit-sdk/fit_cadence_zone_mesg.hpp \
-fit-sdk/fit_cadence_zone_mesg_listener.hpp \
-fit-sdk/fit_camera_event_mesg.hpp \
-fit-sdk/fit_camera_event_mesg_listener.hpp \
-fit-sdk/fit_capabilities_mesg.hpp \
-fit-sdk/fit_capabilities_mesg_listener.hpp \
-fit-sdk/fit_climb_pro_mesg.hpp \
-fit-sdk/fit_climb_pro_mesg_listener.hpp \
-fit-sdk/fit_config.hpp \
-fit-sdk/fit_connectivity_mesg.hpp \
-fit-sdk/fit_connectivity_mesg_listener.hpp \
-fit-sdk/fit_course_mesg.hpp \
-fit-sdk/fit_course_mesg_listener.hpp \
-fit-sdk/fit_course_point_mesg.hpp \
-fit-sdk/fit_course_point_mesg_listener.hpp \
-fit-sdk/fit_crc.hpp \
-fit-sdk/fit_date_time.hpp \
-fit-sdk/fit_decode.hpp \
-fit-sdk/fit_developer_data_id_mesg.hpp \
-fit-sdk/fit_developer_data_id_mesg_listener.hpp \
-fit-sdk/fit_developer_field.hpp \
-fit-sdk/fit_developer_field_definition.hpp \
-fit-sdk/fit_developer_field_description.hpp \
-fit-sdk/fit_developer_field_description_listener.hpp \
-fit-sdk/fit_device_info_mesg.hpp \
-fit-sdk/fit_device_info_mesg_listener.hpp \
-fit-sdk/fit_device_settings_mesg.hpp \
-fit-sdk/fit_device_settings_mesg_listener.hpp \
-fit-sdk/fit_dive_alarm_mesg.hpp \
-fit-sdk/fit_dive_alarm_mesg_listener.hpp \
-fit-sdk/fit_dive_gas_mesg.hpp \
-fit-sdk/fit_dive_gas_mesg_listener.hpp \
-fit-sdk/fit_dive_settings_mesg.hpp \
-fit-sdk/fit_dive_settings_mesg_listener.hpp \
-fit-sdk/fit_dive_summary_mesg.hpp \
-fit-sdk/fit_dive_summary_mesg_listener.hpp \
-fit-sdk/fit_encode.hpp \
-fit-sdk/fit_event_mesg.hpp \
-fit-sdk/fit_event_mesg_listener.hpp \
-fit-sdk/fit_exd_data_concept_configuration_mesg.hpp \
-fit-sdk/fit_exd_data_concept_configuration_mesg_listener.hpp \
-fit-sdk/fit_exd_data_field_configuration_mesg.hpp \
-fit-sdk/fit_exd_data_field_configuration_mesg_listener.hpp \
-fit-sdk/fit_exd_screen_configuration_mesg.hpp \
-fit-sdk/fit_exd_screen_configuration_mesg_listener.hpp \
-fit-sdk/fit_exercise_title_mesg.hpp \
-fit-sdk/fit_exercise_title_mesg_listener.hpp \
-fit-sdk/fit_factory.hpp \
-fit-sdk/fit_field.hpp \
-fit-sdk/fit_field_base.hpp \
-fit-sdk/fit_field_capabilities_mesg.hpp \
-fit-sdk/fit_field_capabilities_mesg_listener.hpp \
-fit-sdk/fit_field_definition.hpp \
-fit-sdk/fit_field_description_mesg.hpp \
-fit-sdk/fit_field_description_mesg_listener.hpp \
-fit-sdk/fit_file_capabilities_mesg.hpp \
-fit-sdk/fit_file_capabilities_mesg_listener.hpp \
-fit-sdk/fit_file_creator_mesg.hpp \
-fit-sdk/fit_file_creator_mesg_listener.hpp \
-fit-sdk/fit_file_id_mesg.hpp \
-fit-sdk/fit_file_id_mesg_listener.hpp \
-fit-sdk/fit_goal_mesg.hpp \
-fit-sdk/fit_goal_mesg_listener.hpp \
-fit-sdk/fit_gps_metadata_mesg.hpp \
-fit-sdk/fit_gps_metadata_mesg_listener.hpp \
-fit-sdk/fit_gyroscope_data_mesg.hpp \
-fit-sdk/fit_gyroscope_data_mesg_listener.hpp \
-fit-sdk/fit_hr_mesg.hpp \
-fit-sdk/fit_hr_mesg_listener.hpp \
-fit-sdk/fit_hr_zone_mesg.hpp \
-fit-sdk/fit_hr_zone_mesg_listener.hpp \
-fit-sdk/fit_hrm_profile_mesg.hpp \
-fit-sdk/fit_hrm_profile_mesg_listener.hpp \
-fit-sdk/fit_hrv_mesg.hpp \
-fit-sdk/fit_hrv_mesg_listener.hpp \
-fit-sdk/fit_jump_mesg.hpp \
-fit-sdk/fit_jump_mesg_listener.hpp \
-fit-sdk/fit_lap_mesg.hpp \
-fit-sdk/fit_lap_mesg_listener.hpp \
-fit-sdk/fit_length_mesg.hpp \
-fit-sdk/fit_length_mesg_listener.hpp \
-fit-sdk/fit_magnetometer_data_mesg.hpp \
-fit-sdk/fit_magnetometer_data_mesg_listener.hpp \
-fit-sdk/fit_memo_glob_mesg.hpp \
-fit-sdk/fit_memo_glob_mesg_listener.hpp \
-fit-sdk/fit_mesg.hpp \
-fit-sdk/fit_mesg_broadcast_plugin.hpp \
-fit-sdk/fit_mesg_broadcaster.hpp \
-fit-sdk/fit_mesg_capabilities_mesg.hpp \
-fit-sdk/fit_mesg_capabilities_mesg_listener.hpp \
-fit-sdk/fit_mesg_definition.hpp \
-fit-sdk/fit_mesg_definition_listener.hpp \
-fit-sdk/fit_mesg_listener.hpp \
-fit-sdk/fit_mesg_with_event.hpp \
-fit-sdk/fit_mesg_with_event_broadcaster.hpp \
-fit-sdk/fit_mesg_with_event_listener.hpp \
-fit-sdk/fit_met_zone_mesg.hpp \
-fit-sdk/fit_met_zone_mesg_listener.hpp \
-fit-sdk/fit_monitoring_info_mesg.hpp \
-fit-sdk/fit_monitoring_info_mesg_listener.hpp \
-fit-sdk/fit_monitoring_mesg.hpp \
-fit-sdk/fit_monitoring_mesg_listener.hpp \
-fit-sdk/fit_nmea_sentence_mesg.hpp \
-fit-sdk/fit_nmea_sentence_mesg_listener.hpp \
-fit-sdk/fit_obdii_data_mesg.hpp \
-fit-sdk/fit_obdii_data_mesg_listener.hpp \
-fit-sdk/fit_ohr_settings_mesg.hpp \
-fit-sdk/fit_ohr_settings_mesg_listener.hpp \
-fit-sdk/fit_one_d_sensor_calibration_mesg.hpp \
-fit-sdk/fit_one_d_sensor_calibration_mesg_listener.hpp \
-fit-sdk/fit_pad_mesg.hpp \
-fit-sdk/fit_pad_mesg_listener.hpp \
-fit-sdk/fit_power_zone_mesg.hpp \
-fit-sdk/fit_power_zone_mesg_listener.hpp \
-fit-sdk/fit_profile.hpp \
-fit-sdk/fit_protocol_validator.hpp \
-fit-sdk/fit_record_mesg.hpp \
-fit-sdk/fit_record_mesg_listener.hpp \
-fit-sdk/fit_runtime_exception.hpp \
-fit-sdk/fit_schedule_mesg.hpp \
-fit-sdk/fit_schedule_mesg_listener.hpp \
-fit-sdk/fit_sdm_profile_mesg.hpp \
-fit-sdk/fit_sdm_profile_mesg_listener.hpp \
-fit-sdk/fit_segment_file_mesg.hpp \
-fit-sdk/fit_segment_file_mesg_listener.hpp \
-fit-sdk/fit_segment_id_mesg.hpp \
-fit-sdk/fit_segment_id_mesg_listener.hpp \
-fit-sdk/fit_segment_lap_mesg.hpp \
-fit-sdk/fit_segment_lap_mesg_listener.hpp \
-fit-sdk/fit_segment_leaderboard_entry_mesg.hpp \
-fit-sdk/fit_segment_leaderboard_entry_mesg_listener.hpp \
-fit-sdk/fit_segment_point_mesg.hpp \
-fit-sdk/fit_segment_point_mesg_listener.hpp \
-fit-sdk/fit_session_mesg.hpp \
-fit-sdk/fit_session_mesg_listener.hpp \
-fit-sdk/fit_set_mesg.hpp \
-fit-sdk/fit_set_mesg_listener.hpp \
-fit-sdk/fit_slave_device_mesg.hpp \
-fit-sdk/fit_slave_device_mesg_listener.hpp \
-fit-sdk/fit_software_mesg.hpp \
-fit-sdk/fit_software_mesg_listener.hpp \
-fit-sdk/fit_speed_zone_mesg.hpp \
-fit-sdk/fit_speed_zone_mesg_listener.hpp \
-fit-sdk/fit_sport_mesg.hpp \
-fit-sdk/fit_sport_mesg_listener.hpp \
-fit-sdk/fit_stress_level_mesg.hpp \
-fit-sdk/fit_stress_level_mesg_listener.hpp \
-fit-sdk/fit_three_d_sensor_calibration_mesg.hpp \
-fit-sdk/fit_three_d_sensor_calibration_mesg_listener.hpp \
-fit-sdk/fit_timestamp_correlation_mesg.hpp \
-fit-sdk/fit_timestamp_correlation_mesg_listener.hpp \
-fit-sdk/fit_totals_mesg.hpp \
-fit-sdk/fit_totals_mesg_listener.hpp \
-fit-sdk/fit_training_file_mesg.hpp \
-fit-sdk/fit_training_file_mesg_listener.hpp \
-fit-sdk/fit_unicode.hpp \
-fit-sdk/fit_user_profile_mesg.hpp \
-fit-sdk/fit_user_profile_mesg_listener.hpp \
-fit-sdk/fit_video_clip_mesg.hpp \
-fit-sdk/fit_video_clip_mesg_listener.hpp \
-fit-sdk/fit_video_description_mesg.hpp \
-fit-sdk/fit_video_description_mesg_listener.hpp \
-fit-sdk/fit_video_frame_mesg.hpp \
-fit-sdk/fit_video_frame_mesg_listener.hpp \
-fit-sdk/fit_video_mesg.hpp \
-fit-sdk/fit_video_mesg_listener.hpp \
-fit-sdk/fit_video_title_mesg.hpp \
-fit-sdk/fit_video_title_mesg_listener.hpp \
-fit-sdk/fit_watchface_settings_mesg.hpp \
-fit-sdk/fit_watchface_settings_mesg_listener.hpp \
-fit-sdk/fit_weather_alert_mesg.hpp \
-fit-sdk/fit_weather_alert_mesg_listener.hpp \
-fit-sdk/fit_weather_conditions_mesg.hpp \
-fit-sdk/fit_weather_conditions_mesg_listener.hpp \
-fit-sdk/fit_weight_scale_mesg.hpp \
-fit-sdk/fit_weight_scale_mesg_listener.hpp \
-fit-sdk/fit_workout_mesg.hpp \
-fit-sdk/fit_workout_mesg_listener.hpp \
-fit-sdk/fit_workout_session_mesg.hpp \
-fit-sdk/fit_workout_session_mesg_listener.hpp \
-fit-sdk/fit_workout_step_mesg.hpp \
-fit-sdk/fit_workout_step_mesg_listener.hpp \
-fit-sdk/fit_zones_target_mesg.hpp \
-fit-sdk/fit_zones_target_mesg_listener.hpp \
 devices/ftmsbike/ftmsbike.h \
 devices/ftmsbike/ftmscontrolpointhandshake.h \
 devices/ftmsbike/resistanceslewlimiter.h \
 devices/ftmsbike/speedracex_defaults.h \
 devices/heartratebelt/heartratebelt.h \
-homeform.h \
 mywhooshlink.h \
-garminconnect.h \
 ios/lockscreen.h \
 keepawakehelper.h \
 macos/lockscreen.h \
 ios/M3iIOS-Interface.h \
 material.h \
 metric.h \
-peloton.h \
-powerzonepack.h \
 qdebugfixup.h \
-qfit.h \
 qmdnsengine_export.h \
+qznotify.h \
+qzpaths.h \
 qzsettings.h \
 qzforkversion.h \
 devices/rower.h \
@@ -654,52 +325,21 @@ screencapture.h \
 sessionline.h \
 signalhandler.h \
 simplecrypt.h \
-devices/smartspin2k/smartspin2k.h \
+devices/simulatedbike/ridescenario.h \
+devices/simulatedbike/simulatedbike.h \
 devices/stagesbike/stagesbike.h \
-smtpclient/src/SmtpMime \
-smtpclient/src/emailaddress.h \
-smtpclient/src/mimeattachment.h \
-smtpclient/src/mimebase64encoder.h \
-smtpclient/src/mimebase64formatter.h \
-smtpclient/src/mimebytearrayattachment.h \
-smtpclient/src/mimecontentencoder.h \
-smtpclient/src/mimecontentformatter.h \
-smtpclient/src/mimefile.h \
-smtpclient/src/mimehtml.h \
-smtpclient/src/mimeinlinefile.h \
-smtpclient/src/mimemessage.h \
-smtpclient/src/mimemultipart.h \
-smtpclient/src/mimepart.h \
-smtpclient/src/mimeqpencoder.h \
-smtpclient/src/mimeqpformatter.h \
-smtpclient/src/mimetext.h \
-smtpclient/src/quotedprintable.h \
-smtpclient/src/smtpclient.h \
-smtpclient/src/smtpmime_global.h \
-devices/strydrunpowersensor/strydrunpowersensor.h \
-tcpclientinfosender.h \
 templateinfosender.h \
 templateinfosenderbuilder.h \
-webtranslation.h \
-gpx.h \
 devices/treadmill.h \
-mainwindow.h \
-trainprogram.h \
 virtualdevices/virtualbike.h \
 virtualdevices/virtualrower.h \
-virtualdevices/virtualtreadmill.h \
 scanrecordresult.h \
 windows_zwift_incline_paddleocr_thread.h \
-zwiftworkout.h
+ui/ridestate.h
 
 
 exists(secret.h): HEADERS += secret.h
 
-!ios: HEADERS += charts.h
-
-!ios: FORMS += \
-   charts.ui \
-	mainwindow.ui
 
 # Translation files - 30 most used languages worldwide
 CONFIG += lrelease
@@ -790,6 +430,8 @@ DISTFILES += \
     $$PWD/android/src/LocationHelper.java \
     $$PWD/android/src/MediaButtonReceiver.java \
     $$PWD/android/src/MediaProjection.java \
+    $$PWD/android/src/MulticastLockHelper.java \
+    $$PWD/android/src/NetworkAddressHelper.java \
     $$PWD/android/src/NotificationUtils.java \
     $$PWD/android/src/QLog.java \
     $$PWD/android/src/ScreenCaptureService.java \
@@ -809,12 +451,9 @@ DISTFILES += \
 	android/gradle/wrapper/gradle-wrapper.properties \
 	android/gradlew \
 	android/gradlew.bat \
-   android/res/layout/floating_layout.xml \
 	android/res/values/libs.xml \
 	android/src/Ant.java \
 	android/src/ChannelService.java \
-   android/src/FloatingHandler.java \
-   android/src/FloatingWindowGFG.java \
    android/src/ForegroundService.java \
    android/src/NotificationClient.java \
    android/src/QZAdbRemote.java \
@@ -868,13 +507,6 @@ ios {
     ios/ios_eliteariafan.mm \
     ios/ios_app_delegate.mm \
     ios/ios_liveactivity.mm \
-	 fit-sdk/FitDecode.mm \
-	 fit-sdk/FitDeveloperField.mm \
-	 fit-sdk/FitEncode.mm \
-	 fit-sdk/FitField.mm \
-	 fit-sdk/FitFieldDefinition.mm \
-	 fit-sdk/FitMesg.mm \
-         fit-sdk/FitMesgDefinition.mm \
          ios/M3iNS.mm \
 
     SOURCES += ios/M3iNSQT.cpp
@@ -896,12 +528,10 @@ ios {
 }
 
 HEADERS += \
-    mqttpublisher.h \
     androidstatusbar.h \
     fontmanager.h
 
 SOURCES += \
-    mqttpublisher.cpp \
     androidstatusbar.cpp \
     fontmanager.cpp
 

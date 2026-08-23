@@ -14,7 +14,29 @@ DirconProcessor::DirconProcessor(const QList<DirconProcessorService *> &my_servi
     foreach (DirconProcessorService *my_service, my_services) { my_service->setParent(this); }
 }
 
-DirconProcessor::~DirconProcessor() {}
+DirconProcessor::~DirconProcessor() {
+    // The three mDNS objects are all children of this processor, and QObject destroys
+    // children in the order they were added - which initAdvertising() makes server,
+    // hostname, provider. That is exactly backwards: ~ProviderPrivate() sends the goodbye
+    // through `server->sendMessageToAll()`, so it reaches through a QObject that was freed
+    // two destructors ago.
+    //
+    // It cost nothing for a long time because the ordinary quit path never gets there. The
+    // provider only says goodbye once its name has been confirmed by a probe - a second or
+    // two after the endpoint comes up - and on quit `aboutToQuit` fires sayGoodbye() first,
+    // which sets saidGoodbye and makes the destructor's call return early. What is left is
+    // every mid-session teardown: releaseShared(), which DirconManager::shared() calls when
+    // a treadmill replaces a bike. That path crashed, and the goodbye it exists to send was
+    // being written into freed memory rather than onto the wire.
+    //
+    // So take them down in dependency order instead of leaving it to child order.
+    delete mdnsProvider;
+    mdnsProvider = nullptr;
+    delete mdnsHostname;
+    mdnsHostname = nullptr;
+    delete mdnsServer;
+    mdnsServer = nullptr;
+}
 
 QString DirconProcessor::convertUUIDFromUINT16ToString (quint16 uuid) {
     if(uuid == ZWIFT_PLAY_CHAR1_ENUM_VALUE)
@@ -59,7 +81,17 @@ void DirconProcessor::initAdvertising() {
     if (!mdnsServer) {
         qDebug() << "Dircon Adv init for" << serverName;
         mdnsServer = new QMdnsEngine::Server(this);
-        mdnsHostname = new QMdnsEngine::Hostname(mdnsServer, serverName.toUtf8() + QByteArrayLiteral("H"), this);
+        // MyWhoosh keys its pending-service map on the instance name with spaces
+        // hyphenated - WahooProgram.ServiceFound() does serviceName.Replace(" ", "-")
+        // + ".local." - then looks that key up with the SRV target hostname and drops
+        // the device silently when it misses. The old trailing "H" and the unhyphenated
+        // spaces both broke that match, so MyWhoosh never resolved us and never opened
+        // TCP to 36866. Hostname appends ".local." itself, and Rouvy ignores the target.
+        // IPv4Only because initServer() binds AnyIPv4: publishing an AAAA would
+        // advertise a link-local address nothing is listening on, and a client
+        // that picks it stalls in SYN_SENT rather than falling back.
+        mdnsHostname = new QMdnsEngine::Hostname(mdnsServer, serverName.toUtf8().replace(' ', '-'),
+                                                 QMdnsEngine::HostnameAddressFamily::IPv4Only, this);
         mdnsProvider = new QMdnsEngine::Provider(mdnsServer, mdnsHostname, this);
         QMdnsEngine::Service mdnsService;
         // Both spellings encode to the same bytes - writeName() chops the trailing
@@ -128,20 +160,18 @@ void DirconProcessor::tcpNewConnection() {
     DirconProcessorClient *client = new DirconProcessorClient(socket);
     clientsMap.insert(socket, client);
 
-    if (rouvy_compatibility) {
-        // Send initial notification for 0x2AD2 (Indoor Bike Data) - Apple TV/Windows compatibility
-        // Elite Avanti sends this immediately after connection
-        DirconPacket initPkt;
-        initPkt.isRequest = false;
-        initPkt.Identifier = DPKT_MSGID_UNSOLICITED_CHARACTERISTIC_NOTIFICATION;
-        initPkt.ResponseCode = DPKT_RESPCODE_SUCCESS_REQUEST;
-        initPkt.uuid = 0x2AD2;
-        initPkt.additional_data = QByteArray(29, 0x00); // Empty data for now
-        QByteArray initData = initPkt.encode(0);
-        socket->write(initData);
-        socket->flush();
-        qDebug() << "Sent initial notification for 0x2AD2 to" << socket->peerAddress().toString();
-    }
+    // No unsolicited 0x2AD2 frame on connect. There used to be one here for Apple TV
+    // compatibility, carrying QByteArray(29, 0x00) - "empty data for now" - and a client
+    // reading the flags word out of it is told the machine measures nothing at all.
+    // MyWhoosh does exactly that: it decides which quantities the trainer reports from
+    // the first Indoor Bike Data frame it sees and latches the answer permanently
+    // (IsIndoorBikeDataFlagRead), so a zero-flag frame arriving before any real one cost
+    // it the power source for the whole session, then it disabled 0x2AD2 as useless.
+    // Rouvy never noticed because it enables 0x2AD2 and reads the real frames.
+    //
+    // Any hand-built frame here has to restate the flags that characteristicnotifier2ad2
+    // computes, which is how this drifted into lying in the first place. Let the notifier
+    // be the only thing that describes the machine.
 }
 
 void DirconProcessor::tcpDisconnected() {

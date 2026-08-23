@@ -1,7 +1,6 @@
 #include "cycplusbc2controller.h"
 
 #include "qtbluetoothcompat.h"
-#include "homeform.h"
 #include <QBluetoothLocalDevice>
 #include <QDateTime>
 #include <QEventLoop>

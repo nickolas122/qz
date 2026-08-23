@@ -41,6 +41,65 @@ concurrency:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+  # Settings are declared in four places that nothing keeps in agreement at build time -
+  # qzsettings.h, allSettings[] in qzsettings.cpp, settings-catalog.json, and settings.qml,
+  # which resolves them by name at runtime. A key deleted from one and left in another is
+  # a dead control on the bike rather than a compile error, which is tolerable while
+  # settings are only added and not while several hundred are being removed.
+  #
+  # Deliberately standalone: no Qt, no build, no `needs:`. It answers in seconds, which is
+  # what makes it useful as the first thing to look at on a PR.
+  settings-integrity:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Check settings declarations agree
+        run: python tools/check-settings-integrity.py
+
+      # Bulk deletion is line-oriented; several Qt constructs wrap onto a second line.
+      # Half of one is often still brace- and paren-balanced, so it reaches moc rather
+      # than any structural check, and moc blames a line that is not the problem.
+      - name: Check for half-deleted constructs
+        run: python tools/check-source-shape.py
+
+  # QML is shipped as a resource, not compiled, so a syntax error in it survives every
+  # other job here: the build is green, the binary is signed, and the only symptom is a
+  # page that will not open on the device. A stray /* left behind by a bulk deletion in
+  # phase 3 made settings.qml unparseable and the settings screen unreachable on both
+  # Android and Windows, and nothing in this file noticed for two phases.
+  #
+  # Qt 5's qmllint is a parser and nothing else - there are no warning categories to
+  # triage, so it answers the only question being asked, which is whether the runtime
+  # can load the file. Qt 6's qmllint would also report style warnings this tree has
+  # thousands of, and would have to be filtered down to this same answer.
+  qml-syntax:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt 5 qmllint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qtdeclarative5-dev-tools
+      - name: Check every QML file parses
+        run: |
+          QMLLINT=/usr/lib/qt5/bin/qmllint
+          [ -x "$QMLLINT" ] || QMLLINT=$(command -v qmllint || true)
+          [ -n "$QMLLINT" ] || { echo "qmllint not found after install"; exit 1; }
+          "$QMLLINT" --version
+          rc=0
+          while IFS= read -r f; do
+            if "$QMLLINT" "$f"; then
+              echo "ok   $f"
+            else
+              echo "::error file=$f::QML syntax error - this file cannot be loaded at runtime"
+              rc=1
+            fi
+          done < <(git ls-files '*.qml')
+          exit $rc
+
   window-build:
     runs-on: windows-2022
     strategy:
@@ -56,12 +115,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout submodule repo
-        uses: actions/checkout@v4
-        with:
-          repository: bluetiger9/SmtpClient-for-Qt
-          path: "src/smtpclient/"
-          ref: 863843c34e03b50d41b8ae8ab6af00e9351693ca   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:
@@ -264,14 +317,9 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |
           cd src
-          echo "#define STRAVA_SECRET_KEY ${{ secrets.strava_secret_key }}" > secret.h
-          echo "#define PELOTON_SECRET_KEY ${{ secrets.peloton_secret_key }}" >> secret.h
-          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" >> secret.h
+          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_ID ${{ secrets.intervalsicu_client_id }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_SECRET ${{ secrets.intervalsicu_client_secret }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           cd ..
 
       - name: Build
@@ -431,13 +479,6 @@ jobs:
 #
 #    steps:
 #      - uses: actions/checkout@v2
-#      - name: Checkout submodule repo
-#        uses: actions/checkout@v2
-#        with:
-#          repository: bluetiger9/SmtpClient-for-Qt
-#          path: "src/smtpclient/"
-#          ref: 863843c34e03b50d41b8ae8ab6af00e9351693ca   # v2.0: the first SmtpClient with Qt 6 support
-#
 #
 #      - uses: msys2/setup-msys2@v2
 #        with:
@@ -465,12 +506,9 @@ jobs:
 #        run: |
 #            qmake
 #            cd src
-#            echo "#define STRAVA_SECRET_KEY ${{ secrets.strava_secret_key }}" > secret.h
-#            echo "#define PELOTON_SECRET_KEY ${{ secrets.peloton_secret_key }}" >> secret.h
-#            echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" >> secret.h
+#            echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
 #            echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
 #            echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-#            echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
 #            echo "#define STEAM_STORE" >> secret.h
 #            cd ..
 #            make -j8
@@ -520,12 +558,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout smtpclient
-        uses: actions/checkout@v4
-        with:
-          repository: bluetiger9/SmtpClient-for-Qt
-          path: "src/smtpclient/"
-          ref: 863843c34e03b50d41b8ae8ab6af00e9351693ca   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:
@@ -538,7 +570,13 @@ jobs:
         with:
           version: '6.8.2'
           host: 'windows'
-          modules: 'qtconnectivity qtpositioning qtnetworkauth qtwebsockets qtspeech qtlocation qtmultimedia qtcharts qthttpserver qtshadertools qtimageformats'
+          # qt5compat carries Qt5Compat.GraphicalEffects, which is where QtGraphicalEffects'
+          # types went in Qt 6 and what tools/qt6-qml-imports.py rewrites every
+          # `import QtGraphicalEffects` to. Without it installed, windeployqt has nothing to
+          # deploy for that import and says so only in passing, so the build stayed green and
+          # the artifact could not load main.qml at all - no window, and a log that stops after
+          # "QQmlApplicationEngine failed to load component".
+          modules: 'qtconnectivity qtpositioning qtnetworkauth qtwebsockets qtspeech qtlocation qtmultimedia qtcharts qthttpserver qtshadertools qtimageformats qt5compat'
           target: "desktop"
           arch: win64_msvc2022_64
           dir: "${{github.workspace}}/qt/"
@@ -597,14 +635,9 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |
           cd src
-          echo "#define STRAVA_SECRET_KEY ${{ secrets.strava_secret_key }}" > secret.h
-          echo "#define PELOTON_SECRET_KEY ${{ secrets.peloton_secret_key }}" >> secret.h
-          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" >> secret.h
+          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_ID ${{ secrets.intervalsicu_client_id }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_SECRET ${{ secrets.intervalsicu_client_secret }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           cd ..
 
       # Every command's status is checked. window-build does not do this, and as a
@@ -650,9 +683,35 @@ jobs:
             cd output
             windeployqt --qmldir ../../ qdomyos-zwift.exe
             if ($LASTEXITCODE -ne 0) { throw "windeployqt failed: $LASTEXITCODE" }
+            # windeployqt exits 0 when it cannot find a QML module: it notes the import and
+            # moves on. That is how a green build once shipped a binary whose first act was
+            # to fail to load its UI. Name the modules the QML actually needs and check they
+            # arrived. The list tracks src/ui/*.qml, which since phase 7c-2b is the whole of
+            # the tree - eleven files importing five modules between them.
+            #
+            # Three names left this list in 7c-2b, each because its last importer was
+            # deleted and windeployqt is now correctly not deploying it:
+            # Qt5Compat\GraphicalEffects (the QtGraphicalEffects imports in main.qml and
+            # settings.qml that tools/qt6-qml-imports.py rewrote), QtQuick\Dialogs and
+            # QtMultimedia. qt5compat stays in the Install Qt 6 module list: it costs
+            # nothing and putting it back is a one-line change if a future screen wants a
+            # drop shadow.
+            #
+            # QtCharts has been absent since phase 3 for the same reason. Its C++ side went
+            # with homeform in 7c-2b, so QT += charts is now the only thing holding it.
+            foreach ($module in @("QtQuick\Controls", "QtQuick\Controls\Material", "QtQuick\Layouts", "Qt\labs\settings")) {
+                if (-not (Test-Path "qml\$module\qmldir")) { throw "windeployqt did not deploy qml\$module - the artifact cannot load its UI" }
+            }
             cp ../../../icons/iOS/iTunesArtwork@2x.png .
             cp ../../AppxManifest.xml .
+            # Both halves, debug last so it wins the names they share. This is
+            # `nmake debug`, so the exe imports libprotobufd.dll and the debug
+            # abseil_dll.dll - and those live in debug\bin, which this step was not
+            # copying. The result was a published zip whose exe cannot start at all:
+            # STATUS_DLL_NOT_FOUND before main(), no window and no log to say why.
+            # The test step above has known about debug\bin since it was written.
             Copy-Item -Path "$vcpkg\bin\*.dll" -Destination . -Verbose
+            Copy-Item -Path "$vcpkg\debug\bin\*.dll" -Destination . -Force -Verbose
             mkdir adb
             cp ../../adb/* adb/
 
@@ -709,12 +768,6 @@ jobs:
 
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
-      - name: Checkout submodule repo
-        uses: actions/checkout@v4
-        with:
-          repository: bluetiger9/SmtpClient-for-Qt
-          path: "src/smtpclient/"
-          ref: 863843c34e03b50d41b8ae8ab6af00e9351693ca   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:
@@ -781,24 +834,6 @@ jobs:
         with:
           name: test_results_xml
           path: tst/test-results/**/*.xml
-
-      - name: Upload test FIT files and database
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: test_fit_files_and_db
-          path: |
-            tst/test-artifacts/*.fit
-            tst/test-artifacts/*.sqlite
-
-#      - name: Test Peloton API
-#        if: github.event_name == 'push' || github.event_name == 'schedule'
-#        run: cd /home/runner/work/qdomyos-zwift/qdomyos-zwift/src/; ./qdomyos-zwift -test-peloton -peloton-username ${{ secrets.peloton_username }} -peloton-password ${{ secrets.peloton_password }}
-#        timeout-minutes: 2
-
-#      - name: Test Home Fitness Buddy API
-#        run: cd /home/runner/work/qdomyos-zwift/qdomyos-zwift/src/; ./qdomyos-zwift -test-hfb
-#        timeout-minutes: 2
 
 #      - uses: actions/checkout@v2
 #        with:
@@ -886,15 +921,6 @@ jobs:
 
       - name: Install packages required to run QZ inside workflow
         run: sudo apt update -y && sudo apt-get install -y qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools qttools5-dev-tools qtquickcontrols2-5-dev libqt5bluetooth5 libqt5widgets5 libqt5positioning5 libqt5xml5 qtconnectivity5-dev qtpositioning5-dev libqt5charts5-dev libqt5charts5 libqt5networkauth5-dev libqt5websockets5* libxcb-randr0-dev libxcb-xtest0-dev libxcb-xinerama0-dev libxcb-shape0-dev libxcb-xkb-dev
-
-#      - name: Test Peloton API
-#        if: github.event_name == 'push' || github.event_name == 'schedule'
-#        run: cd /home/runner/work/qdomyos-zwift/qdomyos-zwift/src/; ./qdomyos-zwift -test-peloton -peloton-username ${{ secrets.peloton_username }} -peloton-password ${{ secrets.peloton_password }}
-#        timeout-minutes: 2
-
-#      - name: Test Home Fitness Buddy API
-#        run: cd /home/runner/work/qdomyos-zwift/qdomyos-zwift/src/; ./qdomyos-zwift -test-hfb
-#        timeout-minutes: 2
 
 #      - uses: actions/checkout@v2
 #        with:
@@ -1004,14 +1030,9 @@ jobs:
       - name: Generate secrets
         run: |
           cd src
-          echo "#define STRAVA_SECRET_KEY ${{ secrets.strava_secret_key }}" > secret.h
-          echo "#define PELOTON_SECRET_KEY ${{ secrets.peloton_secret_key }}" >> secret.h
-          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" >> secret.h
+          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_ID ${{ secrets.intervalsicu_client_id }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_SECRET ${{ secrets.intervalsicu_client_secret }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           echo "#define LICENSE" >> secret.h
 
       - name: Prepare Android signing key
@@ -1322,12 +1343,6 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
-      - name: Checkout submodule repo
-        uses: actions/checkout@v4
-        with:
-          repository: bluetiger9/SmtpClient-for-Qt
-          path: "src/smtpclient/"
-          ref: 863843c34e03b50d41b8ae8ab6af00e9351693ca   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:
@@ -1385,14 +1400,9 @@ jobs:
       - name: Build
         run: |
           cd src
-          echo "#define STRAVA_SECRET_KEY ${{ secrets.strava_secret_key }}" > secret.h
-          echo "#define PELOTON_SECRET_KEY ${{ secrets.peloton_secret_key }}" >> secret.h
-          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" >> secret.h
+          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_ID ${{ secrets.intervalsicu_client_id }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_SECRET ${{ secrets.intervalsicu_client_secret }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           cd ..
           qmake CONFIG+=debug CONFIG+=iphonesimulator \
             && make -j4
@@ -1416,12 +1426,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout submodule repo
-        uses: actions/checkout@v4
-        with:
-          repository: bluetiger9/SmtpClient-for-Qt
-          path: "src/smtpclient/"
-          ref: 863843c34e03b50d41b8ae8ab6af00e9351693ca   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:
@@ -1507,14 +1511,9 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |
           cd src
-          echo "#define STRAVA_SECRET_KEY ${{ secrets.strava_secret_key }}" > secret.h
-          echo "#define PELOTON_SECRET_KEY ${{ secrets.peloton_secret_key }}" >> secret.h
-          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" >> secret.h
+          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_ID ${{ secrets.intervalsicu_client_id }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_SECRET ${{ secrets.intervalsicu_client_secret }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           cd ..
 
       - name: Cache vcpkg
@@ -1646,12 +1645,6 @@ jobs:
     if: false
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout submodule repo
-        uses: actions/checkout@v4
-        with:
-          repository: bluetiger9/SmtpClient-for-Qt
-          path: "src/smtpclient/"
-          ref: 863843c34e03b50d41b8ae8ab6af00e9351693ca   # v2.0: the first SmtpClient with Qt 6 support
       - name: Checkout googletest
         uses: actions/checkout@v4
         with:
@@ -1720,14 +1713,9 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |
           cd src
-          echo "#define STRAVA_SECRET_KEY ${{ secrets.strava_secret_key }}" > secret.h
-          echo "#define PELOTON_SECRET_KEY ${{ secrets.peloton_secret_key }}" >> secret.h
-          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" >> secret.h
+          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_ID ${{ secrets.intervalsicu_client_id }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_SECRET ${{ secrets.intervalsicu_client_secret }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           cd ..
 
       - name: Cache vcpkg
@@ -1829,14 +1817,9 @@ jobs:
       - name: Secrets
         run: |
           cd src
-          echo "#define STRAVA_SECRET_KEY ${{ secrets.strava_secret_key }}" > secret.h
-          echo "#define PELOTON_SECRET_KEY ${{ secrets.peloton_secret_key }}" >> secret.h
-          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" >> secret.h
+          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_ID ${{ secrets.intervalsicu_client_id }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_SECRET ${{ secrets.intervalsicu_client_secret }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           echo "#define LICENSE" >> secret.h
           cd ..
 
@@ -1890,14 +1873,9 @@ jobs:
       - name: Secrets
         run: |
           cd src
-          echo "#define STRAVA_SECRET_KEY ${{ secrets.strava_secret_key }}" > secret.h
-          echo "#define PELOTON_SECRET_KEY ${{ secrets.peloton_secret_key }}" >> secret.h
-          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" >> secret.h
+          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_ID ${{ secrets.intervalsicu_client_id }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_SECRET ${{ secrets.intervalsicu_client_secret }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           echo "#define LICENSE" >> secret.h
           cd ..
 
@@ -2110,14 +2088,9 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |
           cd src
-          echo "#define STRAVA_SECRET_KEY ${{ secrets.strava_secret_key }}" > secret.h
-          echo "#define PELOTON_SECRET_KEY ${{ secrets.peloton_secret_key }}" >> secret.h
-          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" >> secret.h
+          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_ID ${{ secrets.intervalsicu_client_id }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_SECRET ${{ secrets.intervalsicu_client_secret }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           cd ..
 
       - name: Cache vcpkg
@@ -2327,14 +2300,9 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |
           cd src
-          echo "#define STRAVA_SECRET_KEY ${{ secrets.strava_secret_key }}" > secret.h
-          echo "#define PELOTON_SECRET_KEY ${{ secrets.peloton_secret_key }}" >> secret.h
-          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" >> secret.h
+          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_ID ${{ secrets.intervalsicu_client_id }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_SECRET ${{ secrets.intervalsicu_client_secret }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           cd ..
 
       - name: Cache vcpkg
@@ -2530,14 +2498,9 @@ jobs:
           export ANDROID_NDK="${ANDROID_SDK_ROOT}/ndk-bundle"
           export ANDROID_NDK_ROOT="${ANDROID_NDK}"
           cd src
-          echo "#define STRAVA_SECRET_KEY ${{ secrets.strava_secret_key }}" > secret.h
-          echo "#define PELOTON_SECRET_KEY ${{ secrets.peloton_secret_key }}" >> secret.h
-          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" >> secret.h
+          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_ID ${{ secrets.intervalsicu_client_id }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_SECRET ${{ secrets.intervalsicu_client_secret }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           echo "#define LICENSE" >> secret.h
           # Set variant-specific IP setting
           sed -i 's/property string ${{ matrix.variant.setting_key }}: ""/property string ${{ matrix.variant.setting_key }}: "${{ matrix.variant.setting_value }}"/' settings.qml
@@ -2679,14 +2642,9 @@ jobs:
           export ANDROID_NDK="${ANDROID_SDK_ROOT}/ndk-bundle"
           export ANDROID_NDK_ROOT="${ANDROID_NDK}"
           cd src
-          echo "#define STRAVA_SECRET_KEY ${{ secrets.strava_secret_key }}" > secret.h
-          echo "#define PELOTON_SECRET_KEY ${{ secrets.peloton_secret_key }}" >> secret.h
-          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" >> secret.h
+          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_ID ${{ secrets.intervalsicu_client_id }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_SECRET ${{ secrets.intervalsicu_client_secret }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           echo "#define LICENSE" >> secret.h
           # Set variant-specific IP setting
           sed -i 's/property string ${{ matrix.variant.setting_key }}: ""/property string ${{ matrix.variant.setting_key }}: "${{ matrix.variant.setting_value }}"/' settings.qml
@@ -2831,14 +2789,9 @@ jobs:
           export ANDROID_NDK="${ANDROID_SDK_ROOT}/ndk-bundle"
           export ANDROID_NDK_ROOT="${ANDROID_NDK}"
           cd src
-          echo "#define STRAVA_SECRET_KEY ${{ secrets.strava_secret_key }}" > secret.h
-          echo "#define PELOTON_SECRET_KEY ${{ secrets.peloton_secret_key }}" >> secret.h
-          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" >> secret.h
+          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_ID ${{ secrets.intervalsicu_client_id }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_SECRET ${{ secrets.intervalsicu_client_secret }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           echo "#define LICENSE" >> secret.h
           cd ..
 
@@ -2962,14 +2915,9 @@ jobs:
           export ANDROID_NDK="${ANDROID_SDK_ROOT}/ndk-bundle"
           export ANDROID_NDK_ROOT="${ANDROID_NDK}"
           cd src
-          echo "#define STRAVA_SECRET_KEY ${{ secrets.strava_secret_key }}" > secret.h
-          echo "#define PELOTON_SECRET_KEY ${{ secrets.peloton_secret_key }}" >> secret.h
-          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" >> secret.h
+          echo "#define SMTP_USERNAME ${{ secrets.smtp_username }}" > secret.h
           echo "#define SMTP_PASSWORD ${{ secrets.smtp_password }}" >> secret.h
           echo "#define SMTP_SERVER ${{ secrets.smtp_server }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_ID ${{ secrets.intervalsicu_client_id }}" >> secret.h
-          echo "#define INTERVALSICU_CLIENT_SECRET ${{ secrets.intervalsicu_client_secret }}" >> secret.h
-          echo "${{ secrets.cesiumkey }}" >> inner_templates/googlemaps/cesium-key.js
           echo "#define LICENSE" >> secret.h
           cd ..
 

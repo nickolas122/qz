@@ -95,6 +95,15 @@ class ftmsbike : public bike {
     bool inclinationAvailableBySoftware() override { return !resistance_lvl_mode; }
 
   private:
+  protected:
+    /**
+     * @brief One queued write.
+     *
+     * Protected rather than private, and declared here rather than beside the other seams,
+     * because performWrite() takes one and writeQueue below is typed on it: a test subclass
+     * cannot override a method whose parameter type it is not allowed to name, and the type
+     * has to be visible before the queue that holds it.
+     */
     struct WriteRequest {
         QByteArray data;
         QString info;
@@ -105,6 +114,7 @@ class ftmsbike : public bike {
         bool write_without_response = false;
     };
 
+  private:
     bool writeCharacteristic(uint8_t *data, uint8_t data_len, const QString &info, bool disable_log = false,
                              bool wait_for_response = false);
     void writeCharacteristicZwiftPlay(uint8_t *data, uint8_t data_len, const QString &info, bool disable_log = false,
@@ -257,7 +267,6 @@ class ftmsbike : public bike {
     bool D2RIDE = false;
     bool WATTBIKE = false;
     bool VFSPINBIKE = false;
-    bool SS2K = false;
     bool DIRETO_XR = false;
     bool JFBK5_0 = false;
     bool BIKE_ = false;
@@ -317,6 +326,63 @@ class ftmsbike : public bike {
   Q_SIGNALS:
     void disconnected();
     void debug(QString string);
+
+  protected:
+    /**
+     * @brief The notification handler, addressable without a QLowEnergyCharacteristic.
+     *
+     * Layer B of docs/fork/VIRTUAL-BIKE.md exists because of one fact: a test cannot
+     * fabricate a QLowEnergyCharacteristic. It has no public way to set its UUID - the data
+     * is filled in by QLowEnergyServicePrivate - so a default-constructed one reports a null
+     * UUID and every branch of the handler misses. Taking the UUID as an argument is what
+     * makes the shipped parser reachable from a test.
+     *
+     * @param characteristicUuid What the notification arrived on.
+     * @param fromService The QObject that emitted it, compared against currentWriteService to
+     *        decide whether this notification completes a write in flight. The Qt slot passes
+     *        sender(); a test passes whatever it is pretending to be.
+     */
+    virtual void handleNotification(const QBluetoothUuid &characteristicUuid,
+                                    const QByteArray &newValue, QObject *fromService);
+
+    /**
+     * @brief Does a link exist at all? Default: m_control has been built.
+     *
+     * update() dereferences m_control, so an object with no controller is inert. These two
+     * are the whole reason a test can drive update() - see VIRTUAL-BIKE.md, Layer B.
+     */
+    virtual bool linkExists() const;
+
+    /** @brief The controller's state, or Unconnected when there is no controller. */
+    virtual QLowEnergyController::ControllerState linkState() const;
+
+    /**
+     * @brief Is the control point there to be written to? Default: gattFTMSService exists.
+     *
+     * The outbound path defends itself at three levels - this, enqueueTargetValid() and
+     * writeTargetReady() - and all three ask, directly or not, for a QLowEnergyCharacteristic
+     * a test cannot build. Each is its own virtual because each guards a different thing, and
+     * collapsing them would change what production checks.
+     */
+    virtual bool controlPointReady() const;
+
+    /** @brief Can a write be queued for this target? Default: both are valid. */
+    virtual bool enqueueTargetValid(QLowEnergyService *service,
+                                    const QLowEnergyCharacteristic &characteristic) const;
+
+    /** @brief Is @p request's target ready to be written to? Default: its service is discovered. */
+    virtual bool writeTargetReady(const WriteRequest &request) const;
+
+    /** @brief Put @p data on the wire. Default: service->writeCharacteristic(). */
+    virtual void performWrite(const WriteRequest &request, const QByteArray &data);
+
+    /**
+     * @brief Apply @p device's name-derived profile: resistance mode, ERG support, ceiling.
+     *
+     * Called by deviceDiscovered() before the controller is built. Split out so a test can
+     * be a *particular* bike without a radio - see VIRTUAL-BIKE.md, Layer B.
+     */
+    void applyDeviceProfile(const QBluetoothDeviceInfo &device);
 
   public slots:
     void deviceDiscovered(const QBluetoothDeviceInfo &device);

@@ -17,15 +17,16 @@ Upstream is the project. If you are looking for QZ, go there first.
 
 ## Read this before downloading
 
-**Device support has been cut from 132 drivers to 18.** If your machine is not in the list
+**Device support has been cut from 132 drivers to 15.** If your machine is not in the list
 below, this build cannot talk to it and never will — that is the point of the fork, not a
 bug in it. Use upstream instead.
 
-What is left: `ftmsbike` (the FTMS trainer this fork is built around), `cscbike`,
-`stagesbike`, `smartspin2k`, `strydrunpowersensor`, `heartratebelt`, `coresensor`,
-`moxy5sensor`, `dircon`, plus the Elite accessories (`eliteariafan`, `eliterizer`,
-`elitesquarecontroller`, `elitesterzosmart`), `fitmetria_fanfit`, `wahookickrheadwind`,
-`sramAXSController`, `cycplusbc2controller` and `thinkridercontroller`.
+What is left: `ftmsbike` (the FTMS trainer this fork is built around), `cscbike` and
+`stagesbike` (the generic BLE cadence sensor and power meter, read beside the trainer —
+neither can be the machine any more), `heartratebelt`, `coresensor`, `dircon`, plus the
+Elite accessories (`eliteariafan`, `eliterizer`, `elitesquarecontroller`,
+`elitesterzosmart`), `fitmetria_fanfit`, `wahookickrheadwind`, `sramAXSController`,
+`cycplusbc2controller` and `thinkridercontroller`.
 
 **Only Windows and Android are built.** iOS, macOS, Raspberry Pi, NordicTrack/iFIT,
 FitPro and Peloton builds are all disabled here. The releases carry a Windows (Qt 6) zip
@@ -69,11 +70,23 @@ Several bugs here made training apps fail to find QZ, or find it and refuse to c
 - The SRV target is a legal hostname — spaces are no longer smuggled in from the device
   name via Bonjour's `\032` escaping.
 - A goodbye is sent on quit rather than leaving a stale record behind.
+- The SRV hostname is the instance name with spaces hyphenated, which is the form
+  MyWhoosh's resolver insists on.
+- Only an A record is advertised, because the listener binds `AnyIPv4` — an AAAA record
+  sent a client to an address nothing was listening on, where it sat in `SYN_SENT`.
+- The FTMS feature bitmask (`0x2ACC`) declares **power measurement**. Without bit 14 a
+  client can connect, decide the trainer measures nothing useful, and never read
+  `0x2AD2`.
+- No unsolicited zero-filled `0x2AD2` frame is pushed at a new client. A client that
+  latches the reported quantities from the flags of the *first* Indoor Bike Data frame
+  reads all-zero flags as "measures nothing" and drops the characteristic.
 
-Known and not fixable here: **MyWhoosh refuses a DIRCON device advertising the same IP as
-the machine it runs on**, so QZ and MyWhoosh cannot share one PC. Run QZ on Android or a
-second host. This is MyWhoosh's rule, confirmed upstream in
-[issue #3314](https://github.com/cagnulein/qdomyos-zwift/issues/3314).
+**MyWhoosh and QZ do share one PC.** The long-standing claim that MyWhoosh refuses a
+DIRCON device on its own IP — [issue #3314](https://github.com/cagnulein/qdomyos-zwift/issues/3314) —
+does not match its code. It was four stacked bugs, each hidden by the one before it: the
+last four items above. Confirmed 2026-08-17, with Rouvy connected at the same time. On
+Windows MyWhoosh also needs Apple's Bonjour service running; it ships the installer inside
+its own package.
 
 ### Gears
 
@@ -112,8 +125,10 @@ shifting.
 - The nightly `schedule:` trigger is dropped — it burnt runner minutes on release
   plumbing this fork does not publish.
 - Assorted build repairs: MSVC CRT matching (`_ITERATOR_DEBUG_LEVEL`), the app link no
-  longer clobbers the static library, qthttpserver builds without a native perl,
-  `aqtinstall` is pinned, and SmtpClient is pinned to a commit that exists.
+  longer clobbers the static library, qthttpserver builds without a native perl, and
+  `aqtinstall` is pinned. SmtpClient used to be pinned here too; the strip's recording
+  phase removed the e-mail report, so the submodule and its six CI checkout steps are
+  gone.
 
 ## Why, in detail
 
@@ -123,14 +138,22 @@ turned out not to be the cause — are in [docs/fork/](docs/fork/).
 ## Versioning
 
 Releases are tagged `v<upstream base>-qz.<n>` — for example `v2.21.6-qz.1`, meaning the
-first release of this fork built from upstream 2.21.6. Rebasing on a newer upstream moves
-the base and resets the counter.
+first release of this fork built from upstream 2.21.6.
+
+**The base does not move.** This fork deletes upstream code outright rather than carrying
+patches on top of it (see [docs/fork/STRIP-SPEC.md](docs/fork/STRIP-SPEC.md)), so rebasing
+stopped being possible. `2.21.6` is a record of where the tree came from, not a number that
+will be bumped; the `-qz.<n>` counter keeps climbing and never resets. Upstream fixes worth
+having arrive by reading the diff and reimplementing them here by hand.
+
+`v2.21.6-qz.2` is the last release with upstream's shape intact — the fallback if a deletion
+turns out to have taken something load-bearing with it.
 
 The same string lives in [`src/qzforkversion.h`](src/qzforkversion.h) and is written to
 the top of every log:
 
 ```
-QZ fork release 2.21.6-qz.1
+QZ fork release 2.21.6-qz.2
 QZ build <sha> Qt <version> on <os>
 ```
 
