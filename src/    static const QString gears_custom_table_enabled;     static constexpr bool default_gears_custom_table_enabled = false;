@@ -2046,6 +2046,11 @@ class QZSettings {
     static const QString gears_custom_table_enabled;
     static constexpr bool default_gears_custom_table_enabled = false;
 
+    // Trata uma mudança de resistência reportada pela bike (ex: gatilhos do guidão)
+    // que o QZ não pediu, como uma troca de marcha manual do ciclista.
+    static const QString ftms_bike_manual_resistance_as_gear;
+    static constexpr bool default_ftms_bike_manual_resistance_as_gear = false;
+
     static const QString gears_custom_table;
     static const QString default_gears_custom_table;
 
