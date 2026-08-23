@@ -493,6 +493,11 @@ treat as a warning sign. Do it last, or not at all.
 Target: **under 150 keys**, from 1,010. *Estimate*, not a measurement — it falls out of
 the deletions above rather than being designed independently.
 
+**Measured 2026-08-23, after phase 6.** 904 registered → **283**, by deleting every key
+no surviving C++ file names. Of those 283, **114 belong to Group G** and leave with
+phase 8, landing at **169**. The estimate is holding, but the row below that reaches it
+is the machine-types row, not this phase's — see §11.6 phase 6.
+
 | Source of deletion | Keys *(approx)* |
 | --- | --- |
 | Tile system | 471 |
@@ -670,7 +675,7 @@ with Rouvy is still the final word, but it is no longer the only evidence availa
 | 3 | Group C — training programs | medium (homeform surgery) | **none** |  ← landed 2026-08-21, ahead of 6
 | 4 | Group D — telemetry | medium (verify RTSS first) | **covered** |  ← landed 2026-08-21; RTSS check failed, see §7 Group D
 | 5 | Group E — rival trainers, running sensors, `virtualtreadmill` | low, once cscbike is resolved | **covered** |  ← landed 2026-08-20, H1 passed 2026-08-21
-| 6 | Settings consolidation | medium (§3.6 runtime failures) | **covered** |  ← moved to after 7c, see below
+| 6 | Settings consolidation | medium (§3.6 runtime failures) | **covered** |  ← landed 2026-08-23, after 7c; H2 still owed
 | 7a | `RideState` object + `ui_next` flag + new tree under `src/ui/` | medium | **none** |  ← landed 2026-08-21
 | 7b | Ride on the new UI with Rouvy and Zwift; flip the default | low, but needs calendar time | **none** |  ← default flipped 2026-08-23 on H3; H4 still owed, see §11.6
 | 7c | Delete Group F — old tree, tile system, `homeform.cpp`, the flag | high | **none** |  ← 7c-1, 7c-2a, 7c-2b all landed 2026-08-23
@@ -1067,6 +1072,71 @@ survived the reshuffle.
 *Hardware:* **yes — H2.** Short session confirming gear 7 on the flat still lands near
 resistance 14. Settings changes are exactly the kind that pass every automated check and
 still ride wrong.
+
+*Landed 2026-08-23, less H2.* **904 registered settings → 283**, and
+`settings-catalog.json` 868 entries → 248. `qzsettings.h` went from 1,086 declarations to
+337.
+
+The deletion criterion was reachability, not judgement: a setting is live if any
+surviving `.cpp`, `.h` or `.mm` outside `qzsettings.{h,cpp}` names its symbol. **621 of
+the 904 were named by nothing at all** — every one a key the app wrote a default for at
+startup and then never looked at again. The sample that made the case: `tile_*`,
+`shortcut_fan_minus`, `tts_enabled`, `proform_bike_sb`, `fytter_ri08_bike`,
+`kingsmith_encrypt_v3` — groups A through F's leftovers, exactly where §8 predicted them.
+
+It built clean on the first attempt, which is the useful fact about the method: no
+judgement call was made about what a setting *seemed* to be for.
+
+Two things checked before trusting it. **Settings read by string literal** would be
+invisible to a symbol scan; only the template system composes names that way
+(`template_<id>_enabled` and friends), and **no `template_*` key is registered in
+`allSettings[]` at all** — they are created in QSettings at runtime, so nothing here
+could reach them. And the edit is statement-aware rather than line-oriented, because
+§3.6 and the integrity check both warn that a definition or an `allSettings[]` row can
+wrap across two lines.
+
+### The target needs phase 8, and always did
+
+283 is not under 150, and cannot be — **not in this phase**. Classifying what survives:
+
+| What | Keys | Goes when |
+| --- | --- | --- |
+| Treadmill / rower / elliptical, incl. 31 `treadmill_inclination_override_*` | 86 | **Phase 8** (Group G) |
+| Rival and other bike models, detection and quirks | 28 | **Phase 8** |
+| Accessories and sensors | 54 | kept (§7 Group E) |
+| Training-app connection | 49 | kept |
+| Bike and gears | 34 | kept |
+| Everything else — rider profile, platform, logging, simulated bike | 32 | kept |
+
+Phase 8 takes **114** of the 283, which lands at **169** — close to §8's estimate and
+still above it. §8 computed "under 150" against the *whole* strip, Group G included, and
+§10 orders Group G after this phase. So the criterion above was never satisfiable where
+it sits; it is a phase 8 exit condition wearing a phase 6 label. Recorded rather than
+quietly restated: the number was an estimate and it is holding up, but the phase that
+proves it is the last one, not this one.
+
+### The screen
+
+§9.6 named four groups; §8 added **Accessories** as a fifth on the grounds that forcing a
+fan into "Display" would be worse than admitting the group. Phase 6 kept both decisions
+and added nothing further. Rider weight went under **Bike** rather than earning a sixth
+group, because it is an input to the same resistance model `bike_weight` feeds.
+
+`SettingsScreen.qml` now carries **25 controls** across those five groups, up from 8. What
+is *not* on it is the point: 283 settings survive and most are device detection and
+protocol quirks nobody opens a screen to change. The page carries what gets touched
+between rides — resistance offset and gain, the gear table's shape, DIRCON and the
+virtual bike, ERG, the accessories this rider owns.
+
+*Verified:* build clean; suite 189 passed, 12 skipped, unchanged, with `GearTableTest`
+13/13 and the grade→resistance cases green — the two §11.6 names as proof the calibration
+survived; settings integrity consistent (283/283, 248/248, 25 QML bindings all resolving);
+Qt 5 `qmllint` clean; the app starts, logs **zero** QML warnings and still restores the
+rider's gear on connect.
+
+**H2 is still owed** and this phase is the reason it exists. Nothing above proves the
+bike still *feels* the same — §11.6's own warning is that settings changes pass every
+automated check and still ride wrong. Gear 7 on the flat should land near resistance 14.
 
 **Phase 7a — new UI behind the flag**
 *Criteria:* `ui_next` defaults false; the old UI is untouched and still default; new tree
