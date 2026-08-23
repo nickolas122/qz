@@ -12705,7 +12705,6 @@ import AndroidStatusBar 1.0
                 accordionContent: "settings-tts.qml"
             }
 
-            /*
             // static in order to handle the AccordionCheckElement
             StaticAccordionElement {
                 id: experimentalFeatureAccordion

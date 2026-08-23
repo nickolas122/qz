@@ -65,6 +65,41 @@ jobs:
       - name: Check for half-deleted constructs
         run: python tools/check-source-shape.py
 
+  # QML is shipped as a resource, not compiled, so a syntax error in it survives every
+  # other job here: the build is green, the binary is signed, and the only symptom is a
+  # page that will not open on the device. A stray /* left behind by a bulk deletion in
+  # phase 3 made settings.qml unparseable and the settings screen unreachable on both
+  # Android and Windows, and nothing in this file noticed for two phases.
+  #
+  # Qt 5's qmllint is a parser and nothing else - there are no warning categories to
+  # triage, so it answers the only question being asked, which is whether the runtime
+  # can load the file. Qt 6's qmllint would also report style warnings this tree has
+  # thousands of, and would have to be filtered down to this same answer.
+  qml-syntax:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt 5 qmllint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qtdeclarative5-dev-tools
+      - name: Check every QML file parses
+        run: |
+          QMLLINT=/usr/lib/qt5/bin/qmllint
+          [ -x "$QMLLINT" ] || QMLLINT=$(command -v qmllint || true)
+          [ -n "$QMLLINT" ] || { echo "qmllint not found after install"; exit 1; }
+          "$QMLLINT" --version
+          rc=0
+          while IFS= read -r f; do
+            if "$QMLLINT" "$f"; then
+              echo "ok   $f"
+            else
+              echo "::error file=$f::QML syntax error - this file cannot be loaded at runtime"
+              rc=1
+            fi
+          done < <(git ls-files '*.qml')
+          exit $rc
+
   window-build:
     runs-on: windows-2022
     strategy:
