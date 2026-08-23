@@ -272,3 +272,78 @@ bike.
 - `CW_offset` reads `cw`, or a comment says why it must not.
 - Someone with the gains turned on has ridden the change and said whether it feels right.
 - The two unused `fCRR`/`fCW` locals are either used or gone.
+
+---
+
+## The toolbar hides under the display cutout, and the insets that would move it are dropped
+
+**Found 2026-08-22 on the A34 (SM-A346M), from the device's own logs.** The header `ToolBar` is
+laid out from y=0 while the status bar covers the top 75 px of it, so the drawer button, the
+title and the two right-hand buttons are all sliced in half. The bottom sliver stays touchable
+and the drawer does open from it, which is why this presents as "the button sometimes does
+nothing" rather than as a layout fault: a finger aimed at where the icon looks centred lands
+above the window.
+
+`getTopPadding()` in `main.qml:33` is what should prevent it - on Android with API >= 31 it
+returns `AndroidStatusBar.height` (`main.qml:44-46`). That property is 0 for the entire life of
+the process.
+
+### What the log establishes
+
+Java computes the insets correctly and hands them over 54 ms before Qt exists:
+
+```
+17:28:40.083 CustomQtActivity: onApplyWindowInsets - Top:27 Bottom:48 Left:0 Right:0
+17:28:40.083 CustomQtActivity: Raw insets   - SystemTop:75 SystemBottom:135 SystemLeft:0 SystemRight:0
+17:28:40.083 CustomQtActivity: Cutout insets - Top:75 Bottom:0 Left:0 Right:0
+17:28:40.137 QT: qt_process_init() called
+```
+
+`AndroidStatusBar::onInsetsChanged()` logs every change it accepts. That line appears **zero**
+times in a capture taken with `log_debug` on - the same capture carrying dozens of QML warnings
+from the same handler, so nothing was suppressing it. The values never reach C++.
+
+### Two independent reasons it never arrives
+
+`CustomQtActivity.java:119` already knows about the race and gives up on it:
+
+```java
+try {
+    onInsetsChanged(top, bottom, left, right, ...);
+} catch (UnsatisfiedLinkError ignored) {
+    // Qt not ready yet; insets will be re-applied once Qt initializes.
+}
+```
+
+Nothing re-applies them. `onApplyWindowInsets` fires once on this phone and never again, so the
+one delivery that mattered is the one that was swallowed. The comment describes a mechanism that
+was never built.
+
+Second, and true even if the timing were fixed: `registerQmlType()` installs a singleton factory
+returning `new AndroidStatusBar()` (`androidstatusbar.cpp:28`), and the constructor assigns
+`m_instance = this` (`androidstatusbar.cpp:14`). Until QML first dereferences the singleton,
+`AndroidStatusBar::instance()` is null and the JNI entry point returns having done nothing.
+Repairing only the Java side would land the insets in an object no binding is watching.
+
+Worth settling in the same pass: Java divides by `density` and sends dp, while Qt for Android
+measures QML in physical pixels. 27 is not 75, so even a delivered value looks like the wrong
+unit.
+
+### Why it has not shown up before
+
+The emulator has no cutout. On `qz_test` (API 34, generic profile) the toolbar renders complete -
+title, both right-hand buttons, nothing clipped - because a `getTopPadding()` of 0 costs nothing
+when the true inset is also 0. Every device with a notch or a punch-hole is affected and no AVD
+in use here is, so the whole existing test path is blind to it.
+
+This is upstream behaviour, not a strip regression: the guard was added by `07059849c`
+("UnsatisfiedLinkError crash") and nothing in group A-F has touched the inset path since.
+
+### Done looks like
+
+- The header clears the status bar on the A34, with the drawer button whole and touchable along
+  its full height.
+- `AndroidStatusBar.height` is non-zero by the time the first frame is drawn, and still correct
+  after a rotation.
+- A device with a cutout and one without both render correctly, since the fix must not add
+  padding where there is no inset to clear.
