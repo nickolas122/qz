@@ -1335,6 +1335,15 @@ gone from the catalog for good.
   is not answered here.
 - **`main.cpp` needed `<QColor>`, `<QPalette>` and `<QThread>`**, all of which it had been
   getting through `homeform.h`.
+- **CI's deploy guard named three QML modules the tree no longer imports.** The Qt 6
+  job asserts that `windeployqt` actually deployed each module the UI needs, because
+  windeployqt exits 0 when it silently skips one. `Qt5Compat\GraphicalEffects`,
+  `QtQuick\Dialogs` and `QtMultimedia` were all on that list and all lost their last
+  importer with `main.qml` and `settings.qml`, so the guard failed on a correct build.
+  The list now tracks `src/ui/*.qml`: `QtQuick\Controls`, `QtQuick\Controls\Material`,
+  `QtQuick\Layouts` and `Qt\labs\settings`. Worth noticing that this gate is the
+  *only* one that would have caught the opposite mistake — a module the UI needs and
+  the artifact ships without — so it was kept and re-pointed rather than dropped.
 
 *Verified:* mingw debug build clean; suite 189 passed, 12 skipped, unchanged; Qt 5
 `qmllint` clean across all 11 remaining QML files; settings integrity consistent

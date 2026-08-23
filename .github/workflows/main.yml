@@ -684,13 +684,22 @@ jobs:
             windeployqt --qmldir ../../ qdomyos-zwift.exe
             if ($LASTEXITCODE -ne 0) { throw "windeployqt failed: $LASTEXITCODE" }
             # windeployqt exits 0 when it cannot find a QML module: it notes the import and
-            # moves on. That is how a green build shipped a binary whose first act was to fail
-            # to load main.qml. Name the modules the QML actually needs and check they arrived.
-            # QtCharts is deliberately absent: phase 3 deleted GPXList.qml and
-            # TrainingProgramsList.qml, the last QML that imported it, so windeployqt
-            # correctly stops deploying the module. The C++ still links QtCharts
-            # (homeform.h, qtchartscompat.h), which is why QT += charts stays.
-            foreach ($module in @("Qt5Compat\GraphicalEffects", "QtQuick\Controls", "QtQuick\Dialogs", "QtMultimedia")) {
+            # moves on. That is how a green build once shipped a binary whose first act was
+            # to fail to load its UI. Name the modules the QML actually needs and check they
+            # arrived. The list tracks src/ui/*.qml, which since phase 7c-2b is the whole of
+            # the tree - eleven files importing five modules between them.
+            #
+            # Three names left this list in 7c-2b, each because its last importer was
+            # deleted and windeployqt is now correctly not deploying it:
+            # Qt5Compat\GraphicalEffects (the QtGraphicalEffects imports in main.qml and
+            # settings.qml that tools/qt6-qml-imports.py rewrote), QtQuick\Dialogs and
+            # QtMultimedia. qt5compat stays in the Install Qt 6 module list: it costs
+            # nothing and putting it back is a one-line change if a future screen wants a
+            # drop shadow.
+            #
+            # QtCharts has been absent since phase 3 for the same reason. Its C++ side went
+            # with homeform in 7c-2b, so QT += charts is now the only thing holding it.
+            foreach ($module in @("QtQuick\Controls", "QtQuick\Controls\Material", "QtQuick\Layouts", "Qt\labs\settings")) {
                 if (-not (Test-Path "qml\$module\qmldir")) { throw "windeployqt did not deploy qml\$module - the artifact cannot load its UI" }
             }
             cp ../../../icons/iOS/iTunesArtwork@2x.png .
