@@ -15,9 +15,10 @@
 #include "qzforkversion.h"
 #include "bluetooth.h"
 #include "devices/dircon/dirconmanager.h"
-#ifdef Q_OS_WIN
+// Not Q_OS_WIN-guarded any more. The class is compiled on every platform - the .pri has
+// always listed it unconditionally - and reports available() == false where XInput is
+// not there, which is what the mapping screen needs an object to ask.
 #include "gamepadcontroller.h"
-#endif
 #include "qznotify.h"
 #include "qzpaths.h"
 // Reached through homeform.h until 7c-2b deleted it. The dark-palette block below has

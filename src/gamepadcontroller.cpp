@@ -125,12 +125,15 @@ gamepadcontroller::gamepadcontroller(QObject *parent) : QObject(parent) {
 #ifdef Q_OS_WIN
     xinputAvailable = resolveXInput() != nullptr;
 #endif
+    // Read before the availability check, not after it. The mapping screen binds to the
+    // bindings and the repeat timings on every platform - it just says the pad cannot be
+    // read here - and an early return left those showing 0 ms and no buttons.
+    refreshSettings();
+
     if (!xinputAvailable) {
         qDebug() << QStringLiteral("gamepadcontroller: no XInput available, gamepad support is off");
         return;
     }
-
-    refreshSettings();
 
     timer.setTimerType(Qt::CoarseTimer);
     timer.setInterval(enabled ? POLL_INTERVAL_MS : IDLE_INTERVAL_MS);

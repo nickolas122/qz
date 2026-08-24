@@ -6,6 +6,7 @@
 #include "qzsettings.h"
 #include "virtualdevices/virtualbike.h"
 
+#include <QDateTime>
 #include <QSettings>
 
 RideState::RideState(bluetooth *bl, QObject *parent) : QObject(parent), bluetoothManager(bl) {
