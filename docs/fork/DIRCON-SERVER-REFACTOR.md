@@ -382,18 +382,27 @@ Rouvy's own logs are more informative than its UI:
 
 ## Environment notes
 
-- Windows binaries are built on fork CI, never locally: Smart App Control is enforced
-  on the dev machine and blocks `g++` and unsigned wheels. Do not suggest disabling it.
-  `gh workflow run CI -R nickolas122/qz --ref <branch>`, then
-  `gh run download <id> -R nickolas122/qz -n windows-binary-no-python`.
-  Artifact downloads run at roughly 0.1 MB/s from this connection; a 62 MB artifact
-  takes ~10 minutes.
-- The CI matrix is trimmed to Android and Windows. `linux-x86-build` is disabled, and
-  it is the only job that runs the test suite — including the ERG tests described in
-  [AUTO-ERG-MODE.md](AUTO-ERG-MODE.md). Re-enable it before trusting any test result.
+> **The three notes below were true when this was written and are not any more.** Corrected
+> 2026-08-24, in place, because each of them tells a reader to do the wrong thing.
+
+- ~~Windows binaries are built on fork CI, never locally: Smart App Control blocks `g++`.~~
+  The machine owner turned Smart App Control off on 2026-08-13 and **local builds work** —
+  `tools/build-qt6-win.ps1`, and the traps are in
+  [BUILDING-ON-WINDOWS.md](BUILDING-ON-WINDOWS.md). CI is still there
+  (`gh workflow run CI -R nickolas122/qz --ref <branch>`, then
+  `gh run download <id> -R nickolas122/qz -n windows-binary-no-python`) and its artifact
+  downloads still run at roughly 0.1 MB/s, so a 62 MB artifact takes ~10 minutes — which is
+  the reason to build locally.
+- ~~`linux-x86-build` is disabled, and it is the only job that runs the test suite.~~ It is
+  **enabled**, and so are the three Raspberry Pi jobs (phase 8 of
+  [STRIP-SPEC.md](STRIP-SPEC.md)). Test results from CI can be trusted again.
 - Never push to `cagnulein/qdomyos-zwift`. `origin` is `nickolas122/qz`; the upstream
   push URL is deliberately set to `DISABLED_NO_PUSH_TO_UPSTREAM`.
-- Test bike is `YPBM001264` (FTMS, plus a proprietary `fff0` service). Its control
-  point never acknowledges `REQUEST_CONTROL` or `START_RESUME` - the handshake logs
-  `finished without the bike ever acknowledging - control point appears write-only on
-  this console` - so do not read that message as a regression.
+- Test bike is `YPBM001264` (FTMS, plus a proprietary `fff0` service). ~~Its control point
+  never acknowledges `REQUEST_CONTROL` or `START_RESUME`, so do not read the handshake's
+  "control point appears write-only on this console" as a regression.~~ **It does
+  acknowledge.** Measured on Android on 2026-08-09 (`2ad9 << 80 00 01` and `80 07 01`, both
+  SUCCESS, the start 571 ms after the grant) and again on the Qt 6 Windows build in
+  [WINDOWS-QT6-PHASE4.md](WINDOWS-QT6-PHASE4.md) §1. The write-only message was a property of
+  the Qt 5 Windows path, not of the console, and on a current build it **is** worth reading
+  as a fault.

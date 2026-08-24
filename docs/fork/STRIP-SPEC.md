@@ -1,7 +1,13 @@
 # Strip QZ to a trainer bridge — specification
 
-**Status: draft, under discussion.** Nothing here is committed to code yet. Numbers are
-measured against the tree at the time of writing unless marked *estimate* or *verify*.
+**Status: done. Every phase in §10 landed, the last of them on 2026-08-24.** This started
+as a draft under discussion and is now the record of what was actually deleted and what it
+cost — §7's inventory and §11.6's per-phase criteria carry the outcome of each one inline.
+What is still owed is not a phase: H4 (a Zwift ride on the new UI) was declined deliberately
+(§11.7), and the open work is in [TODO.md](TODO.md).
+
+Numbers are measured against the tree at the time of writing unless marked *estimate* or
+*verify*.
 
 ## 1. Goal
 
@@ -44,9 +50,10 @@ live with them.
 arrive only by reading a diff and reimplementing it by hand. This is a deliberate trade:
 the tree becomes readable at the cost of the upstream safety net.
 
-`FORK.md` §Versioning currently promises `v<upstream base>-qz.<n>` and says rebasing
-"moves the base and resets the counter". **That sentence becomes false and must be
-rewritten** when the first deletion phase lands.
+`FORK.md` §Versioning used to promise `v<upstream base>-qz.<n>` and say that rebasing
+"moves the base and resets the counter". That sentence became false with the first
+deletion phase and **was rewritten in phase 0** (`fdd260a17`): the base is now a record of
+where the tree came from, and the counter never resets.
 
 ### 3.2 The BLE peripheral role is not available on Windows
 

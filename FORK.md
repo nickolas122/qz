@@ -17,7 +17,7 @@ Upstream is the project. If you are looking for QZ, go there first.
 
 ## Read this before downloading
 
-**Device support has been cut from 132 drivers to 15.** If your machine is not in the list
+**Device support has been cut from 132 drivers to 16.** If your machine is not in the list
 below, this build cannot talk to it and never will — that is the point of the fork, not a
 bug in it. Use upstream instead.
 
@@ -26,15 +26,38 @@ What is left: `ftmsbike` (the FTMS trainer this fork is built around), `cscbike`
 neither can be the machine any more), `heartratebelt`, `coresensor`, `dircon`, plus the
 Elite accessories (`eliteariafan`, `eliterizer`, `elitesquarecontroller`,
 `elitesterzosmart`), `fitmetria_fanfit`, `wahookickrheadwind`, `sramAXSController`,
-`cycplusbc2controller` and `thinkridercontroller`.
+`cycplusbc2controller`, `thinkridercontroller`, and Zwift Play / Zwift Click. The rule was
+that a driver goes if it competes with the trainer or belongs to a different sport;
+everything that hangs off the rider's own bike — fans, shifters, steering, a body sensor —
+stays.
 
-**Only Windows and Android are built.** iOS, macOS, Raspberry Pi, NordicTrack/iFIT,
-FitPro and Peloton builds are all disabled here. The releases carry a Windows (Qt 6) zip
-and an Android APK, nothing else.
+**Only Windows and Android are shipped.** The releases carry a Windows (Qt 6) zip and an
+Android APK, nothing else. iOS, macOS, NordicTrack/iFIT, FitPro and Peloton builds are
+disabled outright. The Raspberry Pi and Linux x86 jobs do still build in CI — nothing is
+published from them, and they are kept because compiling the Linux/BlueZ half is the only
+thing that proves it is dormant rather than quietly dead.
 
 **The APK is debug-signed** and the Windows build is unsigned.
 
 ## What changed
+
+### The app was stripped to a bridge, and given a new front end
+
+QZ here does one job: carry data and control between the FTMS trainer and the four training
+apps that matter — Rouvy, Zwift, Kinomap, MyWhoosh. Everything that is not that job has been
+deleted rather than disabled, which is also why there is no way back to upstream (see
+[Versioning](#versioning)).
+
+- **Recording is gone.** No FIT files, no history, no charts, no e-mail report, no Strava or
+  Garmin upload. The training apps record the ride; QZ does not keep a second copy.
+- **Training programs, workout media, TTS and the remote-control web UI** are gone with it,
+  along with the machine types this fork cannot have — treadmills, rowers, ellipticals.
+- **The UI is new.** `homeform`'s tile system and its 400-odd tiles are deleted; there are
+  three screens (Ride, Setup, Settings) built around the gear numeral, on a palette chosen
+  for reading mid-ride at arm's length. See
+  [docs/fork/UI-INSTRUMENT-CLUSTER.md](docs/fork/UI-INSTRUMENT-CLUSTER.md).
+- **Settings went from 1,010 keys to 188.** 621 of the ones removed were named by nothing at
+  all — defaults the app wrote at startup and never read again.
 
 ### Windows Bluetooth moved to WinRT
 
@@ -111,17 +134,34 @@ shifting.
 ### Behaviour
 
 - The bike reports the effort **the rider actually made**, rather than the requested value.
+  This console publishes the level it was *commanded to*, and the magnets take 6–9 seconds
+  to get there, so the requested value is a number the legs never produced — measurements in
+  [docs/fork/MEASURED-BIKE.md](docs/fork/MEASURED-BIKE.md).
+- **A resistance slew limiter** keeps QZ from asking for more than the actuator delivers
+  (`resistance_slew_up`/`_down`, both 0 = off), which is what makes the reported watt true.
+- **The ERG level selector was rebuilt.** Interpolating unlearned levels instead of copying a
+  neighbour's whole row, extrapolating below the learned cadence range, and taking the
+  nearest level rather than the one below took the mean error from −13.2 W to +2.7 W.
 - QZ waits for the trainer to grant control before starting a session, and keeps looking
   for the bike, restarting it whenever it reconnects.
-- Reconnect hygiene: exponential backoff, service objects freed, and the likely cause named
-  in the log instead of a bare failure.
+- **The screen says when the bike is gone.** The status chip distinguishes searching,
+  connecting, discovering, live, stale, lost and gave up; readings that stopped being current
+  are dimmed and carry their age rather than standing for ever. On Windows the disconnect
+  never arrives from the OS at all, so a link that stops delivering for 10 seconds is hung up
+  on from this side to produce one.
+- Reconnect hygiene: exponential backoff to a 5-minute ceiling, service objects freed, and
+  the likely cause named in the log instead of a bare failure.
 - The desktop licence check is gated behind `LICENSE`, as Android's already was.
 - The automatic ERG detector is parked, with an account of why in the source.
 
 ### Build and CI
 
-- CI builds **Android and Windows only**; every other platform job is disabled.
+- CI ships **Android and Windows only**. iOS, macOS, NordicTrack/iFIT, FitPro, Peloton and
+  the second Windows/MSVC 2019 pair are all disabled; the Raspberry Pi and Linux x86 jobs
+  build but publish nothing, and exist to keep the dormant Linux/BlueZ half compiling.
 - A `window-qt6-build` job covers the MSVC 2022 / Qt 6.8.2 route.
+- Two checks the strip added and now depends on: `settings-integrity`, which refuses a key
+  that is declared and not catalogued or bound from QML, and `qml-syntax`.
 - The nightly `schedule:` trigger is dropped — it burnt runner minutes on release
   plumbing this fork does not publish.
 - Assorted build repairs: MSVC CRT matching (`_ITERATOR_DEBUG_LEVEL`), the app link no
