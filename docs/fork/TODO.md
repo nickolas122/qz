@@ -36,7 +36,12 @@ nothing — this is what would read it.
 
 ---
 
-## Windows sometimes never finishes discovering the trainer's services, and the retry is silent
+## Windows drops service discovery requests
+
+*Retitled 2026-08-24. This was "…and the retry is silent", which it no longer is: both halves
+that were ours are fixed and struck through below, and what is left is the WinRT timeouts
+themselves — which the entry has always said are probably not ours. It is kept open because
+the timeouts are still happening and nothing here has measured how often.*
 
 **Found 2026-08-21, the phase 5 hardware session.** The first launch found `YPBM001264` and
 connected, then never finished service discovery. All four services arrived, five seconds
@@ -91,8 +96,11 @@ connection parameters and that discovery requests get dropped by the OS stack. T
   which is after discovery finishes; the only thing that ended a discovery stall was the
   controller giving up twenty seconds later.
 
-Worth knowing before designing either: it is intermittent, it recovered on its own the next
-time, and one observation is not a rate.
+Worth knowing before doing anything about the timeouts themselves: it is intermittent, it
+recovered on its own the next time, and one observation is not a rate. Measuring how often it
+happens is the useful next step, and now cheap — a stall that used to need a rider watching a
+frozen screen is a logged `service discovery watchdog fired` line, and the 15:57 session on
+2026-08-24 produced three of them in four minutes against a peripheral that had gone away.
 
 ---
 
