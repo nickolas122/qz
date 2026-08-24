@@ -289,10 +289,29 @@ render.
 
 ## Still open
 
-- The service-discovery watchdog is still armed in `serviceScanDone()`, so it covers the
-  *subscription* pass and not `discoverServices()` itself. The invisible-reconnect half of that
-  TODO entry is now fixed; the unbounded-discovery half is not.
+- ~~The service-discovery watchdog is still armed in `serviceScanDone()`.~~ Fixed 2026-08-24:
+  armed at `ConnectedState`, stopped at `DiscoveredState`, re-armed by `serviceScanDone()` for
+  the subscription pass. Both halves of that TODO entry are now closed.
 - Bundling the real type families (section 1).
 - `bluetooth` still never clears the device on a clean disconnect. Nothing here depends on it any
   more — the link phase is read off the surviving bike object — but the fourteen commented-out
   `disconnected()` connections are still there.
+- A link that reaches `DiscoveredState` and never sends a first frame is deliberately not torn
+  down (see TODO.md). The chip reports it as `stale`, which is honest, but there is no action
+  offered for it — the remedy is an OS-level re-pair and QZ cannot perform one.
+
+## What "Retry now" and "Search" actually do (added 2026-08-24)
+
+The chip has one action button and its label changes with the state. That is not cosmetic: the
+two labels are two different remedies, and which one is possible is a question about the link
+rather than about the UI, so `RideState.retryNow()` decides and the QML does not ask. The
+surface therefore stays at 16 properties and 6 invokables.
+
+| State | Label | What happens |
+| --- | --- | --- |
+| `lost` | Retry now | Resets the backoff and the 5-minute clock, hangs up first if the controller is wedged in `DiscoveredState`, reconnects the same controller. The virtual bike survives, so a training app stays connected. |
+| `gaveup` | Search | `bluetooth::rescan()` — deletes the device and scans again. The only remedy when the bike returns on a different address or the driver is wedged, and the only one that costs the training app its connection. |
+
+The escalation is one-way and only at the ceiling, because the cheap remedy is also the
+non-destructive one. Reaching for `rescan()` earlier would drop a rider's ride to fix something
+a reconnect would have fixed on its own.

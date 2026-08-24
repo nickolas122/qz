@@ -117,6 +117,17 @@ class simulatedFtmsBike : public ftmsbike {
         return out;
     }
 
+    /**
+     * @brief Pretend the last frame arrived @p ms ago.
+     *
+     * The stall watchdog's threshold is ten seconds, and a suite that waits ten seconds
+     * is a suite nobody runs. Pass -1 to hand the clock back to the real one.
+     */
+    void setFrameAge(qint64 ms) { m_frameAgeMs = ms; }
+
+    /** @brief How many times the driver has hung up on its own side. */
+    int closeLinkCount() const { return m_closeLinkCount; }
+
   protected:
     bool linkExists() const override { return true; }
 
@@ -146,6 +157,19 @@ class simulatedFtmsBike : public ftmsbike {
         m_writes.append(data);
     }
 
+    /**
+     * The stall watchdog's entire output. Counted rather than acted on, because there is
+     * no controller here to disconnect - and counting is what makes the decision itself
+     * the thing under test.
+     */
+    void closeLink() override { m_closeLinkCount++; }
+
+    qint64 msSinceLastFrame() const override {
+        return m_frameAgeMs >= 0 ? m_frameAgeMs : ftmsbike::msSinceLastFrame();
+    }
+
   private:
     QList<QByteArray> m_writes;
+    qint64 m_frameAgeMs = -1;
+    int m_closeLinkCount = 0;
 };

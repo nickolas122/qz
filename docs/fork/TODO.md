@@ -78,13 +78,18 @@ connection parameters and that discovery requests get dropped by the OS stack. T
   See [UI-INSTRUMENT-CLUSTER.md](UI-INSTRUMENT-CLUSTER.md) section 3. Original text: between the
   drop and the retry the UI said nothing, so a recovery already in flight looked like a hang —
   and the natural response, restarting, was the one thing that guaranteed it could not finish.
-- **Nothing bounds the discovery phase.** `serviceDiscoveryWatchdog`
-  (`ftmsbike.cpp:2526`, 10 s) starts in `serviceScanDone()` and so covers the *subscription*
-  pass, which is after discovery finishes. This failure was inside Qt's own
-  `discoverServices()`, before that timer exists, and the only thing that ended it was the
-  controller giving up twenty seconds later. A watchdog armed at `connectToDevice()` and
-  stopped on `DiscoveredState` would turn a twenty-second stall into a deliberate retry — and
-  the retry path is already written and already works.
+- ~~**Nothing bounds the discovery phase.**~~ **Fixed 2026-08-24.** `serviceDiscoveryWatchdog`
+  is now armed at `ConnectedState` and stopped at `DiscoveredState`, so it covers the
+  discovery phase as well as the subscription pass it always covered; `serviceScanDone()`
+  re-arms it for the second phase, so each gets its own budget rather than one timer stretched
+  across both. Armed at `ConnectedState` rather than at `connectToDevice()` deliberately — the
+  connect attempt has its own timeout in the stack below us (~23 s on WinRT), and racing it
+  would turn a slow radio into a retry loop. `serviceDiscoveryTimeout()` now branches: with
+  services present it forces the subscription pass as before, and without them it hangs up,
+  because there is nothing to subscribe to and the stall is inside Qt's `discoverServices()`.
+  Original text: it started in `serviceScanDone()` and so covered only the subscription pass,
+  which is after discovery finishes; the only thing that ended a discovery stall was the
+  controller giving up twenty seconds later.
 
 Worth knowing before designing either: it is intermittent, it recovered on its own the next
 time, and one observation is not a rate.
@@ -129,6 +134,103 @@ What is *not* fixed: `bluetooth` still never clears the device on a clean discon
 fourteen commented-out `disconnected()` connections are still there. Nothing depends on them
 any more, because the link phase is read off the surviving bike object instead. Original entry
 below.
+
+### The transport half was not fine after all (found 2026-08-24, fixed the same day)
+
+The entry below says the disconnect "reaches QZ immediately and cleanly" and quotes a log
+showing `InvalidService` on every service followed by `UnconnectedState`. **That is not true of
+Windows with Qt 6.** No desktop log in this tree contains `InvalidService` at all, so that
+observation was almost certainly Android, and it read as if it were general.
+
+Three sessions on 2026-08-24 (`C:\QZ\lite-version`, build `69009d2`, Qt 6.8.2 / WinRT) have the
+fake bike calling `cancelConnection()` and QZ receiving **nothing**: no `UnconnectedState`, no
+controller error, no service state change. The controller sat in `DiscoveredState` for 2m06s
+after the last frame while `virtualbike::bikeProvider` logged 4,202 lines of nothing happening.
+Fifty-one seconds in, a gear shift produced three `writeCharacteristic timeout`s with zero
+`characteristicWritten` — the write queue knew the link was dead and had nowhere to say so.
+
+So the reconnect ladder was never armed, and *that* was the dead end, not the ladder itself:
+the same day's third log shows it running 1 → 2 → 4 → 8 → 16 s correctly when the failure was
+QZ's own outbound connect timing out.
+
+Four things were fixed:
+
+- **`ftmsbike::update()` decides for itself.** A Discovered link that has not delivered Indoor
+  Bike Data for 10 s is hung up on from our side, which produces the `UnconnectedState` the
+  existing path is waiting for. No new retry logic — only the trigger Windows will not supply.
+  Armed only after a first frame has arrived, so a slow handshake is not torn down; rate-limited
+  so a `disconnectFromDevice()` the stack never completes is re-issued rather than becoming a
+  new dead end.
+- **Unacknowledged writes corroborate.** Three in a row shortens the wait to 2 s. Corroboration
+  only, never a trigger of its own — any inbound traffic clears the run, because a
+  `wait_for_response` write is completed by an indication and not by `characteristicWritten()`.
+- **`retryNow()` works from every state.** `QLowEnergyController::connectToDevice()` returns
+  early unless the controller is `Unconnected`, so "Retry now" used to do literally nothing in
+  the one state a rider is most likely to press it in. It hangs up first.
+- **`bluetooth::rescan()`** exists and is reachable, so a rider can get back to discovery
+  without relaunching. `restart()` was already written and had no callers at all. It is offered
+  only from the give-up state, because it deletes the device and the virtual bike goes with it.
+  A rescan the rider asked for is exempt from `bluetooth_no_reconnection`'s `exit()`, which is
+  about automatic reconnection and would otherwise quit the app under someone's hand.
+
+Covered by `tst/Devices/TestFtmsLinkWatchdog.h`, which needed the one narrow clock seam
+(`msSinceLastFrame()`) that `TestFtmsFrameHarness` correctly declines to thread through the
+whole file.
+
+#### The first version moved the dead end instead of removing it
+
+**Found on the bench the same afternoon.** The watchdog was armed only once a frame had
+arrived on the current link, so that a slow handshake would not be torn down. That guard was an
+*exemption* rather than a budget, and it had a hole the size of the original bug:
+
+```
+15:40:33  last frame
+15:40:43  stall detected (10.1 s) -> teardown -> reconnect
+15:40:45  Connected -> Discovered
+15:40:45 -> 15:41:30    45 s, no data, no second teardown, nothing
+```
+
+Windows reports `Connected` and then `Discovered` against a peripheral that has hung up - twice
+in that session, delivering nothing either time. With the watchdog disarmed until a first frame
+that was never coming, QZ sat in that state until the app was killed, and pressing Play on the
+peripheral did nothing because QZ believed it was already connected.
+
+Two things were wrong, and both are now fixed:
+
+- **The guard is a budget, not an exemption.** A link that has never delivered gets
+  `FIRST_FRAME_GRACE_MS` (15 s, measured from `ConnectedState`, generous against the ~2 s
+  discovery and handshake actually observed) instead of `DATA_STALL_MS`. A link that is not
+  delivering is not a link, however new it is.
+- **A socket opening is not a recovery.** The backoff, the failure count and the five-minute
+  ceiling used to reset in the `connected` lambda. On a bike that connects and never streams
+  that resets the ceiling on every lap, so it would retry at one second for ever and never
+  reach the limit that exists to stop exactly that. They now reset in `noteLinkIsDelivering()`,
+  on the first frame - which is what "the bike is back" actually means.
+
+#### What is still not instant, and why
+
+Recovery after the peripheral comes back is now bounded but not immediate: roughly 13 s in the
+common case (10 s to notice the silence, ~1 s of backoff, ~2 s to reconnect and resubscribe),
+and up to ~18 s if the previous reconnect had landed on a dead link and is working through its
+own grace.
+
+That floor is structural. QZ's only evidence that the link died is **silence**, so recovery
+cannot be faster than the silence budget, and pressing Play on the bike is invisible to it.
+
+The one thing that would make Play visible is a **scan**: a peripheral advertising as
+connectable is proof it is not connected to you, and the fake bike starts advertising the
+instant Play is pressed. Restarting discovery while the link is `lost` - and treating an
+advertisement from the device we think we are connected to as immediate grounds to tear down -
+would cut the latency to about a second. It is a real change rather than a tuning knob:
+`bluetooth` owns the discovery agent, `stopDiscovery()` was called when the device was claimed,
+and `bluetooth::finished` is not even connected on Windows (`#ifndef Q_OS_WIN`), so a
+mid-session rescan is not a well-trodden path in this tree. Not attempted yet.
+
+Still not covered: a link that reaches `DiscoveredState` and **never** sends a first frame is
+left alone by design. That is the documented Windows un-bonded case in
+[BUILDING-ON-WINDOWS.md](BUILDING-ON-WINDOWS.md) — services enumerate, no notifications are ever
+delivered — and it has a remedy the watchdog cannot apply. The chip now says "stale" for it
+honestly instead of showing numbers, which is the part that was actually wrong.
 
 ## QZ does not tell the rider when the bike goes away
 

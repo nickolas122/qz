@@ -1437,6 +1437,13 @@ void bluetooth::selectGymModeDevice(const QString &deviceName) {
     restart();
 }
 
+void bluetooth::rescan() {
+    qDebug() << QStringLiteral("bluetooth::rescan - rider asked to search again");
+    userRequestedRescan = true;
+    restart();
+    userRequestedRescan = false;
+}
+
 void bluetooth::restart() {
 
     QSettings settings;
@@ -1448,7 +1455,12 @@ void bluetooth::restart() {
         return;
     }
 
-    if (settings.value(QZSettings::bluetooth_no_reconnection, QZSettings::default_bluetooth_no_reconnection).toBool()) {
+    // bluetooth_no_reconnection exists to make QZ exit rather than loop against a bike
+    // that is not coming back. Applying it to a deliberate button press would quit the
+    // app under the hand of someone who just asked it to look harder, so a rescan the
+    // rider asked for is exempt.
+    if (!userRequestedRescan &&
+        settings.value(QZSettings::bluetooth_no_reconnection, QZSettings::default_bluetooth_no_reconnection).toBool()) {
         exit(EXIT_SUCCESS);
     }
 

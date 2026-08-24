@@ -219,17 +219,76 @@ class ftmsbike : public bike {
     // not report why an attempt failed - so this is a guess offered after enough
     // failures that it is worth guessing. Undiagnosable but common beats silent.
     static constexpr int MULTI_CENTRAL_WARN_AFTER = 5;
-    // Five minutes after the bike went away, stop trying. The backoff doubles to a
-    // 30-second ceiling, so five minutes is roughly fourteen attempts and eight of them
-    // are identical 30-second waits - which is why the limit is wall-clock rather than a
-    // count. "Try 11" tells a rider nothing about how much patience is left; "lost 4
-    // minutes ago" does. Retrying past this point is not recovery, it is a radio kept
-    // warm for a bike that has been switched off.
+    // Five minutes after the bike went away, stop trying. The limit is wall-clock rather
+    // than a count of attempts, and measurement has made the case stronger than the
+    // arithmetic that first argued it: a failed connect on the WinRT backend takes about
+    // 23 seconds to come back, so the backoff's first four steps are invisible against it
+    // and the real period between attempts was 25, 26, 27, 31 and 37 seconds
+    // (debug-Mon_Aug_24_14_14_06_2026.log). Five minutes is therefore seven or eight
+    // attempts here and would be fourteen on a stack that failed instantly - the same
+    // ceiling meaning two different things. "Try 11" tells a rider nothing about how much
+    // patience is left; "lost 4 minutes ago" does, on every platform. Retrying past this
+    // point is not recovery, it is a radio kept warm for a bike that has been switched off.
     static constexpr qint64 RECONNECT_CEILING_MS = 300000;
     QTimer reconnectTimer;
     int reconnectDelayMs = RECONNECT_INITIAL_MS;
     int consecutiveConnectFailures = 0;
     bool multiCentralToastShown = false;
+
+    // --- the link went quiet but nobody hung up -----------------------------------
+    //
+    // Everything above is driven by QLowEnergyController::stateChanged, and on
+    // Windows/Qt 6 that signal does not always arrive. Three sessions on 2026-08-24
+    // (C:\QZ\lite-version, build 69009d2, WinRT backend) have the peripheral calling
+    // cancelConnection() and QZ receiving nothing at all: no UnconnectedState, no
+    // controller error, no service state change. The controller sits in
+    // DiscoveredState for as long as you care to look at it, so the reconnect ladder
+    // - which works, and is proven to work by the same day's third log - is simply
+    // never armed. The only exit was restarting the app.
+    //
+    // So the driver decides for itself. Indoor Bike Data is what a live link is made
+    // of; if it stops arriving on a controller that still claims to be connected, we
+    // hang up on our own side and let the existing UnconnectedState path do the rest.
+    // No new retry logic - this only supplies the trigger Windows will not.
+    /** How long 0x2AD2 may be absent on a Discovered link before we hang up. */
+    static constexpr qint64 DATA_STALL_MS = 10000;
+    /** With the write queue also timing out, the diagnosis is certain and can be quicker. */
+    static constexpr qint64 DATA_STALL_CORROBORATED_MS = 2000;
+    /** Unacknowledged writes needed before they count as corroboration. */
+    static constexpr int WRITE_TIMEOUTS_FOR_STALL = 3;
+    /** Re-issue a teardown this long after one that the stack never completed. */
+    static constexpr qint64 STALL_TEARDOWN_REISSUE_MS = 5000;
+    /**
+     * How long a link that has connected but never delivered a frame is given, measured
+     * from ConnectedState. Longer than DATA_STALL_MS because service discovery and the
+     * control-point handshake both happen inside it - in practice about two seconds, so
+     * this is generous on purpose.
+     *
+     * This being a longer budget rather than an exemption is the whole point, and the
+     * first version got it wrong: it disarmed the watchdog entirely until a frame had
+     * arrived, so a reconnect that landed on a link Windows called Discovered and that
+     * never delivered anything was never torn down again. The 15:40 session on
+     * 2026-08-24 sat in exactly that state for 45 seconds until the app was killed -
+     * the same dead end as before, moved one step later. A link that is not delivering
+     * is not a link, however new it is.
+     */
+    static constexpr qint64 FIRST_FRAME_GRACE_MS = 15000;
+    /**
+     * Has *this* link delivered a frame? Chooses the budget above, and gates the
+     * write-timeout corroboration - which is evidence about a link that was working and
+     * stopped, not about one that never started.
+     */
+    bool everReceivedFrame = false;
+    /** When we last called disconnectFromDevice() over a stall. Invalid if never. */
+    QDateTime stallTeardownAt;
+    /** Consecutive writes the bike never acknowledged. Reset by any write that lands. */
+    int consecutiveWriteTimeouts = 0;
+    /** A frame arrived: clear the teardown grace, and on the first one end the outage. */
+    void noteLinkIsDelivering();
+    /** True while the controller claims Discovered but no data has arrived for the budget. */
+    bool linkHasStalled() const;
+    /** Hang up on our own side so the reconnect ladder gets its UnconnectedState. */
+    void tearDownStalledLink();
 
     // The link's own view of itself, for LinkStatus. Kept here rather than derived from
     // m_control->state() because two of the phases are ours and not Qt's: GaveUp has no
@@ -397,6 +456,24 @@ class ftmsbike : public bike {
 
     /** @brief Put @p data on the wire. Default: service->writeCharacteristic(). */
     virtual void performWrite(const WriteRequest &request, const QByteArray &data);
+
+    /**
+     * @brief Hang up on our own side. Default: m_control->disconnectFromDevice().
+     *
+     * A seam for the same reason as the four above: the stall watchdog's whole output is
+     * this one call, and without somewhere to observe it the decision to make it - which
+     * is the part with the arithmetic in it - could not be tested at all.
+     */
+    virtual void closeLink();
+
+    /**
+     * @brief Milliseconds since the last Indoor Bike Data frame.
+     *
+     * Default: measured from lastRefreshCharacteristicChanged2AD2. The seam exists because
+     * the alternative for a test is to wait ten real seconds, and a suite that waits is a
+     * suite nobody runs.
+     */
+    virtual qint64 msSinceLastFrame() const;
 
     /**
      * @brief Apply @p device's name-derived profile: resistance mode, ERG support, ceiling.

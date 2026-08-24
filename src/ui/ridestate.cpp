@@ -248,10 +248,31 @@ void RideState::setGear(int gear) {
 }
 
 void RideState::retryNow() {
-    if (bike *b = currentBike()) {
-        b->retryNow();
+    // One invokable, two remedies, because the chip is one button whose label already
+    // changes with the state - "Retry now" while it is still trying, "Search" once it
+    // has stopped. Which of the two is possible is a question about the link, not about
+    // the UI, so the UI does not get to ask it and the surface stays at 22 members.
+    bike *b = currentBike();
+
+    // Nothing has been claimed, or the driver has stopped trying. Reconnecting the
+    // existing controller cannot help in either case: there is no controller in the
+    // first, and in the second the bike may have come back on a different address or
+    // the driver object may itself be wedged. Only another scan reaches those.
+    //
+    // Deliberately last resort. rescan() deletes the device, and the virtual bike goes
+    // with it - see bluetooth::rescan(). After five minutes without a trainer there is
+    // no ride left to protect.
+    if (!b || b->linkStatus().phase == LinkStatus::GaveUp) {
+        if (bluetoothManager) {
+            bluetoothManager->rescan();
+            // b is dangling from here: rescan() deleted it. Nothing below may touch it.
+        }
         emit changed();
+        return;
     }
+
+    b->retryNow();
+    emit changed();
 }
 
 bool RideState::autoResistance() const {

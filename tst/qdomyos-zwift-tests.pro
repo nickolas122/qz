@@ -51,6 +51,7 @@ SOURCES += \
         Devices/TestDirconRideLoop.cpp \
         Devices/TestDirconDiscovery.cpp \
         Devices/TestFtmsFrameHarness.cpp \
+        Devices/TestFtmsLinkWatchdog.cpp \
         Devices/TestErgSimConflict.cpp \
         Erg/TestErgTableSelection.cpp \
         Erg/TestErgAutoMode.cpp \
@@ -117,6 +118,7 @@ HEADERS += \
     Devices/ftmsframes.h \
     Devices/simulatedftmsbike.h \
     Devices/TestFtmsFrameHarness.h \
+    Devices/TestFtmsLinkWatchdog.h \
     Devices/TestErgSimConflict.h \
     Erg/ergtabletestsuite.h \
     Erg/TestErgTableSelection.h \

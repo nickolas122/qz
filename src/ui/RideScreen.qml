@@ -89,6 +89,12 @@ Item {
             detail: ride.trainerDetail()
             progress: ride.retryProgress
             battery: rideState.batteryLevel
+            // One button, two remedies. "Retry now" reconnects the existing controller and
+            // costs nothing; "Search" tears the device down and scans again, which is the
+            // only way back when the bike returns on a different address - and takes the
+            // training app's connection with it. Which one is possible is a question about
+            // the link, so RideState decides and this only names the choice.
+            // See UI-INSTRUMENT-CLUSTER.md, "What Retry now and Search actually do".
             action: ride.link === "lost" ? qsTr("Retry now")
                                          : (ride.link === "gaveup" ? qsTr("Search") : "")
             onActionClicked: rideState.retryNow()
