@@ -1801,8 +1801,11 @@ jobs:
           name: windows-msvc2019-ai-server-binary
           path: windows-msvc2019-ai-server-binary.zip
 
+  # Re-enabled 2026-08-23 by phase 8. Section 3.4 of STRIP-SPEC.md is the reason these
+  # three jobs were kept in the file while switched off: the Pi is a future host, so
+  # Linux/BlueZ code is dormant rather than dead, and a build is the only thing that
+  # says whether it still is.
   raspberry-pi-build:
-    if: false # fork: disabled - only android-build and window-* build here
     runs-on: ubuntu-22.04-arm
 
     steps:
@@ -1861,7 +1864,6 @@ jobs:
           path: src/qdomyos-zwift-armv6hf
 
   raspberry-pi-build-and-image-64bit:
-    if: false # fork: disabled - only android-build and window-* build here
     runs-on: ubuntu-22.04-arm
 
     steps:
@@ -1917,7 +1919,6 @@ jobs:
           path: src/qdomyos-zwift-aarch64
 
   raspberry-pi-smoke-test:
-    if: false # fork: disabled - only android-build and window-* build here
     runs-on: ubuntu-22.04-arm
     needs: [raspberry-pi-build, raspberry-pi-build-and-image-64bit]
 
