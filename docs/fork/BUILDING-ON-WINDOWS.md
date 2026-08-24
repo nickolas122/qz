@@ -273,11 +273,34 @@ Bluetooth backend is WinRT rather than Win32. What it needs:
   no IDE. Installs to `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools`.
 - **Qt 6.8.2 `win64_msvc2022_64`** in `C:\Qt`, with `qtconnectivity qtpositioning
   qtnetworkauth qtwebsockets qtspeech qtlocation qtmultimedia qtcharts qthttpserver
-  qtshadertools qtimageformats`. Confirm the backend is real, not the dummy:
+  qtshadertools qtimageformats qt5compat`. Confirm the backend is real, not the dummy:
   `include/QtBluetooth/6.8.2/QtBluetooth/private/qtbluetooth-config_p.h` must say
   `#define QT_FEATURE_winrt_bt 1`.
 - **protobuf from vcpkg**, because `zwift_messages.pb.cc` is compiled only under
   msvc. It must be pinned - see below.
+- **python on PATH.** Unlike Qt 5, the Qt 6 build generates its QML resources:
+  `src/qdomyos-zwift.pri:377` runs `tools/qt6-qml-imports.py` from inside `qmake`
+  itself, so a missing interpreter fails at configure time rather than at build time.
+
+### The script
+
+`tools/build-qt6-win.ps1` does all of the below and checks each precondition before
+it can turn into a failure somewhere else - a missing vcpkg becomes `LNK2019` on a
+protobuf symbol several minutes in, a missing python becomes `rcc` complaining
+about a `.qrc` nothing wrote, and a Qt with the dummy Bluetooth backend builds
+perfectly and then cannot see a bike.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\build-qt6-win.ps1 -Tests
+powershell -ExecutionPolicy Bypass -File tools\build-qt6-win.ps1 -Deploy    # runnable tree
+powershell -ExecutionPolicy Bypass -File tools\build-qt6-win.ps1 -DeployTo C:\QZ\lite-version
+```
+
+`-DeployTo` replaces the `.exe` in an existing deployed tree, which is the fast
+iteration loop. It is only valid while the Qt DLL set is unchanged - the build
+banner QZ logs on launch is the check.
+
+### What it does, by hand
 
 ```powershell
 # the MSVC environment has to come from cmd; copy it back into the session
@@ -285,11 +308,27 @@ cmd /c '"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxil
     ForEach-Object { if ($_ -match "^([^=]+)=(.*)$") { Set-Item ("env:" + $matches[1]) $matches[2] } }
 $env:PATH = "C:\Qt\6.8.2\msvc2022_64\bin;" + $env:PATH
 
+lrelease C:\projetos\qz\qz\src\qdomyos-zwift.pri
+
 # shadow build, so the mingw tree in src/debug stays intact
 mkdir C:\qz-qt6; cd C:\qz-qt6
-qmake C:\projetos\qz\qz\qdomyos-zwift.pro "INCLUDEPATH+=<vcpkg>/installed/x64-windows/include" "LIBS+=-L<vcpkg>/installed/x64-windows/lib"
+qmake C:\projetos\qz\qz\qdomyos-zwift.pro "VCPKG=C:\qz-deps\vcpkg\installed\x64-windows"
 nmake debug
 ```
+
+**Pass `VCPKG=`, never a raw `INCLUDEPATH`/`LIBS` pair.** vcpkg ships two builds of
+protobuf and abseil, and only `defaults.pri` knows which side of `debug|release`
+this build is on; handed the triplet root it picks `debug/lib` or `lib` to match the
+CRT. Pointing `-L` straight at `installed/x64-windows/lib` from a debug build links
+the release half, and on Qt 6 that is not a link error - it is the silent
+`std::string` size mismatch written up at `defaults.pri:20-38`, which surfaces as
+gtest aborting on an empty test name. This recipe used to say exactly that, and it
+was wrong.
+
+Running the tests needs one more thing, for the same reason CI needs it: a debug
+build imports `libprotobufd.dll` and the debug `abseil_dll.dll`, which live in
+`debug\bin` and are on nobody's PATH. Without them the exe dies before `main()`
+with `0xC0000135`, reported as an exit code that looks like a test failure.
 
 **Pin vcpkg's baseline to `8c2fcacefba009d63672f9d137f192765e632c9f`**, the one CI
 uses, by installing in manifest mode rather than `vcpkg install protobuf`. A
