@@ -25,11 +25,6 @@
 // have to be named.
 #include "devices/bike.h"
 #include "devices/bluetoothdevice.h"
-#include "devices/elliptical.h"
-#include "devices/jumprope.h"
-#include "devices/rower.h"
-#include "devices/stairclimber.h"
-#include "devices/treadmill.h"
 #include "devices/coresensor/coresensor.h"
 #include "devices/cscbike/cscbike.h"
 
@@ -54,7 +49,6 @@
 
 
 #include "templateinfosenderbuilder.h"
-#include "devices/treadmill.h"
 #include "devices/wahookickrheadwind/wahookickrheadwind.h"
 
 #include "zwift_play/zwiftPlayDevice.h"
@@ -136,8 +130,6 @@ class bluetooth : public QObject, public SignalHandler {
 
     bool handleSignal(int signal) override;
     bool deviceHasService(const QBluetoothDeviceInfo &device, QBluetoothUuid service);
-    void stateFileUpdate();
-    void stateFileRead();
     bool heartRateBeltAvaiable();
     bool cscSensorAvaiable();
     bool powerSensorAvaiable();
@@ -221,8 +213,6 @@ class bluetooth : public QObject, public SignalHandler {
 #endif
     void canceled();
     void finished();
-    void speedChanged(double);
-    void inclinationChanged(double, double);
     void connectedAndDiscovered();
     void gearDown();
     void gearUp();

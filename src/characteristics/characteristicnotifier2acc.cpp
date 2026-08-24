@@ -1,5 +1,4 @@
 #include "characteristicnotifier2acc.h"
-#include "devices/treadmill.h"
 #include <qmath.h>
 
 CharacteristicNotifier2ACC::CharacteristicNotifier2ACC(bluetoothdevice *Bike, QObject *parent)

@@ -280,7 +280,6 @@ class ftmsbike : public bike {
     bool FIT_BK = false;
     bool YS_G1MPLUS = false;
     bool EXPERT_SX9 = false;
-    bool PM5 = false;
     bool THINK_X = false;
     bool WLT8828 = false;
     bool VANRYSEL_HT = false;

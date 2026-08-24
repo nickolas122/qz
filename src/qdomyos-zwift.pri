@@ -1,5 +1,5 @@
 include(../defaults.pri)
-QT += bluetooth widgets xml positioning quick websockets texttospeech location multimedia
+QT += bluetooth widgets positioning quick websockets texttospeech location multimedia
 QTPLUGIN += qavfmediaplayer
 QT+= charts core-private sql concurrent
 
@@ -116,11 +116,9 @@ SOURCES += \
     $$PWD/androidqlog.cpp \
     $$PWD/devices/coresensor/coresensor.cpp \
     $$PWD/devices/elitesquarecontroller/elitesquarecontroller.cpp \
-    $$PWD/devices/jumprope.cpp \
     $$PWD/devices/cycplusbc2controller/cycplusbc2controller.cpp \
     $$PWD/devices/sramAXSController/sramAXSController.cpp \
     $$PWD/devices/thinkridercontroller/thinkridercontroller.cpp \
-    $$PWD/devices/stairclimber.cpp \
     $$PWD/logwriter.cpp \
     $$PWD/filesearcher.cpp \
 devices/eliteariafan/eliteariafan.cpp \
@@ -133,7 +131,6 @@ windowsblebond.cpp \
 gamepadcontroller.cpp \
 rtssosd.cpp \
 devices/wahookickrheadwind/wahookickrheadwind.cpp \
-windows_zwift_workout_paddleocr_thread.cpp \
 zwift_play/zwiftclickremote.cpp \
 characteristics/characteristicnotifier2a53.cpp \
 characteristics/characteristicnotifier2a5b.cpp \
@@ -170,7 +167,6 @@ devices/dircon/dirconpacket.cpp \
 devices/dircon/dirconprocessor.cpp \
 devices/eliterizer/eliterizer.cpp \
 devices/elitesterzosmart/elitesterzosmart.cpp \
-devices/elliptical.cpp \
 filedownloader.cpp \
 devices/fitmetria_fanfit/fitmetria_fanfit.cpp \
 devices/ftmsbike/ftmsbike.cpp \
@@ -182,7 +178,6 @@ metric.cpp \
 qznotify.cpp \
 qzpaths.cpp \
 qzsettings.cpp \
-devices/rower.cpp \
 screencapture.cpp \
 sessionline.cpp \
 signalhandler.cpp \
@@ -192,11 +187,8 @@ devices/simulatedbike/simulatedbike.cpp \
 devices/stagesbike/stagesbike.cpp \
 templateinfosender.cpp \
 templateinfosenderbuilder.cpp \
-devices/treadmill.cpp \
-virtualdevices/virtualrower.cpp \
 virtualdevices/virtualbike.cpp \
 scanrecordresult.cpp \
-windows_zwift_incline_paddleocr_thread.cpp \
 ui/ridestate.cpp
    
 macx: SOURCES += macos/lockscreen.mm
@@ -220,19 +212,15 @@ HEADERS += \
     $$PWD/characteristics/characteristicwriteprocessor0003.h \
     $$PWD/devices/coresensor/coresensor.h \
     $$PWD/devices/elitesquarecontroller/elitesquarecontroller.h \
-    $$PWD/devices/jumprope.h \
     $$PWD/devices/cycplusbc2controller/cycplusbc2controller.h \
     $$PWD/devices/sramAXSController/sramAXSController.h \
     $$PWD/devices/thinkridercontroller/thinkridercontroller.h \
-    $$PWD/devices/stairclimber.h \
     $$PWD/ergtable.h \
     $$PWD/inclinationresistancetable.h \
     $$PWD/logwriter.h \
     $$PWD/filesearcher.h \
-    $$PWD/treadmillErgTable.h \
     $$PWD/wheelcircumference.h \
 devices/eliteariafan/eliteariafan.h \
-windows_zwift_workout_paddleocr_thread.h \
 zwift-api/PlayerStateWrapper.h \
 zwift-api/zwift_client_auth.h \
 zwift_play/abstractZapDevice.h \
@@ -299,7 +287,6 @@ devices/dircon/dirconpacket.h \
 devices/dircon/dirconprocessor.h \
 devices/eliterizer/eliterizer.h \
 devices/elitesterzosmart/elitesterzosmart.h \
-devices/elliptical.h \
 filedownloader.h \
 devices/fitmetria_fanfit/fitmetria_fanfit.h \
 devices/ftmsbike/ftmsbike.h \
@@ -320,7 +307,6 @@ qznotify.h \
 qzpaths.h \
 qzsettings.h \
 qzforkversion.h \
-devices/rower.h \
 screencapture.h \
 sessionline.h \
 signalhandler.h \
@@ -330,11 +316,8 @@ devices/simulatedbike/simulatedbike.h \
 devices/stagesbike/stagesbike.h \
 templateinfosender.h \
 templateinfosenderbuilder.h \
-devices/treadmill.h \
 virtualdevices/virtualbike.h \
-virtualdevices/virtualrower.h \
 scanrecordresult.h \
-windows_zwift_incline_paddleocr_thread.h \
 ui/ridestate.h
 
 

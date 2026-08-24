@@ -340,15 +340,13 @@ void DirconManager::setResistanceParameters(int8_t bikeResistanceOffset, double 
 }
 
 uint8_t DirconManager::machineTypeFor(bluetoothdevice *t) {
-    // With nothing attached the profile has to be decided up front, and the endpoint
-    // exists for bikes. A treadmill or elliptical that turns up later cannot be served
-    // by rebinding: the listening port is derived from the machine type
-    // (server_base_port + DM_MACHINE_##DESC), so it needs its own endpoint.
-    if (!t) {
-        return DM_MACHINE_TYPE_BIKE;
-    }
-    const BLUETOOTH_TYPE dt = t->deviceType();
-    return dt == TREADMILL || dt == ELLIPTICAL ? DM_MACHINE_TYPE_TREADMILL : DM_MACHINE_TYPE_BIKE;
+    // One answer now that phase 8 has taken the other machine types away. The function
+    // stays because the endpoint is keyed on what it returns - the listening port is
+    // server_base_port + DM_MACHINE_##DESC - and because the service table below still
+    // advertises the treadmill profile exactly as it did before, which is what the
+    // training apps negotiated against.
+    Q_UNUSED(t)
+    return DM_MACHINE_TYPE_BIKE;
 }
 
 DirconManager *DirconManager::shared(bluetoothdevice *t, int8_t bikeResistanceOffset, double bikeResistanceGain) {

@@ -81,12 +81,6 @@ bool bike_power_sensor = false;
 bool battery_service = false;
 bool service_changed = false;
 bool bike_wheel_revs = false;
-bool run_cadence_sensor = false;
-bool horizon_treadmill_7_8 = false;
-bool horizon_treadmill_force_ftms = false;
-bool nordictrack_10_treadmill = false;
-bool proform_performance_300i_treadmill = false;
-bool reebok_fr30_treadmill = false;
 bool zwift_play = false;
 bool zwift_click = false;
 bool zwift_play_emulator = false;
@@ -147,14 +141,6 @@ void displayHelp() {
     printf("  -bike-power-sensor            Enable bike power sensor\n");
     printf("  -bike-wheel-revs              Enable bike wheel revolution tracking\n");
     printf("  -power-sensor-name <name>     Set power sensor name\n");
-
-    printf("\nTreadmill specific options:\n");
-    printf("  -run-cadence-sensor           Enable run cadence sensor\n");
-    printf("  -horizon-treadmill-7-8        Enable Horizon 7.8 treadmill support\n");
-    printf("  -horizon-treadmill-force-ftms Force FTMS for Horizon treadmill\n");
-    printf("  -nordictrack-10-treadmill     Enable NordicTrack 10 treadmill support\n");
-    printf("  -proform-perf-300i-treadmill  Enable Proform Performance 300i support\n");
-    printf("  -reebok_fr30_treadmill        Enable Reebok FR30 treadmill support\n");
 
     printf("\nBluetooth options:\n");
     printf("  -no-reconnection              Disable bluetooth reconnection\n");
@@ -295,18 +281,6 @@ QCoreApplication *createApplication(int &argc, char *argv[]) {
             service_changed = true;
         if (!qstrcmp(argv[i], "-bike-wheel-revs"))
             bike_wheel_revs = true;
-        if (!qstrcmp(argv[i], "-run-cadence-sensor"))
-            run_cadence_sensor = true;
-        if (!qstrcmp(argv[i], "-horizon-treadmill-7-8"))
-            horizon_treadmill_7_8 = true; 
-        if (!qstrcmp(argv[i], "-horizon-treadmill-force-ftms"))
-            horizon_treadmill_force_ftms = true; 
-        if (!qstrcmp(argv[i], "-nordictrack-10-treadmill"))
-            nordictrack_10_treadmill = true;
-        if (!qstrcmp(argv[i], "-proform-perf-300i-treadmill"))
-            proform_performance_300i_treadmill = true;
-        if (!qstrcmp(argv[i], "-reebok_fr30_treadmill"))
-            reebok_fr30_treadmill = true;
         if (!qstrcmp(argv[i], "-zwift_play"))
             zwift_play = true;
         if (!qstrcmp(argv[i], "-zwift_click"))
@@ -563,12 +537,6 @@ int main(int argc, char *argv[]) {
         settings.setValue(QZSettings::battery_service, battery_service);
         settings.setValue(QZSettings::service_changed, service_changed);
         settings.setValue(QZSettings::bike_wheel_revs, bike_wheel_revs);
-        settings.setValue(QZSettings::run_cadence_sensor, run_cadence_sensor);
-        settings.setValue(QZSettings::horizon_treadmill_7_8, horizon_treadmill_7_8);
-        settings.setValue(QZSettings::horizon_treadmill_force_ftms, horizon_treadmill_force_ftms);
-        settings.setValue(QZSettings::nordictrack_10_treadmill, nordictrack_10_treadmill);
-        settings.setValue(QZSettings::proform_performance_300i, proform_performance_300i_treadmill);
-        settings.setValue(QZSettings::reebok_fr30_treadmill, reebok_fr30_treadmill);
         settings.setValue(QZSettings::zwift_click, zwift_click);
         settings.setValue(QZSettings::zwift_play, zwift_play);
         settings.setValue(QZSettings::zwift_play_emulator, zwift_play_emulator);

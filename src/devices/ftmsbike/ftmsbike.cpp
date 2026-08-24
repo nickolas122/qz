@@ -2198,9 +2198,6 @@ void ftmsbike::subscribeToServices() {
     if(gattFTMSService == nullptr && DOMYOS) {
         settings.setValue(QZSettings::domyosbike_notfmts, true);
         QzNotify::toast("Domyos bike presents itself like a FTMS but it's not. Restart QZ to apply the fix, thanks.");
-    } else if(gattFTMSService == nullptr && PM5) {
-        settings.setValue(QZSettings::ftms_rower, bluetoothDevice.name());
-        QzNotify::toast("PM5 rower found. Restart QZ to apply the fix, thanks.");
     }
 
     // FTMS wants request-control acknowledged before it accepts anything else, and the console
@@ -2671,9 +2668,6 @@ void ftmsbike::applyDeviceProfile(const QBluetoothDeviceInfo &device) {
         qDebug() << QStringLiteral("YS_G1MPLUS found");
         YS_G1MPLUS = true;
         max_resistance = 100;
-    } else if (bluetoothDevice.name().toUpper().startsWith(QStringLiteral("PM5"))) {
-        PM5 = true;
-        qDebug() << QStringLiteral("PM5 found");
     } else if(device.name().toUpper().startsWith(QStringLiteral("THINK X")) || device.name().toUpper().startsWith(QStringLiteral("THINK-"))) {
         THINK_X = true;
         qDebug() << "THINK X workaround enabled!";

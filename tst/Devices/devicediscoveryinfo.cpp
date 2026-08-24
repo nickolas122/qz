@@ -10,46 +10,16 @@ void InitializeTrackedSettings()
     if(trackedSettings.size())
         return;
 
-    trackedSettings.insert(QZSettings::antbike, QZSettings::default_antbike);
-    trackedSettings.insert(QZSettings::applewatch_fakedevice, QZSettings::default_applewatch_fakedevice);
     trackedSettings.insert(QZSettings::cadence_sensor_as_bike, QZSettings::default_cadence_sensor_as_bike);
     trackedSettings.insert(QZSettings::cadence_sensor_name, QZSettings::default_cadence_sensor_name);
-    trackedSettings.insert(QZSettings::csafe_rower, QZSettings::default_csafe_rower);
-    trackedSettings.insert(QZSettings::csafe_elliptical_port, QZSettings::default_csafe_elliptical_port);
-    trackedSettings.insert(QZSettings::computrainer_serialport, QZSettings::default_computrainer_serialport);
     trackedSettings.insert(QZSettings::domyosbike_notfmts, QZSettings::default_domyosbike_notfmts);
-    trackedSettings.insert(QZSettings::domyostreadmill_notfmts, QZSettings::default_domyostreadmill_notfmts);
-    trackedSettings.insert(QZSettings::fakedevice_elliptical, QZSettings::default_fakedevice_elliptical);
-    trackedSettings.insert(QZSettings::fakedevice_treadmill, QZSettings::default_fakedevice_treadmill);
-    trackedSettings.insert(QZSettings::fakedevice_rower, QZSettings::default_fakedevice_treadmill);
-    trackedSettings.insert(QZSettings::gem_module_inclination, QZSettings::default_gem_module_inclination);
     trackedSettings.insert(QZSettings::filter_device, QZSettings::default_filter_device);
-    trackedSettings.insert(QZSettings::fitplus_bike, QZSettings::default_fitplus_bike);
     trackedSettings.insert(QZSettings::flywheel_life_fitness_ic8, QZSettings::default_flywheel_life_fitness_ic8);
     trackedSettings.insert(QZSettings::ftms_bike, QZSettings::default_ftms_bike);
-    trackedSettings.insert(QZSettings::ftms_treadmill, QZSettings::default_ftms_treadmill);
-    trackedSettings.insert(QZSettings::gymstick_gx6_0_elliptical, QZSettings::default_gymstick_gx6_0_elliptical);
     trackedSettings.insert(QZSettings::hammer_racer_s, QZSettings::default_hammer_racer_s);
-    trackedSettings.insert(QZSettings::horizon_treadmill_force_ftms, QZSettings::default_horizon_treadmill_force_ftms);
-    trackedSettings.insert(QZSettings::iconcept_elliptical, QZSettings::default_iconcept_elliptical);
-    trackedSettings.insert(QZSettings::iconsole_elliptical, QZSettings::default_iconsole_elliptical);
-    trackedSettings.insert(QZSettings::nordictrack_2950_ip, QZSettings::default_nordictrack_2950_ip);
-    trackedSettings.insert(QZSettings::pafers_treadmill, QZSettings::default_pafers_treadmill);
-    trackedSettings.insert(QZSettings::pafers_treadmill_bh_iboxster_plus, QZSettings::default_pafers_treadmill_bh_iboxster_plus);
     trackedSettings.insert(QZSettings::power_sensor_name, QZSettings::default_power_sensor_name);
-    trackedSettings.insert(QZSettings::proform_elliptical_ip, QZSettings::default_proform_elliptical_ip);
-    trackedSettings.insert(QZSettings::proformtdf1ip, QZSettings::default_proformtdf1ip);
-    trackedSettings.insert(QZSettings::proformtdf4ip, QZSettings::default_proformtdf4ip);
-    trackedSettings.insert(QZSettings::proformtreadmillip, QZSettings::default_proformtreadmillip);
     trackedSettings.insert(QZSettings::saris_trainer, QZSettings::default_saris_trainer);
-    trackedSettings.insert(QZSettings::snode_bike, QZSettings::default_snode_bike);
-    trackedSettings.insert(QZSettings::sole_treadmill_inclination, QZSettings::default_sole_treadmill_inclination);
-    trackedSettings.insert(QZSettings::tdf_10_ip, QZSettings::default_tdf_10_ip);
-    trackedSettings.insert(QZSettings::technogym_myrun_treadmill_experimental, QZSettings::default_technogym_myrun_treadmill_experimental);
-    trackedSettings.insert(QZSettings::toorx_bike, QZSettings::default_toorx_bike);
     trackedSettings.insert(QZSettings::toorx_ftms, QZSettings::default_toorx_ftms);
-    trackedSettings.insert(QZSettings::toorx_ftms_treadmill, QZSettings::default_toorx_ftms_treadmill);
-    trackedSettings.insert(QZSettings::virtufit_etappe, QZSettings::default_virtufit_etappe);
 };
 
 static void AssertKeyIsTracked(const QString& key) {

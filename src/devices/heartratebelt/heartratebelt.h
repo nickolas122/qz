@@ -26,9 +26,13 @@
 #include <QTime>
 #include <QDateTime>
 
-#include "treadmill.h"
+#include "devices/bluetoothdevice.h"
 
-class heartratebelt : public treadmill {
+// Derived from `treadmill` until phase 8, which was never more than where the class
+// happened to be written. It reads no speed and no inclination; it publishes a heart
+// rate. `bluetoothdevice` carries m_control, bluetoothDevice and Heart, which is all
+// of the base it ever touched.
+class heartratebelt : public bluetoothdevice {
     Q_OBJECT
   public:
     heartratebelt();

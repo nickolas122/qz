@@ -498,6 +498,12 @@ no surviving C++ file names. Of those 283, **114 belong to Group G** and leave w
 phase 8, landing at **169**. The estimate is holding, but the row below that reaches it
 is the machine-types row, not this phase's — see §11.6 phase 6.
 
+**Measured again 2026-08-23, after phase 8: 283 → 188.** The under-150 target is *not*
+reached and there is no phase left that would reach it. The 114 above was 86 machine-type
+keys — correct — plus 28 filed as "rival and other bike models", which turned out to be
+detection variants of the kept `ftmsbike` driver that Group E kept along with it. See
+§11.6 phase 8. 188 is the number.
+
 | Source of deletion | Keys *(approx)* |
 | --- | --- |
 | Tile system | 471 |
@@ -679,7 +685,7 @@ with Rouvy is still the final word, but it is no longer the only evidence availa
 | 7a | `RideState` object + `ui_next` flag + new tree under `src/ui/` | medium | **none** |  ← landed 2026-08-21
 | 7b | Ride on the new UI with Rouvy and Zwift; flip the default | low, but needs calendar time | **none** |  ← default flipped 2026-08-23 on H3; H4 still owed, see §11.6
 | 7c | Delete Group F — old tree, tile system, `homeform.cpp`, the flag | high | **none** |  ← 7c-1, 7c-2a, 7c-2b all landed 2026-08-23
-| 8 | Group G, Pi build revival | medium | partial |
+| 8 | Group G, Pi build revival | medium | partial |  ← Group G landed 2026-08-23; Pi revival still owed
 
 "Covered" means the end-to-end loop asserts on that phase's blast radius: bike frames in,
 metrics, DIRCON, a client reading numbers back out. It is deliberately **not** UI coverage
@@ -1520,6 +1526,124 @@ recorded — the old tree logs 51.
 referring to them; the Pi jobs re-enabled and green.
 *Tests:* full suite; the Pi smoke-test job.
 *Hardware:* Pi only, and only when that target is actually pursued.
+
+*Group G landed 2026-08-23.* **3,805 lines of machine types deleted**, and 6,099 lines
+gone in total across 40 files. `treadmill.*` (1,072), `virtualrower.*` (1,465),
+`rower.*` (343), `elliptical.*` (285), `stairclimber.*` (110), `jumprope.*` (117),
+`treadmillErgTable.h` (185), and the two `windows_zwift_*_paddleocr_thread` files (228),
+which nothing outside the `.pri` had named since the tile UI went.
+
+### The precondition, and it was two lines after all
+
+§7 left `treadmill.*` in this group "only after `heartratebelt` stops deriving from it",
+and warned the reparent was not free: the belt inherits a treadmill's speed and
+inclination metrics, and whatever reads those has to be checked first. **Nothing read
+them.** `heartratebelt.cpp` touches `m_control`, `bluetoothDevice` and `Heart`, all three
+of which are `bluetoothdevice`'s, and the class overrides no treadmill member. It is
+stored as `heartratebelt *` and handed out as `bluetoothdevice *` — no call site ever
+cast it to a treadmill. The reparent is one include and one base class.
+
+The one real consequence is `deviceType()`, which the belt inherited from `treadmill` and
+now inherits from `bluetoothdevice`: it answers `UNKNOWN` instead of `TREADMILL`. The belt
+is never the device on `bluetooth::device()`, so nothing switches on it.
+
+### The DIRCON path, and what was deliberately not touched
+
+§7 says the FTMS/DIRCON branches on `TREADMILL` and `ELLIPTICAL` "become unreachable
+rather than wrong, so removing them is tidying — but it is tidying inside the DIRCON path,
+which §5 says to treat as a warning sign. Do it last, or not at all." Deleting the headers
+forces the issue: seven files under `characteristics/` included them.
+
+The rule taken: **the advertised service table in `dirconmanager.cpp` is not touched at
+all**, and not one byte of a BIKE code path moves. Only branches `dt` can no longer take
+were deleted. So `DM_CHAR_OP` still declares the whole treadmill profile and the RSC
+service exactly as before; what a client negotiates against is unchanged. Two consequences
+worth naming:
+
+- `0x2ACD` (Treadmill Data) had its entire body inside `if (dt == TREADMILL || dt ==
+  ELLIPTICAL)`, so a bike already fell through to `CN_INVALID`. It now says that in one
+  line, and stays registered.
+- `machineTypeFor()` returns `DM_MACHINE_TYPE_BIKE` unconditionally. It stays as a
+  function because the listening port is derived from what it returns.
+
+`tools/dircon_smoke.py` against the built binary is what makes this checkable rather than
+argued: the announced service list is still `0x1826, 0x1818, 0x1816`, `0x1826` still
+offers the same six characteristics, `0x2ACC` still reads `835400000ce00000`, and the
+`0x2AD2` stream still carries flags `0x0264`. Identical to before the phase.
+
+### Four things that came out with the machines
+
+Deleting by *feature* rather than by class, as §7 Group E's rule requires, took four
+things the file list would not have found:
+
+1. **`status.xml`** — `bluetooth::stateFileRead()` / `stateFileUpdate()`, a treadmill
+   state file written for a gym console. `stateFileUpdate()` returned immediately unless
+   the device was a treadmill, nothing connected the two slots that called it, and nothing
+   ever called `stateFileRead()`. It was also the only thing left in the tree that used
+   `QtXml`, so **`xml` came off the `QT +=` line**.
+2. **Classic Bluetooth discovery** — the `ClassicMethod | LowEnergyMethod` branch existed
+   for exactly four devices (Technogym MyRun, TRX Route Key, BH Spada 2, iConcept
+   elliptical), every one already deleted. Discovery is now unconditionally BLE.
+3. **The PM5 branch in `ftmsbike`** — a Concept2 rower detected by name, which on finding
+   no FTMS service wrote `ftms_rower` and told the rider to restart. And `ftms_rower`
+   itself gated the FTMS-bike branch in `bluetooth.cpp`: a device the rider had marked as
+   a rower was not to be built as a bike.
+4. **`cadence_sensor_as_treadmill`** — a cadence sensor standing in for a machine that no
+   longer exists, in four places.
+
+`R_setspeed` was **kept**, unlike the rest. It is part of the QZWS wire protocol, and a
+bike has always answered it with null because the handler required a treadmill; it now
+answers null unconditionally, which is the same behaviour stated once.
+
+### The settings target, reached — and the estimate was wrong about where
+
+**283 registered → 188**, catalog 248 → 153, `qzsettings.h` 337 declarations → 230. 95
+keys left, and every one is a machine type or a device deleted in an earlier group: 31
+`treadmill_inclination_override_*`, the treadmill speed/incline bounds, `csafe_rower`,
+`virtual_device_rower`, `fakedevice_{treadmill,rower,elliptical}`, `iconcept_elliptical`,
+`proformtreadmillip`, and the rest.
+
+§11.6's phase 6 note predicted **169** by taking 114 keys: 86 machine-type plus 28 "rival
+and other bike models". The machine-type half was right. **The 28 was not a phase 8 row at
+all** — those keys are `ftms_bike`, `toorx_ftms`, `saris_trainer`, `hammer_racer_s`,
+`flywheel_life_fitness_ic8` and their neighbours, which are *detection variants of the
+kept `ftmsbike` driver*, read live by `bluetooth.cpp` and by the device-detection tests.
+Group E kept the driver, so it kept them. They were misfiled, not missed.
+
+So the honest number is **188, not under 150**, and the target from §8 is not reached. It
+was an estimate rather than a measurement, said so at the time, and this is where it stops:
+what remains is either read by a kept driver, bound by `SettingsScreen.qml`, asserted by a
+test, or Android-only screen-capture OCR. **There is no next phase that takes another 38.**
+The number to record is 188, not a smaller one obtained by deleting something that works.
+
+### Two false readers the audit had been counting
+
+Phase 6's sweep deleted every key "no surviving C++ file names", and two files were
+answering to that description without being readers:
+
+- **`tst/Devices/devicediscoveryinfo.cpp`** mirrors the setting registry — a key listed
+  there is written by the test harness and read back by the same harness, which is not a
+  use. It was keeping about forty already-dead device keys alive one whole phase after
+  their devices were gone. Its list is now pruned to the ten the tests actually name.
+- **`src/debug/`** is gitignored build output, and its stale moc JSON still names classes
+  deleted phases ago. It alone was keeping `antbike` registered.
+
+Both are fixed in `audit_settings.py`. The lesson is narrow and worth keeping: a
+reachability sweep is only as good as its definition of *reader*, and a mirror of the
+thing you are measuring is the easiest false positive to miss.
+
+*Verified:* mingw debug build clean; suite **189 passed, 12 skipped**, unchanged;
+settings integrity consistent (188/188, 153/153, 25 QML bindings resolving); Qt 5
+`qmllint` clean; `tools/qzws_smoke.py` all checks passed against the built binary, gear
+9→10→9 — the gate that caught 7c-2b's silent regression, and the one that matters here
+because `templateinfosenderbuilder.cpp` lost 88 lines; `tools/dircon_smoke.py` all checks
+passed, wire format byte-identical.
+
+**The Pi half of this phase is not done and is deliberately separate.** Reviving
+`raspberry-pi-build`, `raspberry-pi-build-and-image-64bit` and `raspberry-pi-smoke-test`
+means flipping three `if: false` guards, and if they come back red it will be for reasons
+that have nothing to do with Group G. Landing it as its own commit keeps the attribution
+readable.
 
 ### 11.7 Hardware budget
 

@@ -21,7 +21,7 @@ void metric::setValue(double v, bool applyGainAndOffset) {
     if (applyGainAndOffset) {
         if (m_type == METRIC_WATT) {
             if (v > 0) {
-                double maxGain = (m_bluetooth_type == ROWING) ? 5.00 : 2.00;
+                double maxGain = 2.00;
                 if (settings.value(QZSettings::watt_gain, QZSettings::default_watt_gain).toDouble() <= maxGain) {
                     if (settings.value(QZSettings::watt_gain, QZSettings::default_watt_gain).toDouble() != 1.0) {
                         qDebug() << QStringLiteral("watt value was ") << v
@@ -127,7 +127,7 @@ double metric::valueRaw() {
 
     if (m_type == METRIC_WATT) {
         if (v > 0) {
-            double maxGain = (m_bluetooth_type == ROWING) ? 5.00 : 2.00;
+            double maxGain = 2.00;
             if (settings.value(QZSettings::watt_gain, QZSettings::default_watt_gain).toDouble() <= maxGain) {
                 v /= settings.value(QZSettings::watt_gain, QZSettings::default_watt_gain).toDouble();
             }

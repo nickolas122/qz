@@ -1,5 +1,4 @@
 #include "devices/bike.h"
-#include "devices/elliptical.h"
 #include "characteristicwriteprocessor.h"
 #include <QSettings>
 
@@ -86,21 +85,6 @@ void CharacteristicWriteProcessor::changeSlope(int16_t iresistance, uint8_t crr,
             // same on the training program
             Bike->changeResistance((resistance_t)(round(resistance * bikeResistanceGain)) + bikeResistanceOffset + 1 +
                                    CRR_offset + CW_offset); // resistance start from 1
-        }
-    } else if (dt == TREADMILL) {
-        emit changeInclination(grade, percentage);
-    } else if (dt == ELLIPTICAL) {
-        bool inclinationAvailableByHardware = ((elliptical *)Bike)->inclinationAvailableByHardware();
-        qDebug() << "inclinationAvailableByHardware" << inclinationAvailableByHardware << "erg_mode" << erg_mode;
-        emit changeInclination(grade, percentage);
-
-        if (!inclinationAvailableByHardware) {
-            if (force_resistance && !erg_mode) {
-                // same on the training program
-                ((elliptical *)Bike)
-                    ->changeResistance((resistance_t)(round(resistance * bikeResistanceGain)) + bikeResistanceOffset +
-                                       1 + CRR_offset + CW_offset); // resistance start from 1
-            }
         }
     }
     emit slopeChanged();
