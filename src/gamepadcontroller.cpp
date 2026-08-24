@@ -169,6 +169,184 @@ quint32 gamepadcontroller::buttonMask(const QString &names) {
     return mask;
 }
 
+QString gamepadcontroller::settingKeyFor(const QString &action) {
+    if (action == QStringLiteral("gearUp"))
+        return QZSettings::gamepad_gear_up;
+    if (action == QStringLiteral("gearDown"))
+        return QZSettings::gamepad_gear_down;
+    if (action == QStringLiteral("erg"))
+        return QZSettings::gamepad_erg_mode;
+    return QString();
+}
+
+QStringList gamepadcontroller::boundButtons(const QString &action) {
+    const QString key = settingKeyFor(action);
+    if (key.isEmpty())
+        return QStringList();
+
+    QSettings settings;
+    QString value;
+    if (key == QZSettings::gamepad_gear_up)
+        value = settings.value(key, QZSettings::default_gamepad_gear_up).toString();
+    else if (key == QZSettings::gamepad_gear_down)
+        value = settings.value(key, QZSettings::default_gamepad_gear_down).toString();
+    else
+        value = settings.value(key, QZSettings::default_gamepad_erg_mode).toString();
+
+    QStringList out;
+    const QStringList parts = value.split(QStringLiteral(","), Qt::SkipEmptyParts);
+    for (const QString &p : parts) {
+        const QString name = p.trimmed().toLower();
+        if (!name.isEmpty() && !out.contains(name))
+            out.append(name);
+    }
+    return out;
+}
+
+QStringList gamepadcontroller::gearUpButtons() const { return boundButtons(QStringLiteral("gearUp")); }
+QStringList gamepadcontroller::gearDownButtons() const { return boundButtons(QStringLiteral("gearDown")); }
+QStringList gamepadcontroller::ergButtons() const { return boundButtons(QStringLiteral("erg")); }
+
+QStringList gamepadcontroller::pressedButtons() const {
+    QStringList out;
+    for (const namedButton &b : BUTTONS) {
+        if (heldButtons & b.mask)
+            out.append(QString::fromLatin1(b.name));
+    }
+    return out;
+}
+
+QString gamepadcontroller::actionFor(const QString &button) const {
+    const QString name = button.trimmed().toLower();
+    if (gearUpButtons().contains(name))
+        return QStringLiteral("gearUp");
+    if (gearDownButtons().contains(name))
+        return QStringLiteral("gearDown");
+    if (ergButtons().contains(name))
+        return QStringLiteral("erg");
+    return QString();
+}
+
+void gamepadcontroller::beginCapture(const QString &action) {
+    if (settingKeyFor(action).isEmpty()) {
+        qDebug() << QStringLiteral("gamepadcontroller: refusing to capture for unknown action") << action;
+        return;
+    }
+    captureAction = action;
+    // Whatever is held right now does not count. A rider reaching for the screen with a
+    // thumb resting on a trigger would otherwise bind that trigger the instant capture
+    // opened, which is the one thing a capture UI must not do.
+    captureBaseline = heldButtons;
+    capturePending = 0;
+    // The poll idles at 1 Hz when shifting is off, which is too slow to feel like it is
+    // listening. Capture needs the fast rate whether or not the feature is enabled.
+    timer.setInterval(POLL_INTERVAL_MS);
+    qDebug() << QStringLiteral("gamepadcontroller: capturing for") << action;
+    emit statusChanged();
+}
+
+void gamepadcontroller::cancelCapture() {
+    if (captureAction.isEmpty())
+        return;
+    captureAction.clear();
+    captureBaseline = 0;
+    capturePending = 0;
+    emit statusChanged();
+}
+
+void gamepadcontroller::pollCapture(quint32 buttons) {
+    // A button held since capture opened stops being excused the moment it comes up.
+    captureBaseline &= buttons;
+
+    const quint32 fresh = buttons & ~captureBaseline;
+
+    if (capturePending == 0) {
+        // BUTTONS order is the stable order buttonNames() promises, so two buttons
+        // pressed in the same 50 ms frame resolve the same way every time.
+        for (const namedButton &b : BUTTONS) {
+            if (fresh & b.mask) {
+                capturePending = b.mask;
+                emit statusChanged();
+                break;
+            }
+        }
+        return;
+    }
+
+    if (buttons & capturePending) {
+        return; // still held - nothing commits until it comes up
+    }
+
+    QString name;
+    for (const namedButton &b : BUTTONS) {
+        if (b.mask == capturePending) {
+            name = QString::fromLatin1(b.name);
+            break;
+        }
+    }
+
+    const QString action = captureAction;
+    captureAction.clear();
+    captureBaseline = 0;
+    capturePending = 0;
+
+    if (name.isEmpty()) {
+        emit statusChanged();
+        return;
+    }
+
+    // A button may drive exactly one action. Binding it somewhere new takes it away from
+    // wherever it was, rather than firing two actions off one press.
+    const QString previous = actionFor(name);
+    if (!previous.isEmpty() && previous != action) {
+        unbind(previous, name);
+    }
+
+    QStringList names = boundButtons(action);
+    if (!names.contains(name)) {
+        names.append(name);
+        QSettings settings;
+        settings.setValue(settingKeyFor(action), names.join(QStringLiteral(",")));
+    }
+
+    qDebug() << QStringLiteral("gamepadcontroller: bound") << name << QStringLiteral("to") << action;
+    refreshSettings();
+    emit statusChanged();
+    emit bindingsChanged();
+}
+
+void gamepadcontroller::unbind(const QString &action, const QString &button) {
+    const QString key = settingKeyFor(action);
+    if (key.isEmpty())
+        return;
+
+    QStringList names = boundButtons(action);
+    if (!names.removeAll(button.trimmed().toLower()))
+        return;
+
+    QSettings settings;
+    // An empty string is what buttonMask() already reads as "this action is off", so
+    // clearing the last binding disables the action rather than leaving it bound to
+    // everything. That behaviour predates this screen; the screen just exposes it.
+    settings.setValue(key, names.join(QStringLiteral(",")));
+    refreshSettings();
+    emit bindingsChanged();
+}
+
+void gamepadcontroller::setRepeatDelay(int ms) {
+    QSettings settings;
+    settings.setValue(QZSettings::gamepad_repeat_delay, qMax(0, ms));
+    refreshSettings();
+    emit bindingsChanged();
+}
+
+void gamepadcontroller::setRepeatRate(int ms) {
+    QSettings settings;
+    settings.setValue(QZSettings::gamepad_repeat_rate, qMax(POLL_INTERVAL_MS, ms));
+    refreshSettings();
+    emit bindingsChanged();
+}
+
 void gamepadcontroller::refreshSettings() {
     QSettings settings;
     lastSettingsRefresh = QDateTime::currentMSecsSinceEpoch();
@@ -291,9 +469,19 @@ void gamepadcontroller::poll() {
         refreshSettings();
     }
 
-    if (!enabled) {
+    // The mapping screen has to work with shifting switched off - that is the state a
+    // rider is in while setting the pad up for the first time - so capture keeps the
+    // poll running and at full rate.
+    const bool capturing = !captureAction.isEmpty();
+
+    if (!enabled && !capturing) {
         if (timer.interval() != IDLE_INTERVAL_MS) {
             timer.setInterval(IDLE_INTERVAL_MS);
+        }
+        if (padPresent || heldButtons) {
+            padPresent = false;
+            heldButtons = 0;
+            emit statusChanged();
         }
         return;
     }
@@ -304,6 +492,27 @@ void gamepadcontroller::poll() {
     quint32 buttons = 0;
     if (!readPad(&buttons)) {
         releaseAll();
+        if (padPresent || heldButtons) {
+            padPresent = false;
+            heldButtons = 0;
+            emit statusChanged();
+        }
+        return;
+    }
+
+    if (!padPresent || heldButtons != buttons) {
+        padPresent = true;
+        heldButtons = buttons;
+        emit statusChanged();
+    }
+
+    if (capturing) {
+        // No actions fire while binding. Pressing RT to map it must not also shift.
+        pollCapture(buttons);
+        return;
+    }
+
+    if (!enabled) {
         return;
     }
 

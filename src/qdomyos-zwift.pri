@@ -275,6 +275,7 @@ qmdnsengine/src/src/service_p.h \
 devices/bike.h \
 devices/bluetooth.h \
 devices/bluetoothdevice.h \
+devices/linkstatus.h \
 characteristics/characteristicnotifier.h \
 characteristics/characteristicnotifier2a37.h \
 characteristics/characteristicnotifier2a63.h \

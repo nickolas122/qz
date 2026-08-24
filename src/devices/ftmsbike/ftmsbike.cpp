@@ -977,6 +977,10 @@ void ftmsbike::update() {
 }
 
 void ftmsbike::serviceDiscovered(const QBluetoothUuid &gatt) {
+    // Counted so the chip can tell a discovery that is crawling from one that has
+    // stopped. On the Windows stall in TODO.md these arrived five seconds apart, each
+    // behind a WinRT timeout, and the screen had no way to say anything was happening.
+    servicesSeen++;
     emit debug(QStringLiteral("serviceDiscovered ") + gatt.toString());
 }
 
@@ -1043,10 +1047,12 @@ void ftmsbike::handleNotification(const QBluetoothUuid &characteristicUuid, cons
 
     if (characteristicUuid == QBluetoothUuid((quint16)0x2A19) && !D2RIDE) { // Battery Service
         if(newValue.length() > 0) {
-            uint8_t b = (uint8_t)newValue.at(0);
-            if(b != battery_level)
-                QzNotify::toast(bluetoothDevice.name() + QStringLiteral(" Battery Level ") + QString::number(b) + " %");
-            battery_level = b;
+            // No toast on change any more. A battery reading is a standing fact, not an
+            // event: it now rides on the trainer chip for as long as the bike is
+            // connected, instead of being visible for three seconds at a moment nobody
+            // chose. See UI-INSTRUMENT-CLUSTER.md section 4.
+            battery_level = (uint8_t)newValue.at(0);
+            batteryLevelKnown = true;
         }
         return;
     }
@@ -2785,6 +2791,12 @@ void ftmsbike::deviceDiscovered(const QBluetoothDeviceInfo &device) {
             reconnectTimer.stop();
             reconnectDelayMs = RECONNECT_INITIAL_MS;
             consecutiveConnectFailures = 0;
+            // The outage is over, so the ceiling clock and its one-shot toast reset with
+            // it. Anything that goes wrong from here is a new outage with a full budget.
+            linkLostAt = QDateTime();
+            gaveUpToastShown = false;
+            servicesSeen = 0;
+            linkPhase = LinkStatus::Discovering;
             m_control->discoverServices();
         });
         connect(m_control, &QLowEnergyController::disconnected, this, [this]() {
@@ -2831,6 +2843,13 @@ uint16_t ftmsbike::watts() {
 
 void ftmsbike::controllerStateChanged(QLowEnergyController::ControllerState state) {
     qDebug() << QStringLiteral("controllerStateChanged") << state;
+    if (state == QLowEnergyController::ConnectingState) {
+        linkPhase = LinkStatus::Connecting;
+    } else if (state == QLowEnergyController::DiscoveringState) {
+        linkPhase = LinkStatus::Discovering;
+    } else if (state == QLowEnergyController::DiscoveredState) {
+        linkPhase = LinkStatus::Live;
+    }
     if (state == QLowEnergyController::UnconnectedState && m_control) {
         qDebug() << QStringLiteral("trying to connect back again...");
         // These belong to the disconnection, not to the retry, so they stay here
@@ -2855,11 +2874,76 @@ void ftmsbike::controllerStateChanged(QLowEnergyController::ControllerState stat
                                "QZ instances."));
         }
 
+        // First failure of this outage starts the ceiling clock. Every later one is
+        // measured against that same instant, not against itself.
+        if (!linkLostAt.isValid()) {
+            linkLostAt = QDateTime::currentDateTime();
+        }
+        linkPhase = LinkStatus::Lost;
+
+        if (linkLostAt.msecsTo(QDateTime::currentDateTime()) >= RECONNECT_CEILING_MS) {
+            linkPhase = LinkStatus::GaveUp;
+            reconnectTimer.stop();
+            qDebug() << QStringLiteral("giving up: no link for") << RECONNECT_CEILING_MS
+                     << QStringLiteral("ms across") << consecutiveConnectFailures << QStringLiteral("attempts");
+            // Said out loud once, because this is the moment the rider stops being
+            // recovered automatically and the training app owns the screen. The chip
+            // says so too, but nobody is looking at it - see STRIP-SPEC.md 9.7.
+            if (!gaveUpToastShown) {
+                gaveUpToastShown = true;
+                QzNotify::toast(bluetoothDevice.name() +
+                                QStringLiteral(" did not come back after 5 minutes. Tap Search to try again."));
+            }
+            // The controller stays. It is not ours to delete - bluetooth never clears
+            // the device on a clean disconnect (TODO.md), and the retry lambda guards on
+            // m_control being alive. Stopping the timer is the whole of giving up;
+            // retryNow() starts it again from one second.
+            return;
+        }
+
         qDebug() << QStringLiteral("reconnecting in") << reconnectDelayMs << QStringLiteral("ms, consecutive failures")
                  << consecutiveConnectFailures;
         reconnectTimer.start(reconnectDelayMs);
         reconnectDelayMs = qMin(reconnectDelayMs * 2, RECONNECT_MAX_MS);
     }
+}
+
+LinkStatus ftmsbike::linkStatus() const {
+    LinkStatus s;
+    s.phase = linkPhase;
+    s.servicesFound = servicesSeen;
+    s.attempts = consecutiveConnectFailures;
+    s.batteryLevel = batteryLevelKnown ? (int)battery_level : -1;
+
+    if (reconnectTimer.isActive()) {
+        s.msToNextAttempt = reconnectTimer.remainingTime();
+    }
+
+    // Indoor Bike Data is what a ride is made of, so its arrival is what "receiving"
+    // means. The member is seeded with the construction time rather than a null, so an
+    // Idle link would otherwise report an age that only measures how long QZ has been
+    // running.
+    if (linkPhase != LinkStatus::Idle) {
+        s.msSinceLastFrame = lastRefreshCharacteristicChanged2AD2.msecsTo(QDateTime::currentDateTime());
+    }
+    return s;
+}
+
+void ftmsbike::retryNow() {
+    if (!m_control) {
+        return;
+    }
+    qDebug() << QStringLiteral("retryNow: resetting backoff and ceiling");
+    reconnectTimer.stop();
+    reconnectDelayMs = RECONNECT_INITIAL_MS;
+    consecutiveConnectFailures = 0;
+    gaveUpToastShown = false;
+    // The clock restarts here, which is the point: someone who has just walked back from
+    // power-cycling the trainer gets a fresh five minutes, not the twenty seconds left
+    // over from the outage they were away for.
+    linkLostAt = QDateTime::currentDateTime();
+    linkPhase = LinkStatus::Connecting;
+    m_control->connectToDevice();
 }
 
 double ftmsbike::maxGears() {

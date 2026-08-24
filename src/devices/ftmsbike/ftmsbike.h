@@ -94,6 +94,9 @@ class ftmsbike : public bike {
     bool ergModeSupportedAvailableBySoftware() override { return !FS_YK; }
     bool inclinationAvailableBySoftware() override { return !resistance_lvl_mode; }
 
+    LinkStatus linkStatus() const override;
+    void retryNow() override;
+
   private:
   protected:
     /**
@@ -216,10 +219,30 @@ class ftmsbike : public bike {
     // not report why an attempt failed - so this is a guess offered after enough
     // failures that it is worth guessing. Undiagnosable but common beats silent.
     static constexpr int MULTI_CENTRAL_WARN_AFTER = 5;
+    // Five minutes after the bike went away, stop trying. The backoff doubles to a
+    // 30-second ceiling, so five minutes is roughly fourteen attempts and eight of them
+    // are identical 30-second waits - which is why the limit is wall-clock rather than a
+    // count. "Try 11" tells a rider nothing about how much patience is left; "lost 4
+    // minutes ago" does. Retrying past this point is not recovery, it is a radio kept
+    // warm for a bike that has been switched off.
+    static constexpr qint64 RECONNECT_CEILING_MS = 300000;
     QTimer reconnectTimer;
     int reconnectDelayMs = RECONNECT_INITIAL_MS;
     int consecutiveConnectFailures = 0;
     bool multiCentralToastShown = false;
+
+    // The link's own view of itself, for LinkStatus. Kept here rather than derived from
+    // m_control->state() because two of the phases are ours and not Qt's: GaveUp has no
+    // QLowEnergyController equivalent, and Lost has to outlive the controller returning
+    // to UnconnectedState, which is where a reconnect starts from.
+    LinkStatus::Phase linkPhase = LinkStatus::Idle;
+    /** When the link last dropped. Invalid while it is up. What the ceiling is measured from. */
+    QDateTime linkLostAt;
+    int servicesSeen = 0;
+    /** Cleared on a fresh connect, so the ceiling toast is once per outage, not per attempt. */
+    bool gaveUpToastShown = false;
+    /** 0x2A19 is optional. Without this, a battery that has never been read is 0%. */
+    bool batteryLevelKnown = false;
 
     /** Tear down the service objects and everything pointing into them. */
     void discardServiceObjects();

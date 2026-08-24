@@ -4,10 +4,16 @@
         <file>settings-catalog.json</file>
         <file>TemplateWebServer.qml</file>
         <file>ui/Main.qml</file>
+        <file>ui/Theme.qml</file>
         <file>ui/RideScreen.qml</file>
         <file>ui/SetupScreen.qml</file>
         <file>ui/SettingsScreen.qml</file>
-        <file>ui/StatusPill.qml</file>
+        <file>ui/GamepadScreen.qml</file>
+        <file>ui/StatusChip.qml</file>
+        <file>ui/MetricChip.qml</file>
+        <file>ui/BatteryGlyph.qml</file>
+        <file>ui/PadDiagram.qml</file>
+        <file>ui/ReadoutRow.qml</file>
         <file>ui/GearButton.qml</file>
         <file>ui/SettingsGroup.qml</file>
         <file>ui/SettingsSwitch.qml</file>

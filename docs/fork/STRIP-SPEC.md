@@ -563,16 +563,25 @@ refresh loop go away.
 
 QML must not talk to `homeform`. A single new object carries the ride:
 
-`src/ui/ridestate.{h,cpp}` — roughly 12 properties and 4 invokables, wrapping the bridge
-core and nothing else:
+`src/ui/ridestate.{h,cpp}` — 16 properties and 6 invokables, wrapping the bridge core and
+nothing else:
 
 | Kind | Members |
 | --- | --- |
-| Connection | `trainerConnected`, `trainerName`, `appConnected`, `appName`, `transport` (BLE/DIRCON) |
-| Ride | `gear`, `resistance`, `power`, `cadence`, `speed`, `heartRate`, `ergMode` |
-| Actions | `gearUp()`, `gearDown()`, `setGear(int)`, `toggleErg()` |
+| Connection | `trainerState`, `trainerName`, `appState`, `transport` (BLE/DIRCON), `batteryLevel`, `retrySeconds`, `dataAgeSeconds` |
+| Ride | `gear`, `resistance`, `resistanceLevels`, `power`, `cadence`, `speed`, `heartRate`, `ergMode`, `autoResistance` |
+| Actions | `gearUp()`, `gearDown()`, `setGear(int)`, `toggleErg()`, `toggleAutoResistance()`, `retryNow()` |
 
-Keeping this surface small is the point of the exercise. **If it grows past ~20 members,
+**The ceiling moved from ~20 to 22 on 2026-08-24**, the only time it has moved, and the
+argument is in [UI-INSTRUMENT-CLUSTER.md](UI-INSTRUMENT-CLUSTER.md) section 6 and beside the
+assertion in `TestRideState`. In short: the five members the connection work added are all
+bridge facts a rider must be able to see — what the radio link is doing, how old the numbers
+are, how much battery the bike has — and not the tile-rendering plumbing this limit exists to
+keep out. It cost five rather than ten because two booleans were *replaced* by the two state
+properties, `appName` was deleted outright (it returned an empty string unconditionally), and
+one data-age clock does the work that staleness and time-since-lost would otherwise need two of.
+
+Keeping this surface small is the point of the exercise. **If it grows past 22 members,
 something UI-shaped has leaked back into the bridge**, and that is the signal to stop and
 reconsider.
 

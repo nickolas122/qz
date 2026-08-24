@@ -70,12 +70,14 @@ The timeouts themselves are probably not ours to fix.
 connection parameters and that discovery requests get dropped by the OS stack. Two things that
 *are* ours, and they are separable:
 
-- **The reconnect is invisible.** Between the drop and the retry the UI says nothing, so a
-  recovery that was already in flight looks like a hang — and the natural response, restarting,
-  is the one thing that guarantees it cannot finish. Done would be a connection state the rider
-  can see: searching, connecting, discovering, connected, reconnecting. This is the same missing
-  surface as *QZ does not tell the rider when the bike goes away* below, from the other end — a
-  connection that never completed rather than one that ended — and one indicator answers both.
+- ~~**The reconnect is invisible.**~~ **Fixed 2026-08-24** by the UI refactor. The chip shows
+  exactly the states this asked for — searching, connecting, discovering, live, stale, lost,
+  gave up — with the countdown to the next attempt, and `servicesFound` ticking up during
+  discovery so a crawl is distinguishable from a stall. As predicted, one indicator answered
+  both this and *QZ does not tell the rider when the bike goes away* below.
+  See [UI-INSTRUMENT-CLUSTER.md](UI-INSTRUMENT-CLUSTER.md) section 3. Original text: between the
+  drop and the retry the UI said nothing, so a recovery already in flight looked like a hang —
+  and the natural response, restarting, was the one thing that guaranteed it could not finish.
 - **Nothing bounds the discovery phase.** `serviceDiscoveryWatchdog`
   (`ftmsbike.cpp:2526`, 10 s) starts in `serviceScanDone()` and so covers the *subscription*
   pass, which is after discovery finishes. This failure was inside Qt's own
@@ -104,6 +106,29 @@ One line. `qzlog2ride.py` will pick it up with no change, and recordings made af
 complete; older ones keep their `?`.
 
 ---
+
+## ~~QZ does not tell the rider when the bike goes away~~
+
+**Resolved 2026-08-24**, by the UI refactor —
+[UI-INSTRUMENT-CLUSTER.md](UI-INSTRUMENT-CLUSTER.md) section 3. Both latches are gone:
+
+- `trainerConnected`/`appConnected` (booleans that never went back down) are replaced by
+  `trainerState` and `appState`, string states fed by `LinkStatus` and a frame-age test. The
+  app half is the staleness comparison this entry predicted was "one comparison away".
+- Metrics stop being presented as current: each chip carries its own age and marks itself.
+- The reconnect is visible — the chip shows the countdown off `reconnectTimer`, which was
+  already running correctly all along, plus a "Retry now" that resets the backoff.
+- It now stops: a **5-minute** ceiling, timed rather than counted, because the backoff's
+  30-second cap makes an attempt count meaningless. Reaching it toasts and writes into the RTSS
+  overlay rather than failing quietly.
+
+The open product question this entry left — clear, grey out, or hold with a marker — was
+answered **hold with a marker**: the last reading stays, dimmed, with its age in amber.
+
+What is *not* fixed: `bluetooth` still never clears the device on a clean disconnect, and the
+fourteen commented-out `disconnected()` connections are still there. Nothing depends on them
+any more, because the link phase is read off the surviving bike object instead. Original entry
+below.
 
 ## QZ does not tell the rider when the bike goes away
 

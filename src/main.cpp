@@ -782,6 +782,22 @@ int main(int argc, char *argv[]) {
 
         engine.rootContext()->setContextProperty("rideState", &rideState);
 
+        // A gamepad is the only shifter that works once the training app owns the
+        // screen. It used to reach the bike through homeform's keyboard entry points,
+        // which were the same ones the shortcuts and the gear tile used; all three are
+        // gone, and RideState carries the same three actions straight to the device.
+        //
+        // Built on every platform now, not just Windows: the class already reports
+        // available() == false where XInput is not there, and the mapping screen needs
+        // an object to ask. A screen that cannot say "not supported here" would have to
+        // pretend instead, which is the failure section 3.2.1 exists to prevent.
+        // Created before engine.load() because the screen binds to it.
+        gamepadcontroller *pad = new gamepadcontroller(&rideState);
+        QObject::connect(pad, &gamepadcontroller::gearUp, &rideState, &RideState::gearUp);
+        QObject::connect(pad, &gamepadcontroller::gearDown, &rideState, &RideState::gearDown);
+        QObject::connect(pad, &gamepadcontroller::ergToggle, &rideState, &RideState::toggleErg);
+        engine.rootContext()->setContextProperty("gamepad", pad);
+
         // Where the bridge posts "battery at 40%", "restart to apply", "another device
         // has the bike". Drivers emit into QzNotify and ToastArea.qml shows what lands.
         engine.rootContext()->setContextProperty("qzNotify", QzNotify::singleton());
@@ -819,18 +835,6 @@ int main(int argc, char *argv[]) {
         // that caches discovery results and does not retry a failed connect will
         // otherwise hold a record for a port nobody is listening on.
         DirconManager::startIdleEndpoint();
-
-#ifdef Q_OS_WIN
-        // A gamepad is the only shifter that works once the training app owns the
-        // screen. It used to reach the bike through homeform's keyboard entry points,
-        // which were the same ones the shortcuts and the gear tile used; all three are
-        // gone, and RideState carries the same three actions straight to the device.
-        gamepadcontroller *pad = new gamepadcontroller(&rideState);
-        QObject::connect(pad, &gamepadcontroller::gearUp, &rideState, &RideState::gearUp);
-        QObject::connect(pad, &gamepadcontroller::gearDown, &rideState, &RideState::gearDown);
-        QObject::connect(pad, &gamepadcontroller::ergToggle, &rideState, &RideState::toggleErg);
-#endif
-
 
         {
 #ifdef Q_OS_ANDROID

@@ -28,6 +28,23 @@ void RideState::updateRtssOsd() {
         return;
     }
 
+    // A lost trainer displaces everything else. This overlay is the only QZ surface a
+    // rider sees while the training app runs exclusive fullscreen (STRIP-SPEC.md 9.7),
+    // which makes it the one place a silent five-minute reconnect can be announced to
+    // somebody who is actually riding. Gear and resistance are meaningless anyway once
+    // the numbers behind them have stopped arriving.
+    const QString link = trainerState();
+    if (link == QStringLiteral("lost")) {
+        const int secs = retrySeconds();
+        rtssOsd.publish(QStringLiteral("QZ: TRAINER LOST\nRetrying%1")
+                            .arg(secs > 0 ? QStringLiteral(" in %1s").arg(secs) : QStringLiteral("...")));
+        return;
+    }
+    if (link == QStringLiteral("gaveup")) {
+        rtssOsd.publish(QStringLiteral("QZ: TRAINER LOST\nGave up after 5 min"));
+        return;
+    }
+
     QSettings settings;
     const bool erg = settings.value(QZSettings::zwift_erg, QZSettings::default_zwift_erg).toBool();
 
@@ -68,28 +85,101 @@ bike *RideState::currentBike() const {
     return static_cast<bike *>(dev);
 }
 
-bool RideState::trainerConnected() const { return currentBike() != nullptr; }
+QString RideState::trainerState() const {
+    bike *b = currentBike();
+    // No device object at all means discovery has not matched anything yet. QZ is always
+    // scanning in that state, so "searching" is the honest word rather than "idle".
+    if (!b)
+        return QStringLiteral("searching");
+
+    const LinkStatus s = b->linkStatus();
+    switch (s.phase) {
+    case LinkStatus::Connecting:
+        return QStringLiteral("connecting");
+    case LinkStatus::Discovering:
+        return QStringLiteral("discovering");
+    case LinkStatus::Lost:
+        return QStringLiteral("lost");
+    case LinkStatus::GaveUp:
+        return QStringLiteral("gaveup");
+    case LinkStatus::Live:
+        // A link that is up but silent is its own state. The bike is still there and
+        // the reconnect has nothing to do, but the numbers on screen stopped being
+        // true - which is exactly the case TODO.md says must never be shown as normal.
+        if (s.msSinceLastFrame >= 0 && s.msSinceLastFrame > TRAINER_STALE_MS)
+            return QStringLiteral("stale");
+        return QStringLiteral("live");
+    case LinkStatus::Idle:
+    default:
+        // A driver that tracks no link of its own. Falling back to "is there an object"
+        // is the old latching answer, so say what is certain instead: nothing is known
+        // to be receiving yet.
+        return QStringLiteral("searching");
+    }
+}
 
 QString RideState::trainerName() const {
     bike *b = currentBike();
     return b ? b->bluetoothDevice.name() : QString();
 }
 
-bool RideState::appConnected() const { return !transport().isEmpty(); }
+QString RideState::appState() const {
+    bike *b = currentBike();
+    if (!b)
+        return QStringLiteral("idle");
+    virtualbike *v = b->VirtualBike();
+    if (!v || !v->ftmsDeviceConnected())
+        return QStringLiteral("idle");
 
-QString RideState::appName() const { return QString(); }
+    // ftmsDeviceConnected() only says a frame arrived once, ever - neither timestamp is
+    // set back to zero when the app quits or the socket closes, which is why the pill
+    // used to read "connected" for the life of the process. The timestamp it latched on
+    // is the fix: ask how long ago instead of whether.
+    const qint64 age = QDateTime::currentMSecsSinceEpoch() - v->whenLastFTMSFrameReceived();
+    if (age <= APP_STALE_MS)
+        return QStringLiteral("live");
+    if (age <= APP_GONE_MS)
+        return QStringLiteral("stale");
+    // Not a fault. Quitting the training app is how rides end, so this degrades to a
+    // past-tense grey rather than an alarm - only the trainer goes red.
+    return QStringLiteral("past");
+}
 
 QString RideState::transport() const {
     bike *b = currentBike();
     if (!b)
         return QString();
     virtualbike *v = b->VirtualBike();
+    // Deliberately not gated on the app still being there: the chip has to be able to
+    // say "DIRCON client left", which needs to know it was DIRCON.
     if (!v || !v->ftmsDeviceConnected())
         return QString();
     // Both paths stamp their own timestamp; whichever is set is the one carrying the
-    // ride. They fail differently, which is why the pill names the transport rather
+    // ride. They fail differently, which is why the chip names the transport rather
     // than just saying "connected" - see STRIP-SPEC.md section 9.4.
     return v->isDirconFTMS() ? QStringLiteral("DIRCON") : QStringLiteral("BLE");
+}
+
+int RideState::batteryLevel() const {
+    bike *b = currentBike();
+    return b ? b->linkStatus().batteryLevel : -1;
+}
+
+int RideState::retrySeconds() const {
+    bike *b = currentBike();
+    if (!b)
+        return -1;
+    const int ms = b->linkStatus().msToNextAttempt;
+    // Rounded up, so a countdown never shows 0 while it is still waiting.
+    return ms < 0 ? -1 : (ms + 999) / 1000;
+}
+
+int RideState::dataAgeSeconds() const {
+    bike *b = currentBike();
+    if (!b)
+        return -1;
+    const qint64 ms = b->linkStatus().msSinceLastFrame;
+    return ms < 0 ? -1 : (int)(ms / 1000);
 }
 
 int RideState::gear() const {
@@ -100,6 +190,14 @@ int RideState::gear() const {
 double RideState::resistance() const {
     bike *b = currentBike();
     return b ? b->currentResistance().value() : 0.0;
+}
+
+int RideState::resistanceLevels() const {
+    // Already virtual on bluetoothdevice and already overridden by ftmsbike, which
+    // returns the value applyDeviceProfile() set from the device name - 32 for this
+    // trainer. Nothing new had to be plumbed for the ladder under the gear.
+    bike *b = currentBike();
+    return b ? (int)b->maxResistance() : 0;
 }
 
 double RideState::power() const {
@@ -144,6 +242,13 @@ void RideState::gearDown() {
 void RideState::setGear(int gear) {
     if (bike *b = currentBike()) {
         b->setGears(gear);
+        emit changed();
+    }
+}
+
+void RideState::retryNow() {
+    if (bike *b = currentBike()) {
+        b->retryNow();
         emit changed();
     }
 }

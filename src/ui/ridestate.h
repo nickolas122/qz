@@ -13,26 +13,66 @@ class bluetooth;
  * @brief The whole of what the new UI is allowed to know about a ride.
  *
  * QML must not talk to homeform. This object wraps the bridge core and nothing else:
- * the trainer's connection, the numbers coming off it, and the four things a rider
- * does through QZ mid-ride. See STRIP-SPEC.md section 9.2.
+ * the trainer's connection, the numbers coming off it, and the things a rider does
+ * through QZ mid-ride. See STRIP-SPEC.md section 9.2.
  *
- * Keeping the surface small is the point of the exercise. If it grows past 20 members,
- * something UI-shaped has leaked back into the bridge - and TestRideState asserts that
- * bound rather than leaving it to judgement.
+ * Keeping the surface small is the point of the exercise. The ceiling is 22 members and
+ * TestRideState asserts it. It was 20 until 2026-08-24, and the reason it moved is worth
+ * knowing before moving it again: section 9.2's limit exists to keep *tile-rendering
+ * plumbing* out of the bridge, and the members that pushed it over are not that - they
+ * are bridge facts a rider has to be able to see (what the radio link is doing, how old
+ * the numbers are, how much battery the bike has). Two booleans became two state strings
+ * rather than being joined by them, one always-empty property was deleted outright, and
+ * one clock does the work of two. A member that cannot survive that kind of scrutiny is
+ * the leak the test was written to catch.
  */
 class RideState : public QObject {
     Q_OBJECT
 
     // Connection
-    Q_PROPERTY(bool trainerConnected READ trainerConnected NOTIFY changed)
+    /**
+     * @brief What the trainer's radio link is doing, as one of a fixed vocabulary:
+     * "searching", "connecting", "discovering", "live", "stale", "lost", "gaveup".
+     *
+     * A string rather than a Q_ENUM because RideState reaches QML as a context property,
+     * so an enum would need qmlRegisterUncreatableType and a module import - and section
+     * 9.8 is explicit that the Qt 6 import rewriter is the easiest way to break the
+     * Android build. TestRideState pins the vocabulary instead.
+     *
+     * This replaced a bool that was `currentBike() != nullptr`, which never went back
+     * down because `bluetooth` never clears the device. See TODO.md, "both status
+     * indicators are latches, not state".
+     */
+    Q_PROPERTY(QString trainerState READ trainerState NOTIFY changed)
     Q_PROPERTY(QString trainerName READ trainerName NOTIFY changed)
-    Q_PROPERTY(bool appConnected READ appConnected NOTIFY changed)
-    Q_PROPERTY(QString appName READ appName NOTIFY changed)
+    /**
+     * @brief The training app's link: "idle", "live", "stale", "past".
+     *
+     * Replaced a bool built on `lastFTMSFrameReceived != 0`, which latched true on the
+     * first frame Zwift ever sent and stayed true through the app quitting and the
+     * socket closing. The fix was a staleness test, not a new signal.
+     */
+    Q_PROPERTY(QString appState READ appState NOTIFY changed)
+    /** @brief "BLE", "DIRCON", or empty when no training app has ever driven the bike. */
     Q_PROPERTY(QString transport READ transport NOTIFY changed)
+    /** @brief Trainer battery, 0-100, or -1 when the bike does not report one. */
+    Q_PROPERTY(int batteryLevel READ batteryLevel NOTIFY changed)
+    /** @brief Seconds until the next reconnect attempt, or -1 when none is armed. */
+    Q_PROPERTY(int retrySeconds READ retrySeconds NOTIFY changed)
+    /**
+     * @brief Age of the newest data from the bike, in seconds, or -1 when none has come.
+     *
+     * Does three jobs, which is why there is one of it rather than three: it marks the
+     * metric chips stale, it is how long the bike has been gone while "lost", and it is
+     * what "stale" is derived from.
+     */
+    Q_PROPERTY(int dataAgeSeconds READ dataAgeSeconds NOTIFY changed)
 
     // Ride
     Q_PROPERTY(int gear READ gear NOTIFY changed)
     Q_PROPERTY(double resistance READ resistance NOTIFY changed)
+    /** @brief How many resistance levels this bike has, for the ladder under the gear. */
+    Q_PROPERTY(int resistanceLevels READ resistanceLevels NOTIFY changed)
     Q_PROPERTY(double power READ power NOTIFY changed)
     Q_PROPERTY(double cadence READ cadence NOTIFY changed)
     Q_PROPERTY(double speed READ speed NOTIFY changed)
@@ -51,24 +91,18 @@ class RideState : public QObject {
   public:
     explicit RideState(bluetooth *bl, QObject *parent = nullptr);
 
-    bool trainerConnected() const;
+    QString trainerState() const;
     QString trainerName() const;
-    bool appConnected() const;
-    /**
-     * @brief The training app's name, when the bridge happens to know it.
-     *
-     * It usually does not. A BLE central never announces who it is, and the DIRCON
-     * client's address is known only to DirconProcessor, which does not surface it.
-     * Reaching it would mean widening the bridge to satisfy a status pill, which is
-     * exactly the trade section 9.2 says not to make. Empty means "connected, name
-     * unknown" - the UI shows the transport instead, which is the useful half anyway.
-     */
-    QString appName() const;
-    /** @brief "BLE", "DIRCON", or empty when no training app is driving the bike. */
+    QString appState() const;
+    /** @brief "BLE", "DIRCON", or empty. See the property doc. */
     QString transport() const;
+    int batteryLevel() const;
+    int retrySeconds() const;
+    int dataAgeSeconds() const;
 
     int gear() const;
     double resistance() const;
+    int resistanceLevels() const;
     double power() const;
     double cadence() const;
     double speed() const;
@@ -80,6 +114,14 @@ class RideState : public QObject {
     Q_INVOKABLE void gearDown();
     Q_INVOKABLE void setGear(int gear);
     Q_INVOKABLE void toggleErg();
+
+    /**
+     * @brief Abandon the backoff and try the trainer again now.
+     *
+     * Behind "Retry now" and "Search" on the trainer chip. Resets the five-minute
+     * ceiling as well as the delay - see bluetoothdevice::retryNow().
+     */
+    Q_INVOKABLE void retryNow();
 
     /** @brief Also a slot: the QZWS `autoResistance` command lands here. */
     Q_INVOKABLE void toggleAutoResistance();
@@ -108,11 +150,18 @@ class RideState : public QObject {
      * @brief One signal for the lot.
      *
      * Every value here is polled off the device on the same tick, so a notify per
-     * property would fire them all together and buy nothing but 12 more members.
+     * property would fire them all together and buy nothing but more members.
      */
     void changed();
 
   private:
+    /** Data older than this, on a live link, is no longer presented as current. */
+    static constexpr int TRAINER_STALE_MS = 5000;
+    /** A training app that has sent nothing for this long is not driving the ride. */
+    static constexpr int APP_STALE_MS = 5000;
+    /** Past this, it has gone rather than paused - the ride is over, not faulty. */
+    static constexpr int APP_GONE_MS = 30000;
+
     bluetooth *bluetoothManager = nullptr;
     QTimer poll;
     RtssOsd rtssOsd;
