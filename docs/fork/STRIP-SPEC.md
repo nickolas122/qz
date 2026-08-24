@@ -166,6 +166,11 @@ The Pi is a future target, so the strip **must not** delete Linux-guarded code a
 CI still carries `raspberry-pi-build`, `raspberry-pi-build-and-image-64bit` and
 `raspberry-pi-smoke-test` jobs. They stay in the workflow file even while disabled.
 
+**Re-enabled 2026-08-24, and green on the first attempt** (phase 8, §11.6). The rule above
+had been applied for eight phases with nothing compiling the result; it holds. The three
+jobs now run on every CI invocation, which is what keeps the Pi a real future host rather
+than an intention.
+
 ### 3.5 The new UI must be Qt 5 source-compatible
 
 Android is on Qt 5; the Pi will likely be too. Windows is Qt 6.8.2. The existing scheme —
@@ -681,11 +686,16 @@ with Rouvy is still the final word, but it is no longer the only evidence availa
 | 3 | Group C — training programs | medium (homeform surgery) | **none** |  ← landed 2026-08-21, ahead of 6
 | 4 | Group D — telemetry | medium (verify RTSS first) | **covered** |  ← landed 2026-08-21; RTSS check failed, see §7 Group D
 | 5 | Group E — rival trainers, running sensors, `virtualtreadmill` | low, once cscbike is resolved | **covered** |  ← landed 2026-08-20, H1 passed 2026-08-21
-| 6 | Settings consolidation | medium (§3.6 runtime failures) | **covered** |  ← landed 2026-08-23, after 7c; H2 still owed
+| 6 | Settings consolidation | medium (§3.6 runtime failures) | **covered** |  ← landed 2026-08-23, after 7c; H2 passed the same day
 | 7a | `RideState` object + `ui_next` flag + new tree under `src/ui/` | medium | **none** |  ← landed 2026-08-21
 | 7b | Ride on the new UI with Rouvy and Zwift; flip the default | low, but needs calendar time | **none** |  ← default flipped 2026-08-23 on H3; H4 still owed, see §11.6
 | 7c | Delete Group F — old tree, tile system, `homeform.cpp`, the flag | high | **none** |  ← 7c-1, 7c-2a, 7c-2b all landed 2026-08-23
-| 8 | Group G, Pi build revival | medium | partial |  ← Group G landed 2026-08-23; Pi revival still owed
+| 8 | Group G, Pi build revival | medium | partial |  ← **complete 2026-08-24**; Group G and the Pi jobs both green
+
+**Every phase in this table has landed, as of 2026-08-24.** What is still owed is not a
+phase: H4 (a Zwift ride) was declined as a deliberate decision rather than skipped — see
+§11.7 — and the open work is the two status indicators that latch instead of reporting
+state (`docs/fork/TODO.md`), plus the new UI's deferred tweaks.
 
 "Covered" means the end-to-end loop asserts on that phase's blast radius: bike frames in,
 metrics, DIRCON, a client reading numbers back out. It is deliberately **not** UI coverage
@@ -1639,11 +1649,27 @@ settings integrity consistent (188/188, 153/153, 25 QML bindings resolving); Qt 
 because `templateinfosenderbuilder.cpp` lost 88 lines; `tools/dircon_smoke.py` all checks
 passed, wire format byte-identical.
 
-**The Pi half of this phase is not done and is deliberately separate.** Reviving
-`raspberry-pi-build`, `raspberry-pi-build-and-image-64bit` and `raspberry-pi-smoke-test`
-means flipping three `if: false` guards, and if they come back red it will be for reasons
-that have nothing to do with Group G. Landing it as its own commit keeps the attribution
-readable.
+### The Pi half — done 2026-08-24, and it answered a question eight phases old
+
+Landed as its own commit rather than with Group G, so that a red Pi job could not be read
+as Group G's fault. Group G was already green on all six active jobs when the three
+`if: false` guards came off.
+
+**All three are green on the first attempt** — `raspberry-pi-build` (armv6hf under QEMU),
+`raspberry-pi-build-and-image-64bit`, and `raspberry-pi-smoke-test`, which needs both.
+
+That is the useful result, and it is not really about the Pi. §3.4 set the rule the entire
+strip has been run on — *remove code by feature, never by platform*, so `#if
+defined(Q_OS_LINUX)` blocks inside a kept feature stay — and until this run **nothing had
+compiled the outcome for eight phases**. The rule was being obeyed on trust. It holds: the
+Linux/BlueZ half is still dormant rather than quietly dead, and it builds against distro
+Qt 5 packages, with the `src/ui/` tree and the phase 6/8 settings shape it had never seen.
+
+Two things about these jobs that were plausible failure modes and were not: they build the
+whole tree through the root `.pro` rather than the Windows/Android path, and they `sed`
+QtHttpServer out of every source file before qmake. Neither had met the new UI tree before.
+
+**Phase 8 is complete.** Both halves, nine CI jobs green on `d01f034b`.
 
 ### 11.7 Hardware budget
 
