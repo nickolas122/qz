@@ -279,6 +279,54 @@ class ftmsbike : public bike {
      * stopped, not about one that never started.
      */
     bool everReceivedFrame = false;
+    /**
+     * Has this object *ever* delivered, on any link? Never cleared. Kept for the record
+     * a log reader wants; it is deliberately *not* what gates the automatic rescan.
+     *
+     * It used to be. That guard read "never rescan a driver that has produced a ride",
+     * which sounds prudent and was wrong: the 20:10 session on 2026-08-24 delivered data,
+     * the bike stopped, and QZ then connected six times to a device with no Fitness
+     * Machine service without ever escalating - the backoff climbing to 30 s and the only
+     * exit being the five-minute ceiling. To reach that state the link must have dropped
+     * and reconnected onto the wrong device three times over; no ride survives that, so
+     * the guard was protecting nothing and costing five minutes.
+     */
+    bool everDeliveredThisSession = false;
+    /** Connections that completed discovery without a 0x1826 service, in a row. */
+    int consecutiveNoFtmsConnections = 0;
+    /**
+     * How many of those before concluding the address itself is wrong. Reconnecting can
+     * only reach the same device again; only discovery can find a different one.
+     */
+    static constexpr int NO_FTMS_BEFORE_RESCAN = 3;
+    /**
+     * How stale the data has to be before an automatic rescan is allowed. The rescan
+     * deletes this object and the virtual bike with it, so a training app loses its
+     * connection - which is right once the trainer is gone and wrong while it is not.
+     * On a session that never had data this delays nothing, because lastFrameEverAt is
+     * invalid and the test short-circuits. On one that did, it dominates: the 21:01 session
+     * escalated on the fifth no-FTMS connection rather than the third, about thirty seconds
+     * after the last frame, which is the intent rather than a surprise.
+     */
+    static constexpr qint64 RESCAN_MIN_DATA_AGE_MS = 30000;
+    /**
+     * When a frame last actually arrived. Invalid until one ever does, and never touched
+     * by anything else.
+     *
+     * It exists because lastRefreshCharacteristicChanged2AD2 cannot answer this. That
+     * member is the *display* clock and is deliberately rebased to now on every connect,
+     * so a fresh link does not open reading "No data for 143 s" - which means by the time
+     * serviceScanDone() runs, a few hundred milliseconds later, it always reports about
+     * 0.4 s however long the bike has really been gone. The first version of the rescan
+     * guard asked it how stale the data was and was therefore never satisfiable: the 20:32
+     * session on 2026-08-24 made twelve consecutive no-FTMS connections without once
+     * escalating, and took the full five minutes to the ceiling instead.
+     *
+     * Two different questions were sharing one timestamp. They get one each now.
+     */
+    QDateTime lastFrameEverAt;
+    /** Set once the decision to abandon this address is taken, to stop scheduling retries. */
+    bool abandoningAddress = false;
     /** When we last called disconnectFromDevice() over a stall. Invalid if never. */
     QDateTime stallTeardownAt;
     /** Consecutive writes the bike never acknowledged. Reset by any write that lands. */
@@ -476,12 +524,41 @@ class ftmsbike : public bike {
     virtual qint64 msSinceLastFrame() const;
 
     /**
+     * @brief Milliseconds since a frame really arrived, or -1 if one never has.
+     *
+     * The counterpart to msSinceLastFrame(), and the distinction is the whole point: that
+     * one is the display clock and is rebased on every connect, this one is not touched by
+     * anything but a frame. Anything asking how long the bike has been gone wants this.
+     */
+    qint64 msSinceRealFrame() const;
+
+    /**
+     * @brief Forget what belonged to the link that just ended, on connecting a new one.
+     *
+     * Extracted from the controller's connected handler so that what a connection does and
+     * does not reset is one readable list rather than a lambda - and so a test can ask
+     * whether connecting rewinds a clock it has no business touching.
+     */
+    void resetForNewLink();
+
+    /**
      * @brief Apply @p device's name-derived profile: resistance mode, ERG support, ceiling.
      *
      * Called by deviceDiscovered() before the controller is built. Split out so a test can
      * be a *particular* bike without a radio - see VIRTUAL-BIKE.md, Layer B.
      */
     void applyDeviceProfile(const QBluetoothDeviceInfo &device);
+
+  Q_SIGNALS:
+    /**
+     * Discovery keeps completing against a device with no Fitness Machine service, so the
+     * address this driver was given is wrong and reconnecting to it can only find the same
+     * wrong device again. Only discovery can find a different one, and this driver does not
+     * own the discovery agent - bluetooth does.
+     *
+     * Connect it queued. The slot deletes this object.
+     */
+    void deviceHasNoFtmsService();
 
   public slots:
     void deviceDiscovered(const QBluetoothDeviceInfo &device);

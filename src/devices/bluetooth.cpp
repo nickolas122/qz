@@ -789,6 +789,11 @@ void bluetooth::deviceDiscovered(const QBluetoothDeviceInfo &device) {
                 connect(ftmsBike, &bluetoothdevice::connectedAndDiscovered, this, &bluetooth::connectedAndDiscovered);
                 // connect(trxappgateusb, SIGNAL(disconnected()), this, SLOT(restart()));
                 connect(ftmsBike, &ftmsbike::debug, this, &bluetooth::debug);
+                // Queued, and not optional: rescan() deletes ftmsBike, and this signal is
+                // emitted from inside one of its own methods. Delivering it directly would
+                // free the object the call stack is standing on.
+                connect(ftmsBike, &ftmsbike::deviceHasNoFtmsService, this, &bluetooth::rescan,
+                        Qt::QueuedConnection);
                 ftmsBike->deviceDiscovered(b);
                 this->signalBluetoothDeviceConnected(ftmsBike);
             } else if (b.name().toUpper().startsWith(QStringLiteral("CORE ")) && !coreSensor) {
@@ -1438,7 +1443,11 @@ void bluetooth::selectGymModeDevice(const QString &deviceName) {
 }
 
 void bluetooth::rescan() {
-    qDebug() << QStringLiteral("bluetooth::rescan - rider asked to search again");
+    // Neutral wording on purpose: this has two callers now. The rider pressing Search is
+    // one; the driver concluding its address is wrong is the other, and it does not read
+    // well in a log to be told a rider asked for something they did not. Each caller says
+    // why immediately before this line.
+    qDebug() << QStringLiteral("bluetooth::rescan - tearing the device down and scanning again");
     userRequestedRescan = true;
     restart();
     userRequestedRescan = false;

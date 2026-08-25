@@ -69,6 +69,13 @@ class FtmsLinkWatchdogTest : public ::testing::Test {
         QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
     }
 
+    /** Let real time pass while the event loop runs, for assertions about elapsed time. */
+    static void turnEventLoop(int ms) {
+        const qint64 deadline = QDateTime::currentMSecsSinceEpoch() + ms;
+        while (QDateTime::currentMSecsSinceEpoch() < deadline)
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+    }
+
     /** A frame of the shape the YPBM actually sends, so the link is properly live. */
     void deliverFrame() {
         bike->notify(0x2AD2, ftmsframes::IndoorBikeData()
@@ -188,6 +195,39 @@ TEST_F(FtmsLinkWatchdogTest, AFrameClearsTheSuspicionRaisedByWrites) {
     bike->tick();
 
     EXPECT_EQ(0, bike->closeLinkCount());
+}
+
+/**
+ * `msSinceLastFrame()` is the *display* clock and is rebased to now on every connect, so that a
+ * fresh link does not open reading "No data for 143 s". Anything that needs to know how long the
+ * bike has really been gone must not ask it.
+ *
+ * The rescan guard did, and was therefore never satisfiable: `serviceScanDone()` runs a few
+ * hundred milliseconds after the connect that reset the clock, so it always saw ~0.4 s against a
+ * 30 s threshold. The 20:32 session on 2026-08-24 made twelve consecutive connections to a
+ * device with no Fitness Machine service without escalating once, and spent the full five
+ * minutes reaching the ceiling instead.
+ *
+ * This pins the property that made it possible: a connect must not make the bike look
+ * recently-heard-from.
+ */
+TEST_F(FtmsLinkWatchdogTest, ConnectingDoesNotMakeTheBikeLookRecentlyHeardFrom) {
+    deliverFrame();
+
+    // Real elapsed time, and it is load-bearing. Without it both a preserved clock and a
+    // rebased one read ~0 ms - the frame arrived microseconds ago - and the assertion below
+    // holds whatever the code does. The first draft of this test did exactly that and could
+    // not have failed on the bug it was written for.
+    turnEventLoop(120);
+
+    const qint64 beforeReconnect = bike->msSinceRealFrame();
+    ASSERT_GE(beforeReconnect, 100) << "the clock must reflect the time that has actually passed";
+
+    // Whatever a reconnect does to the display clock, the real one is not a connection event.
+    bike->simulateReconnect();
+
+    EXPECT_GE(bike->msSinceRealFrame(), beforeReconnect)
+        << "reconnecting must not rewind the clock that says how long the bike has been gone";
 }
 
 /**

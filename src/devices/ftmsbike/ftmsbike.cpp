@@ -2522,6 +2522,62 @@ void ftmsbike::serviceScanDone(void) {
     QBluetoothUuid ftmsService((quint16)0x1826);
     bool JK_fitness_577 = bluetoothDevice.name().toUpper().startsWith("DHZ-");
 
+    // A device with no Fitness Machine service is not this trainer, whatever it is
+    // called. Saying so here rather than waiting for the stall watchdog matters because
+    // this is a *positive* answer available in milliseconds: discovery has finished and
+    // 0x1826 is provably absent, so there is nothing to wait for.
+    //
+    // The 17:17 session on 2026-08-24 is what this is for. Discovery found no YPBM, so
+    // connectToLastDeviceIfIdle() handed the stored address to deviceDiscovered() - which
+    // is correct on Windows, where a device the OS already holds never advertises. But the
+    // stored address was stale (the fake bike is a phone, and Android randomises its BLE
+    // address), Windows "connected" to it in 45 ms out of the bond record rather than over
+    // the air, and enumerated six cached services: exactly the seven the real bike had
+    // minus 0x1826. Nothing subscribed, no frame ever arrived, and QZ reported a live
+    // trainer for fifteen seconds until the watchdog pulled it down - then did it again.
+    if (!services_list.contains(ftmsService)) {
+        consecutiveNoFtmsConnections++;
+        qWarning() << QStringLiteral("connected to") << bluetoothDevice.name() << bluetoothDevice.address()
+                   << QStringLiteral("but it has no Fitness Machine service (0x1826). Not a trainer. Services:")
+                   << services_list << QStringLiteral("- consecutive:") << consecutiveNoFtmsConnections;
+
+        // Repeatedly reaching the wrong device means the address we are reaching it at is
+        // wrong, and reconnecting to it can only find it again. Discovery is the only
+        // thing that can find the right one, so hand the decision back to bluetooth.
+        //
+        // Guarded on never having received a frame: this object has produced no ride, so
+        // there is nothing for a rescan to cost. A trainer that streamed and then dropped
+        // is a different situation entirely and must not be torn down automatically - see
+        // bluetooth::rescan().
+        // Never delivered at all, or delivered long enough ago that no ride is being cut
+        // short. Deliberately not msSinceLastFrame(), which is the display clock and is
+        // rebased on every connect - see lastFrameEverAt.
+        const bool nothingToLose =
+            !lastFrameEverAt.isValid() ||
+            lastFrameEverAt.msecsTo(QDateTime::currentDateTime()) >= RESCAN_MIN_DATA_AGE_MS;
+
+        if (consecutiveNoFtmsConnections >= NO_FTMS_BEFORE_RESCAN && nothingToLose) {
+            qWarning() << QStringLiteral("giving up on this address and asking for a new scan");
+            linkPhase = LinkStatus::Lost;
+            // Nothing is going to come of the reconnect this teardown would otherwise
+            // schedule, and a "reconnecting in 4000 ms" line logged immediately after
+            // "asking for a new scan" reads as though the decision had not been taken.
+            abandoningAddress = true;
+            // Hang up before walking away. The slot on the other end deletes this object,
+            // and a controller destroyed while it still believes it holds a link leaves
+            // Windows to work that out on its own.
+            closeLink();
+            emit deviceHasNoFtmsService();
+            return;
+        }
+
+        linkPhase = LinkStatus::Lost;
+        stallTeardownAt = QDateTime::currentDateTime();
+        closeLink();
+        return;
+    }
+    consecutiveNoFtmsConnections = 0;
+
     // Two passes, and the split is the whole point. discoverDetails() resolves
     // synchronously on Qt's Win32 backend, so creating and discovering in one loop
     // drove stateChanged() to completion before the loop reached the next UUID -
@@ -2827,28 +2883,7 @@ void ftmsbike::deviceDiscovered(const QBluetoothDeviceInfo &device) {
             Q_UNUSED(this);
             emit debug(QStringLiteral("Controller connected. Search services..."));
             reconnectTimer.stop();
-            servicesSeen = 0;
-            // Note what is deliberately NOT reset here: the backoff, the failure count and
-            // the ceiling clock. A socket opening is not a recovery - the 2026-08-24 logs
-            // have Windows reporting Connected and then Discovered against a peripheral
-            // that had hung up, twice, and delivering nothing either time. Treating that as
-            // "the outage is over" resets the ceiling on every lap, so a bike that connects
-            // and never streams would retry at one second for ever and never reach the
-            // five-minute limit that exists to stop exactly that. The outage ends when data
-            // arrives; see noteLinkIsDelivering().
-            // A new link has never received a frame, so the stall watchdog disarms until
-            // one arrives. Without this the age of the *previous* link's last frame would
-            // be measured against a connection that has only just come up, and the first
-            // poll after reconnecting would tear it straight back down.
-            everReceivedFrame = false;
-            stallTeardownAt = QDateTime();
-            consecutiveWriteTimeouts = 0;
-            // The age of a frame belongs to the link that carried it. Left alone, the
-            // chip would open a fresh connection already reading "No data for 143 s"
-            // and the rider would be told the new link was stale before it had had a
-            // chance to say anything. Measured from here, the number stays honest: a
-            // link that comes up and never streams still goes stale, on its own clock.
-            lastRefreshCharacteristicChanged2AD2 = QDateTime::currentDateTime();
+            resetForNewLink();
             linkPhase = LinkStatus::Discovering;
             m_control->discoverServices();
         });
@@ -2918,6 +2953,14 @@ void ftmsbike::controllerStateChanged(QLowEnergyController::ControllerState stat
         serviceDiscoveryWatchdog.stop();
     }
     if (state == QLowEnergyController::UnconnectedState && m_control) {
+        if (abandoningAddress) {
+            // The decision to walk away from this address has already been taken and the
+            // rescan is queued behind this call. Scheduling a retry here would log a
+            // countdown for an attempt that cannot happen, against an object that is
+            // about to be deleted.
+            qDebug() << QStringLiteral("unconnected, and this address has been abandoned - no retry scheduled");
+            return;
+        }
         qDebug() << QStringLiteral("trying to connect back again...");
         // Whatever the last link's silence was, it belongs to a link that no longer
         // exists. Clearing this here rather than only on connect matters because a
@@ -3003,10 +3046,39 @@ LinkStatus ftmsbike::linkStatus() const {
     return s;
 }
 
+void ftmsbike::resetForNewLink() {
+    servicesSeen = 0;
+    // Note what is deliberately NOT reset here: the backoff, the failure count and the
+    // ceiling clock. A socket opening is not a recovery - the 2026-08-24 logs have Windows
+    // reporting Connected and then Discovered against a peripheral that had hung up, and
+    // delivering nothing either time. Treating that as "the outage is over" resets the
+    // ceiling on every lap, so a bike that connects and never streams would retry at one
+    // second for ever and never reach the five-minute limit that exists to stop exactly
+    // that. The outage ends when data arrives; see noteLinkIsDelivering().
+    //
+    // Nor is lastFrameEverAt, for the same reason one level down: how long the bike has
+    // really been gone is not a property of the socket.
+    everReceivedFrame = false;
+    stallTeardownAt = QDateTime();
+    consecutiveWriteTimeouts = 0;
+    // The age of a frame belongs to the link that carried it. Left alone, the chip would
+    // open a fresh connection already reading "No data for 143 s" and the rider would be
+    // told the new link was stale before it had had a chance to say anything. Measured
+    // from here, the number stays honest: a link that comes up and never streams still
+    // goes stale, on its own clock.
+    lastRefreshCharacteristicChanged2AD2 = QDateTime::currentDateTime();
+}
+
+qint64 ftmsbike::msSinceRealFrame() const {
+    return lastFrameEverAt.isValid() ? lastFrameEverAt.msecsTo(QDateTime::currentDateTime()) : -1;
+}
+
 void ftmsbike::noteLinkIsDelivering() {
     // Every frame clears the teardown grace, because a link that is talking is not one we
     // are waiting to finish hanging up on.
     stallTeardownAt = QDateTime();
+    // The one clock nothing else may rebase. See lastFrameEverAt.
+    lastFrameEverAt = QDateTime::currentDateTime();
     if (everReceivedFrame) {
         return;
     }
@@ -3017,6 +3089,8 @@ void ftmsbike::noteLinkIsDelivering() {
     // second, the failure count clears, and the five-minute ceiling and its one-shot toast
     // reset for whatever goes wrong next.
     everReceivedFrame = true;
+    everDeliveredThisSession = true;
+    consecutiveNoFtmsConnections = 0;
     reconnectDelayMs = RECONNECT_INITIAL_MS;
     consecutiveConnectFailures = 0;
     linkLostAt = QDateTime();

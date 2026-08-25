@@ -128,6 +128,17 @@ class simulatedFtmsBike : public ftmsbike {
     /** @brief How many times the driver has hung up on its own side. */
     int closeLinkCount() const { return m_closeLinkCount; }
 
+    /** @brief Milliseconds since a frame really arrived, or -1 if one never has. */
+    qint64 msSinceRealFrame() const { return ftmsbike::msSinceRealFrame(); }
+
+    /**
+     * @brief Everything a fresh connection resets, without a radio.
+     *
+     * The controller's connected handler is unreachable from here - it needs a real
+     * `QLowEnergyController` - so this calls the half of it that is ours.
+     */
+    void simulateReconnect() { resetForNewLink(); }
+
   protected:
     bool linkExists() const override { return true; }
 

@@ -296,9 +296,13 @@ render.
 - `bluetooth` still never clears the device on a clean disconnect. Nothing here depends on it any
   more — the link phase is read off the surviving bike object — but the fourteen commented-out
   `disconnected()` connections are still there.
-- A link that reaches `DiscoveredState` and never sends a first frame is deliberately not torn
-  down (see TODO.md). The chip reports it as `stale`, which is honest, but there is no action
-  offered for it — the remedy is an OS-level re-pair and QZ cannot perform one.
+- A link that reaches `DiscoveredState` and never sends a first frame **is** torn down, after
+  `FIRST_FRAME_GRACE_MS` (15 s). This bullet used to say it was left alone; that was true of the
+  watchdog's first draft only, and saying otherwise here is what put the same wrong claim into
+  TODO.md when that file was collapsed. What remains open is that a teardown does not *cure* the
+  Windows un-bonded case — services enumerate, notifications never arrive, and the remedy is an
+  OS-level re-pair QZ cannot perform. It loops visibly to the 5-minute ceiling instead of sitting
+  silent, and the chip offers no action short of that.
 
 ## What "Retry now" and "Search" actually do (added 2026-08-24)
 

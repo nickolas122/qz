@@ -79,16 +79,48 @@ It is a real change rather than a tuning knob: `bluetooth` owns the discovery ag
 connected on Windows (`#ifndef Q_OS_WIN`), so a mid-session rescan is not a well-trodden path in
 this tree.
 
-Deliberately still not covered, and not part of this: a link that reaches `DiscoveredState` and
-**never** sends a first frame is left alone. That is the documented Windows un-bonded case in
+*(An earlier version of this paragraph said a link that reaches `DiscoveredState` and never sends
+a first frame is left alone. That was true of the watchdog's first draft and was fixed in the
+same commit — `FIRST_FRAME_GRACE_MS`, 15 s from `ConnectedState` — before this entry was
+written. The 17:17 log on 2026-08-24 shows it firing: `no Indoor Bike Data for 15155 ms`.)*
+
+What a teardown cannot fix is the Windows un-bonded case in
 [BUILDING-ON-WINDOWS.md](BUILDING-ON-WINDOWS.md) — services enumerate, no notifications are ever
-delivered — and it has a remedy the watchdog cannot apply. The chip says "stale" for it honestly
-instead of showing numbers, which is the part that was actually wrong.
+delivered, and the remedy is an OS-level re-pair. QZ now loops on it visibly, with the backoff
+climbing to the 5-minute ceiling, rather than sitting silent; that is honest but it is not a
+cure, and nothing here has yet confirmed the ceiling firing on hardware.
 
 ### Done looks like
 
 - Pressing Play on a bike QZ has lost gets it back in about a second, not thirteen.
 - A rescan started mid-session does not disturb a link that is merely slow.
+
+---
+
+## The last-device address is remembered before the device has proved it is a trainer
+
+**Left open 2026-08-24 by the wrong-device fix below.** `bluetooth::deviceDiscovered()` calls
+`setLastBluetoothDevice(b)` at claim time — the moment the name matches, before a connection is
+attempted, let alone before a frame arrives. So the address `connectToLastDeviceIfIdle()` falls
+back on is whatever QZ last *tried*, not what last worked, and a ghost survives into the next
+launch to be tried again.
+
+It cost nothing in the 17:17 session, because the address it re-stored was the same stale one it
+had come from. It is still the wrong invariant: the fallback exists to reach a device Windows is
+already holding, and it should be seeded from a device that has actually delivered.
+
+The question to answer first is what counts as proof. `connectedAndDiscovered` is the obvious
+hook and is wrong — it fires on a descriptor write, which the 17:17 ghost would have reached had
+it carried an FTMS service. The honest signal is the same one the watchdog uses: the first
+Indoor Bike Data frame, which is where `noteLinkIsDelivering()` already runs.
+
+Worth doing together with it: nothing ever clears the stored pair, so an address that is
+permanently wrong can only be displaced by a successful connection to something else.
+
+### Done looks like
+
+- The stored address is one a frame has arrived from, not one a name matched.
+- A ghost address does not survive a restart.
 
 ---
 
@@ -294,6 +326,41 @@ complete; older ones keep their `?`.
 
 ---
 
+## The build banner reports a stale commit on an incremental build
+
+**Found 2026-08-24, checking which binary produced a log.** The `QZ build` line said
+`69009d225`. The binary had been built from `4af0cb28d`, and HEAD was `efa6b2891` by then — so
+the banner named a commit two ahead of nothing and one behind reality.
+
+`QZ_GIT_SHA` is a `-D` on the compile line (`src/qdomyos-zwift.pri:96`). `qmake` re-evaluates it
+on every run, but `nmake` decides what to rebuild from file timestamps, and nothing in
+`main.cpp`'s dependency list changes when only a define does. So `main.o` keeps whatever SHA it
+was compiled with until something else forces it to rebuild, and the banner reports the commit
+of the last `main.cpp` *compile* rather than of the build.
+
+It is correct after `-Clean` and silently wrong otherwise, which is the bad combination: it
+looks authoritative and there is no signal that it is stale.
+
+The comment above that block says the stamp exists because *"answering 'am I running the new
+binary?' by grepping ASCII out of the .exe cost more than one debugging round"*. That is exactly
+what it cost again — and grepping ASCII does not work either, since `QStringLiteral` stores
+UTF-16, so the search has to be `s.encode('utf-16-le')`.
+
+[BUILDING-ON-WINDOWS.md](BUILDING-ON-WINDOWS.md) tells a reader to use this banner to confirm
+that an `-DeployTo` of the `.exe` alone is still valid against the deployed Qt DLLs. That advice
+is currently unsound.
+
+Cheapest honest fix is to make the SHA a generated header that `main.cpp` includes, so the
+dependency is a file and the rebuild follows from it. Writing it only when the contents change
+keeps incremental builds cheap.
+
+### Done looks like
+
+- The banner names the commit the binary was built from, on an incremental build.
+- Or, failing that, it says `unknown` rather than something plausible and wrong.
+
+---
+
 ## `RideScenario`'s `bike` directive is still read by nothing
 
 **Left over from the device-profile seam, 2026-08-21.** `applyDeviceProfile()` exists and
@@ -331,6 +398,23 @@ unless the controller is `Unconnected`, and `bluetooth::rescan()` becoming reach
 and the ceiling reset in `noteLinkIsDelivering()`, on a frame — not in the `connected` lambda,
 where a bike that connects and never streams reset them every lap. Covered by
 `tst/Devices/TestFtmsLinkWatchdog.h`. What it does not make instant is its own entry above.
+
+**~~A connection that succeeds against the wrong device~~** — *found and fixed 2026-08-24.* With
+no trainer to find, discovery came up empty and `connectToLastDeviceIfIdle()` handed the stored
+address to `deviceDiscovered()`. Windows answered in **45 ms** — out of the bond record, not over
+the air; a real connect in these logs takes ~2 s — and enumerated six cached services: exactly
+the seven the working session had, minus `0x1826`. Nothing subscribed, no frame could arrive, and
+QZ reported a live trainer until the stall watchdog pulled it down 15 s later, repeatedly. The
+stored address was stale because the fake bike is a phone and Android randomises its BLE address;
+the fallback is left alone, being correct for the real YPBM. Fixed where a *positive* answer
+exists: `serviceScanDone()` refuses a device with no Fitness Machine service and hangs up, and
+after `NO_FTMS_BEFORE_RESCAN` such connections in a row emits `deviceHasNoFtmsService()` —
+connected **queued**, because the slot deletes the sender — to `bluetooth::rescan()`, since
+reconnecting can only reach the same wrong device. Guarded on `everDeliveredThisSession`: a
+trainer that streamed and then dropped is never torn down automatically. This also promotes the
+stale GATT cache in [BUILDING-ON-WINDOWS.md](BUILDING-ON-WINDOWS.md) from "currently cosmetic" to
+a fault with a symptom. Not unit-tested — the check needs a live `QLowEnergyController`, which
+the Layer B harness by design does not have.
 
 **~~The reconnect is invisible~~** — *fixed 2026-08-24* by the same refactor: the chip shows
 searching, connecting, discovering, live, stale, lost and gave up, with the countdown to the next

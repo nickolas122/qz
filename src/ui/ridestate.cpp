@@ -7,6 +7,7 @@
 #include "virtualdevices/virtualbike.h"
 
 #include <QDateTime>
+#include <QDebug>
 #include <QSettings>
 
 RideState::RideState(bluetooth *bl, QObject *parent) : QObject(parent), bluetoothManager(bl) {
@@ -264,6 +265,7 @@ void RideState::retryNow() {
     // no ride left to protect.
     if (!b || b->linkStatus().phase == LinkStatus::GaveUp) {
         if (bluetoothManager) {
+            qDebug() << QStringLiteral("RideState::retryNow - rider asked to search again");
             bluetoothManager->rescan();
             // b is dangling from here: rescan() deleted it. Nothing below may touch it.
         }
