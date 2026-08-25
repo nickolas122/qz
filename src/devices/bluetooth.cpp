@@ -137,9 +137,22 @@ bluetooth::bluetooth(bool logs, const QString &deviceName, bool noWriteResistanc
 
 #endif
         connect(discoveryAgent, &QBluetoothDeviceDiscoveryAgent::canceled, this, &bluetooth::canceled);
-#ifndef Q_OS_WIN
+        // Connected on Windows too, as of 2026-08-24. finished() ends with startDiscovery(),
+        // so it *is* the scan cycle; excluding Windows meant discovery ran once and stopped
+        // for good when the agent hit its timeout. BUILDING-ON-WINDOWS.md recorded that as
+        // "discovery is effectively one-shot at launch, so the bike must be advertising
+        // before QZ starts", which was tolerable while nothing ever went back to scanning.
+        //
+        // bluetooth::rescan() does go back, and the 21:01 session shows what that was worth
+        // without this: the rescan started a scan at 21:02:30, the agent stopped at 21:03:10
+        // - forty seconds, Qt's default LE timeout, since setLowEnergyDiscoveryTimeout() is
+        // also skipped here - and QZ then displayed "searching" for eight minutes while
+        // scanning for none of them.
+        //
+        // finished() is already prepared for this platform: its first act after the
+        // one-shot guard is `#ifdef Q_OS_WIN if (this->device()) return;`, so a claimed
+        // device makes it a no-op rather than letting it re-enter the claim loop.
         connect(discoveryAgent, &QBluetoothDeviceDiscoveryAgent::finished, this, &bluetooth::finished);
-#endif
         // The 15s discovery watchdog that used to be armed here existed solely to
         // unstick fake and IP-based devices on platforms where the discovery agent's
         // finished() never fires. Every one of those devices is gone, so the watchdog

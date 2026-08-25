@@ -345,6 +345,24 @@ sees 0, and concludes the headers are too old.
 
 ## Testing the binary
 
+**Close QZ before running the test suite.** A running instance answers the mDNS
+queries the `DirconDiscovery` tests send, because it is a real responder on the
+same multicast group and it gets there first. All eight fail, and they fail
+looking like a DIRCON regression rather than a port conflict:
+
+```
+TestDirconDiscovery.h(267): Expected equality of these values:
+  kBikePort          Which is: 47820   <- what the fixture advertises
+  srvs.first().port  Which is: 36866   <- what actually answered
+```
+
+A second symptom of the same thing, if the running instance was launched from the
+deploy directory: `windeployqt` cannot overwrite a locked `qdomyos-zwift.exe`, so
+`-Deploy` fails after a build that was perfectly good.
+
+`tools/build-qt6-win.ps1 -Tests` does not check for this. It is worth a glance at
+Task Manager first, or `Get-Process qdomyos-zwift`.
+
 The bike is Bluetooth LE, and **BLE does not work in a VM** - VirtualBox has no
 virtual Bluetooth adapter, and the only route is USB passthrough of a physical
 dongle, which needs the Extension Pack (not installed) and is unreliable for BLE
@@ -354,11 +372,22 @@ Bluetooth adapter.
 Two Windows-specific behaviours to keep in mind when a bike connects but no data
 arrives:
 
-- `bluetooth::finished` is not connected on Windows
-  (`src/devices/bluetooth.cpp`, `#ifndef Q_OS_WIN`), and the rescan cycle lives in
-  that handler. Discovery is effectively one-shot at launch, so the bike must be
-  advertising before QZ starts. This also means the reconnection work on
-  `kind-of-stable` has no effect on Windows.
+- ~~`bluetooth::finished` is not connected on Windows.~~ **Fixed 2026-08-24.** It is
+  connected on every platform now. `finished()` ends with `startDiscovery()`, so it
+  *is* the scan cycle, and excluding Windows meant discovery ran once and stopped for
+  good when the agent hit its timeout - which is Qt's 40 s default here, because
+  `setLowEnergyDiscoveryTimeout()` is skipped on Windows too.
+
+  It went unnoticed while nothing ever went back to scanning. `bluetooth::rescan()`
+  does, and the 21:01 session shows the cost: the rescan started a scan at 21:02:30,
+  the agent went silent at 21:03:10, and QZ then displayed "searching" for eight
+  minutes while scanning for none of them.
+
+  Original text, worth keeping because it is what a reader was told for months:
+  *"the rescan cycle lives in that handler. Discovery is effectively one-shot at
+  launch, so the bike must be advertising before QZ starts."* The first half of that
+  is no longer true; the second half is now only true of the window before the first
+  scan completes.
 - **The bike must be paired in Windows Settings first.** Until it is bonded at the
   OS level, the connection succeeds and the services enumerate, but no
   notifications are ever delivered - `characteristicChanged` stays at 0 and every
