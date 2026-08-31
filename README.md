@@ -127,9 +127,15 @@ run as
 
 ### Translations
 
-  Translations are managed with [Weblate](https://weblate.org). If you'd like to help translate QZ into your language, visit the project on Weblate:
+  This fork ships two languages: English, which is the source language, and Brazilian
+  Portuguese. The picker is in Settings, under Display. See
+  [src/translations/README.md](src/translations/README.md).
 
-  [![Translation status](https://hosted.weblate.org/widget/qdomyos-zwift/multi-auto.svg)](https://hosted.weblate.org/engage/qdomyos-zwift/)
+  Upstream's thirty languages are managed with [Weblate](https://hosted.weblate.org/engage/qdomyos-zwift/)
+  and translate `homeform`, which this fork deleted — so they were dropped here rather than
+  shipped as catalogues of strings nothing displays. If you want to help translate QZ,
+  [do it upstream](https://hosted.weblate.org/engage/qdomyos-zwift/); it reaches the people
+  who use it.
 
 ### Blog
 

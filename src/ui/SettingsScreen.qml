@@ -206,6 +206,18 @@ Item {
 
             SettingsGroup { title: qsTr("Display") }
 
+            SettingsChoice {
+                // English is the language the .qml files are written in, so picking it
+                // uninstalls the catalogue rather than loading one. Either way the
+                // change lands here: QzLanguage retranslates the loaded tree, so the
+                // page is already in the new language when the finger comes off it.
+                label: qsTr("Language")
+                values: language.codes
+                names: language.names
+                value: language.current
+                onPicked: language.current = newValue
+            }
+
             SettingsSwitch {
                 label: qsTr("Miles instead of kilometres")
                 checked: qzSettings.miles_unit

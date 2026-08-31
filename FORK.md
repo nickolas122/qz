@@ -58,6 +58,13 @@ deleted rather than disabled, which is also why there is no way back to upstream
   [docs/fork/UI-INSTRUMENT-CLUSTER.md](docs/fork/UI-INSTRUMENT-CLUSTER.md).
 - **Settings went from 1,010 keys to 188.** 621 of the ones removed were named by nothing at
   all — defaults the app wrote at startup and never read again.
+- **It speaks Portuguese.** The UI is translated to Brazilian Portuguese, picked in
+  Settings → Display → Language and applied without a restart. Upstream's other 29
+  catalogues are deleted: every one of them translated `homeform`, so they shipped and
+  displayed nothing. See [src/translations/README.md](src/translations/README.md).
+- **No console window.** Upstream links the Windows binary as a console subsystem app, so
+  a black `cmd` window opens beside it and sits there for the whole ride. Nothing is read
+  from it — every line goes to `debug-<timestamp>.log` — so `CONFIG += console` is gone.
 
 ### Windows Bluetooth moved to WinRT
 
@@ -163,7 +170,9 @@ shifting.
 - Two checks the strip added and now depends on: `settings-integrity`, which refuses a key
   that is declared and not catalogued or bound from QML, and `qml-syntax`.
 - The nightly `schedule:` trigger is dropped — it burnt runner minutes on release
-  plumbing this fork does not publish.
+  plumbing this fork does not publish. The weekly `update-translations` workflow went with
+  it: it opened PRs against a `master` branch this fork does not have, for 29 catalogues it
+  no longer ships.
 - Assorted build repairs: MSVC CRT matching (`_ITERATOR_DEBUG_LEVEL`), the app link no
   longer clobbers the static library, qthttpserver builds without a native perl, and
   `aqtinstall` is pinned. SmtpClient used to be pinned here too; the strip's recording

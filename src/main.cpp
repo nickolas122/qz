@@ -9,8 +9,6 @@
 #endif
 #endif
 #include <QQmlContext>
-#include <QTranslator>
-#include <QLocale>
 #include "logwriter.h"
 #include "qzforkversion.h"
 #include "bluetooth.h"
@@ -63,6 +61,7 @@
 #endif
 
 
+#include "ui/language.h"
 #include "ui/ridestate.h"
 #include "handleurl.h"
 #include "mywhooshlink.h"
@@ -708,41 +707,6 @@ int main(int argc, char *argv[]) {
         fontManager.initializeEmojiFont();
 #endif
 
-        // Load translations based on explicit app setting or system locale.
-        QTranslator *translator = new QTranslator(app.data());
-        QString configuredLanguage =
-            settings.value(QZSettings::app_language, QZSettings::default_app_language).toString().trimmed();
-        QString locale = configuredLanguage.compare(QStringLiteral("auto"), Qt::CaseInsensitive) == 0 ||
-                                 configuredLanguage.isEmpty()
-                             ? QLocale::system().name()
-                             : configuredLanguage;
-        locale.replace(QLatin1Char('-'), QLatin1Char('_'));
-
-        auto tryLoadTranslation = [&](const QString &localeKey, const QString &sourceLabel) -> bool {
-            if (localeKey.isEmpty()) {
-                return false;
-            }
-            if (translator->load(QStringLiteral(":/translations/translations/qdomyos-zwift_") + localeKey)) {
-                app->installTranslator(translator);
-                qDebug() << "Translation loaded successfully for" << sourceLabel << ":" << localeKey;
-                return true;
-            }
-            return false;
-        };
-
-        // "en" is the built-in source language, so we don't load any translator for it.
-        if (locale.startsWith(QStringLiteral("en"), Qt::CaseInsensitive)) {
-            qDebug() << "Language setting resolves to English. Using built-in source strings.";
-        } else {
-            bool loaded = tryLoadTranslation(locale, QStringLiteral("locale"));
-            if (!loaded && locale.contains(QLatin1Char('_'))) {
-                loaded = tryLoadTranslation(locale.section(QLatin1Char('_'), 0, 0), QStringLiteral("language"));
-            }
-            if (!loaded) {
-                qDebug() << "No translation available for locale:" << locale << "- using default (English)";
-            }
-        }
-
         // The whole of what the UI is allowed to know about a ride. Section 9.2 caps
         // this surface at 20 members and TestRideState holds it to the list.
         //
@@ -782,6 +746,17 @@ int main(int argc, char *argv[]) {
         engine.rootContext()->setContextProperty("fileSearcher", &fileSearcher);
 
         engine.rootContext()->setContextProperty("rideState", &rideState);
+
+        // The language, and the only thing that can change it. Built here rather than
+        // before the engine because it needs one to retranslate, and before
+        // engine.load() below so the first tree is built in the rider's language.
+        //
+        // Parented to rideState for the reason spelled out above it: a local declared
+        // after the engine is destroyed before the engine, and the QML tree reads this
+        // object's `current` while it is being torn down. rideState outlives the engine,
+        // so anything parented to it does too - which is also why `pad` below is.
+        QzLanguage *language = new QzLanguage(&engine, &rideState);
+        engine.rootContext()->setContextProperty("language", language);
 
         // A gamepad is the only shifter that works once the training app owns the
         // screen. It used to reach the bike through homeform's keyboard entry points,

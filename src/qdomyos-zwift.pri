@@ -197,6 +197,7 @@ templateinfosender.cpp \
 templateinfosenderbuilder.cpp \
 virtualdevices/virtualbike.cpp \
 scanrecordresult.cpp \
+ui/language.cpp \
 ui/ridestate.cpp
    
 macx: SOURCES += macos/lockscreen.mm
@@ -327,47 +328,25 @@ templateinfosender.h \
 templateinfosenderbuilder.h \
 virtualdevices/virtualbike.h \
 scanrecordresult.h \
+ui/language.h \
 ui/ridestate.h
 
 
 exists(secret.h): HEADERS += secret.h
 
 
-# Translation files - 30 most used languages worldwide
+# Translations. Two languages, because two are read here: English, which is the source
+# language the .qml files are written in and therefore needs no catalogue, and Brazilian
+# Portuguese, which is the one this fork is ridden in.
+#
+# Upstream ships thirty. They were dropped rather than left in place: every one of them
+# was a catalogue of homeform's strings, and homeform is deleted - so each .qm still
+# built, still shipped, and translated nothing that is on screen any more. See
+# translations/README.md.
 CONFIG += lrelease
 LRELEASE_DIR = $$PWD/translations
 
-TRANSLATIONS += \
-    $$PWD/translations/qdomyos-zwift_it.ts \
-    $$PWD/translations/qdomyos-zwift_de.ts \
-    $$PWD/translations/qdomyos-zwift_fr.ts \
-    $$PWD/translations/qdomyos-zwift_es.ts \
-    $$PWD/translations/qdomyos-zwift_pt.ts \
-    $$PWD/translations/qdomyos-zwift_pt_BR.ts \
-    $$PWD/translations/qdomyos-zwift_ru.ts \
-    $$PWD/translations/qdomyos-zwift_zh_CN.ts \
-    $$PWD/translations/qdomyos-zwift_zh_TW.ts \
-    $$PWD/translations/qdomyos-zwift_ja.ts \
-    $$PWD/translations/qdomyos-zwift_ko.ts \
-    $$PWD/translations/qdomyos-zwift_ar.ts \
-    $$PWD/translations/qdomyos-zwift_hi.ts \
-    $$PWD/translations/qdomyos-zwift_tr.ts \
-    $$PWD/translations/qdomyos-zwift_vi.ts \
-    $$PWD/translations/qdomyos-zwift_pl.ts \
-    $$PWD/translations/qdomyos-zwift_uk.ts \
-    $$PWD/translations/qdomyos-zwift_nl.ts \
-    $$PWD/translations/qdomyos-zwift_th.ts \
-    $$PWD/translations/qdomyos-zwift_id.ts \
-    $$PWD/translations/qdomyos-zwift_ro.ts \
-    $$PWD/translations/qdomyos-zwift_cs.ts \
-    $$PWD/translations/qdomyos-zwift_el.ts \
-    $$PWD/translations/qdomyos-zwift_sv.ts \
-    $$PWD/translations/qdomyos-zwift_hu.ts \
-    $$PWD/translations/qdomyos-zwift_fi.ts \
-    $$PWD/translations/qdomyos-zwift_no.ts \
-    $$PWD/translations/qdomyos-zwift_da.ts \
-    $$PWD/translations/qdomyos-zwift_he.ts \
-    $$PWD/translations/qdomyos-zwift_ca.ts
+TRANSLATIONS +=     $$PWD/translations/qdomyos-zwift_pt_BR.ts
 
 # Qt compiles .ts to .qm files before building the resource file.
 # .qm files are ignored by git and embedded through translations.qrc.
