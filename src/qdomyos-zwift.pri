@@ -23,7 +23,15 @@ qtHaveModule(httpserver) {
 #		}
 }
 
-CONFIG += c++17 console app_bundle optimize_full ltcg
+CONFIG += c++17 app_bundle optimize_full ltcg
+
+# No `console`. On Windows that flag links the app as a console subsystem binary, so
+# every launch - including from Explorer - opens a black cmd window beside the app and
+# keeps it there for the whole ride. Nothing is read from it: qInstallMessageHandler
+# sends every line to debug-<timestamp>.log in the writable app dir (see myMessageOutput
+# in main.cpp), which is what the logs quoted in docs/fork/ are. It is not needed
+# elsewhere either - `console` is a Windows-only flag - and the tests keep their own
+# copy in tst/qdomyos-zwift-tests.pro, where a console binary is the right answer.
 
 CONFIG += qmltypes
 
