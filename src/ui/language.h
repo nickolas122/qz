@@ -32,8 +32,15 @@ class QzLanguage : public QObject {
     /** The codes above, in the order the picker shows them. */
     Q_PROPERTY(QStringList codes READ codes CONSTANT)
 
-    /** What each of those codes is called, in its own language. */
-    Q_PROPERTY(QStringList names READ names CONSTANT)
+    /**
+     * @brief What each of those codes is called, in its own language.
+     *
+     * Notifies on currentChanged rather than being CONSTANT: two of the three are
+     * language names and never move, but "System" is a label like any other and is
+     * translated. A CONSTANT property is not re-read on retranslate, so the picker would
+     * have kept saying "Sistema" in an English UI until the next launch.
+     */
+    Q_PROPERTY(QStringList names READ names NOTIFY currentChanged)
 
   public:
     /**
