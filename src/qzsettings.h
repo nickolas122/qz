@@ -866,6 +866,34 @@ class QZSettings {
     static const QString default_simulated_bike_ride;
 
     /**
+     *@brief osd_enabled Draw QZ's overlay into RivaTuner's OSD at all. Off is not merely
+     *"stop writing": the slot is handed back, because RTSS keeps drawing the last text it
+     *was given and would otherwise freeze a stale gear over the training app. Windows
+     *only - RtssOsd compiles to no-ops elsewhere, so the switch is hidden there.
+     */
+    static const QString osd_enabled;
+    static constexpr bool default_osd_enabled = true;
+
+    /**
+     *@brief osd_line_gear Show the "Gear: n" line. Only a bike has one, so this is
+     *ignored when the connected device is not a bike.
+     */
+    static const QString osd_line_gear;
+    static constexpr bool default_osd_line_gear = true;
+
+    /**
+     *@brief osd_line_erg Show the "ERG: ON/OFF" line.
+     */
+    static const QString osd_line_erg;
+    static constexpr bool default_osd_line_erg = true;
+
+    /**
+     *@brief osd_line_resistance Show the "Resistance: n" line.
+     */
+    static const QString osd_line_resistance;
+    static constexpr bool default_osd_line_resistance = true;
+
+    /**
      * @brief Write the QSettings values using the constants from this namespace.
      * @param showDefaults Optionally indicates if the default should be shown with the key.
      */

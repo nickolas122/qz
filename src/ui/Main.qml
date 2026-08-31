@@ -52,6 +52,10 @@ ApplicationWindow {
         property bool fitmetria_fanfit_enable: false
         property bool miles_unit: false
         property bool log_debug: false
+        property bool osd_enabled: true
+        property bool osd_line_gear: true
+        property bool osd_line_erg: true
+        property bool osd_line_resistance: true
     }
 
     /** Settings pushes the gamepad mapping screen over everything. */

@@ -6,7 +6,7 @@ import QtQuick.Layouts 1.3
 // rider changes rather than around vendors. No nesting and no accordions.
 //
 // The Settings block itself moved up to Main.qml so the ride screen can read miles_unit;
-// nothing was added to it. Five groups, as before. The only row here that leads anywhere
+// nothing was added to it. Six groups. The only row here that leads anywhere
 // is Gamepad, and its subtitle is its own current binding - so the summary and the route
 // to change it are the same control, and the groups stay flat.
 Item {
@@ -228,6 +228,51 @@ Item {
                 label: qsTr("Verbose log")
                 checked: qzSettings.log_debug
                 onToggled: qzSettings.log_debug = checked
+            }
+
+            // The RTSS overlay is drawn by RivaTuner, which exists only on Windows -
+            // RtssOsd compiles to no-ops elsewhere. Four rows describing a feature that
+            // cannot run is worse than not offering it, so the group goes rather than
+            // being greyed out on Android.
+            SettingsGroup {
+                title: qsTr("OSD overlay")
+                visible: OS_VERSION === "Other"
+            }
+
+            SettingsSwitch {
+                label: qsTr("Show the overlay")
+                // Off releases the RTSS slot rather than just stopping the writes, so
+                // nothing stays frozen over the training app. Trainer warnings are not
+                // one of the lines below: they are how a silent reconnect is announced
+                // to somebody riding in exclusive fullscreen, so they always show.
+                note: qsTr("Drawn over the training app by RivaTuner. Trainer warnings always show.")
+                visible: OS_VERSION === "Other"
+                checked: qzSettings.osd_enabled
+                onToggled: qzSettings.osd_enabled = checked
+            }
+
+            SettingsSwitch {
+                label: qsTr("Gear line")
+                visible: OS_VERSION === "Other"
+                enabled: qzSettings.osd_enabled
+                checked: qzSettings.osd_line_gear
+                onToggled: qzSettings.osd_line_gear = checked
+            }
+
+            SettingsSwitch {
+                label: qsTr("ERG line")
+                visible: OS_VERSION === "Other"
+                enabled: qzSettings.osd_enabled
+                checked: qzSettings.osd_line_erg
+                onToggled: qzSettings.osd_line_erg = checked
+            }
+
+            SettingsSwitch {
+                label: qsTr("Resistance line")
+                visible: OS_VERSION === "Other"
+                enabled: qzSettings.osd_enabled
+                checked: qzSettings.osd_line_resistance
+                onToggled: qzSettings.osd_line_resistance = checked
             }
 
             Label {

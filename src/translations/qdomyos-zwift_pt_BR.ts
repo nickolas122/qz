@@ -123,17 +123,17 @@
 <context>
     <name>Main</name>
     <message>
-        <location filename="../ui/Main.qml" line="71"/>
+        <location filename="../ui/Main.qml" line="75"/>
         <source>Ride</source>
         <translation>Pedal</translation>
     </message>
     <message>
-        <location filename="../ui/Main.qml" line="71"/>
+        <location filename="../ui/Main.qml" line="75"/>
         <source>Setup</source>
         <translation>Conexão</translation>
     </message>
     <message>
-        <location filename="../ui/Main.qml" line="71"/>
+        <location filename="../ui/Main.qml" line="75"/>
         <source>Settings</source>
         <translation>Ajustes</translation>
     </message>
@@ -518,7 +518,37 @@
         <translation>Log detalhado</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="241"/>
+        <location filename="../ui/SettingsScreen.qml" line="238"/>
+        <source>OSD overlay</source>
+        <translation>Sobreposição OSD</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="243"/>
+        <source>Show the overlay</source>
+        <translation>Mostrar a sobreposição</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="248"/>
+        <source>Drawn over the training app by RivaTuner. Trainer warnings always show.</source>
+        <translation>Desenhada sobre o app de treino pelo RivaTuner. Avisos do rolo aparecem sempre.</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="255"/>
+        <source>Gear line</source>
+        <translation>Linha da marcha</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="263"/>
+        <source>ERG line</source>
+        <translation>Linha do ERG</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="271"/>
+        <source>Resistance line</source>
+        <translation>Linha da resistência</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="286"/>
         <source>Changes to the connection settings take effect when QZ restarts.</source>
         <translation>As mudanças nos ajustes de conexão passam a valer quando o QZ reinicia.</translation>
     </message>
