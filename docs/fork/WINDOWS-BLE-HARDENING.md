@@ -95,7 +95,7 @@ catastrophic on Windows, and nothing in the pipeline could have caught it.
 
 ### Problem
 
-`ftmsbike::serviceScanDone()` in [src/devices/ftmsbike/ftmsbike.cpp](src/devices/ftmsbike/ftmsbike.cpp)
+`ftmsbike::serviceScanDone()` in [src/devices/ftmsbike/ftmsbike.cpp](../../src/devices/ftmsbike/ftmsbike.cpp)
 interleaves object creation with detail discovery in a single loop:
 
 ```cpp
@@ -264,7 +264,7 @@ Undiagnosable-but-common beats silent.
 Every debugging round so far has included some version of "am I running the new binary?", answered by
 grepping ASCII out of the `.exe`. Fix permanently.
 
-In [src/qdomyos-zwift.pri](src/qdomyos-zwift.pri):
+In [src/qdomyos-zwift.pri](../../src/qdomyos-zwift.pri):
 
 ```qmake
 QZ_GIT_SHA = $$system(git rev-parse --short HEAD)
@@ -340,7 +340,7 @@ must treat `cancelled` as "superseded, find the newer run", not as failure.
 ### The pattern already exists in this repo
 
 `67fdf241` extracted the FTMS control-point handshake into
-[src/devices/ftmsbike/ftmscontrolpointhandshake.h](src/devices/ftmsbike/ftmscontrolpointhandshake.h):
+[src/devices/ftmsbike/ftmscontrolpointhandshake.h](../../src/devices/ftmsbike/ftmscontrolpointhandshake.h):
 header-only, no Qt objects, no clock (the caller supplies `now`), fully reachable from tests, 14 of
 them in `tst/Devices/TestFtmsControlPointHandshake.{h,cpp}`. That design is why the handshake has
 been reliable while the code driving it has not.

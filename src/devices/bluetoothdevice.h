@@ -3,6 +3,7 @@
 
 #include "bluetoothdevicetype.h"
 #include "definitions.h"
+#include "linkstatus.h"
 #include "metric.h"
 #include "qzsettings.h"
 #include "ergtable.h"
@@ -488,6 +489,27 @@ class bluetoothdevice : public QObject {
      * @brief Overridden in subclasses to specify the maximum resistance level supported by the device.
      */
     virtual resistance_t maxResistance();
+
+    /**
+     * @brief What this device's radio link is doing right now.
+     *
+     * The default says "never connected", which is the truthful answer for any driver
+     * that does not track its own link - better than a boolean that latches true on the
+     * first frame and stays there for the life of the process, which is what the UI read
+     * before this existed (TODO.md, "both status indicators are latches, not state").
+     *
+     * Called once per UI redraw, so it must be cheap and must not touch the radio.
+     */
+    virtual LinkStatus linkStatus() const { return LinkStatus(); }
+
+    /**
+     * @brief Abandon the current backoff and attempt to reconnect immediately.
+     *
+     * Resets the retry ceiling as well as the delay: a rider who has just power-cycled
+     * the trainer should not inherit a 30-second wait and a ceiling twenty seconds away.
+     * A no-op on devices that do not reconnect.
+     */
+    virtual void retryNow() {}
 
     // Metrics for core temperature data
     metric CoreBodyTemperature;  // Core body temperature in °C or °F

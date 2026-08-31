@@ -1,11 +1,9 @@
 #include "characteristicnotifier2a53.h"
-#include "devices/treadmill.h"
 
 CharacteristicNotifier2A53::CharacteristicNotifier2A53(bluetoothdevice *Bike, QObject *parent)
     : CharacteristicNotifier(0x2a53, Bike, parent) {}
 
 int CharacteristicNotifier2A53::notify(QByteArray &value) {
-    BLUETOOTH_TYPE dt = Bike->deviceType();
     value.append(0x02); // total distance
     uint16_t speed = Bike->currentSpeed().value() / 3.6 * 256;
     uint32_t distance = Bike->odometer() * 10000.0;

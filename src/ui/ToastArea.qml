@@ -1,6 +1,5 @@
 import QtQuick 2.12
 import QtQuick.Controls 2.12
-import QtQuick.Controls.Material 2.12
 
 // Short messages from the bridge - battery levels, "restart to apply", "another device
 // has the bike". They arrive on QzNotify, which is where the device drivers post now
@@ -13,6 +12,7 @@ Item {
     id: toastArea
 
     readonly property real unit: window.unit
+    readonly property var theme: window.theme
     readonly property int visibleLimit: 3
 
     anchors.fill: parent
@@ -62,8 +62,8 @@ Item {
                 width: Math.min(toastArea.width - unit * 2, label.implicitWidth + unit * 2)
                 height: label.implicitHeight + unit
                 radius: unit / 2
-                color: Material.dialogColor
-                border.color: Material.accent
+                color: theme.raised
+                border.color: theme.line
                 border.width: 1
                 opacity: 0.95
 
@@ -73,8 +73,9 @@ Item {
                     width: toastArea.width - unit * 4
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
-                    font.pixelSize: unit * 1.1
-                    color: Material.foreground
+                    font.family: theme.fontUi
+                    font.pixelSize: unit * 1.08
+                    color: theme.ink
                     text: model.text
                 }
             }

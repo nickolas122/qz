@@ -25,11 +25,6 @@
 // have to be named.
 #include "devices/bike.h"
 #include "devices/bluetoothdevice.h"
-#include "devices/elliptical.h"
-#include "devices/jumprope.h"
-#include "devices/rower.h"
-#include "devices/stairclimber.h"
-#include "devices/treadmill.h"
 #include "devices/coresensor/coresensor.h"
 #include "devices/cscbike/cscbike.h"
 
@@ -54,7 +49,6 @@
 
 
 #include "templateinfosenderbuilder.h"
-#include "devices/treadmill.h"
 #include "devices/wahookickrheadwind/wahookickrheadwind.h"
 
 #include "zwift_play/zwiftPlayDevice.h"
@@ -136,8 +130,6 @@ class bluetooth : public QObject, public SignalHandler {
 
     bool handleSignal(int signal) override;
     bool deviceHasService(const QBluetoothDeviceInfo &device, QBluetoothUuid service);
-    void stateFileUpdate();
-    void stateFileRead();
     bool heartRateBeltAvaiable();
     bool cscSensorAvaiable();
     bool powerSensorAvaiable();
@@ -153,6 +145,8 @@ class bluetooth : public QObject, public SignalHandler {
 
     QTimer discoveryTimeout;
     bool discoveryFinishedHandled = false;
+    /** Set only for the duration of rescan(), so restart() can tell the two apart. */
+    bool userRequestedRescan = false;
 
 #ifdef Q_OS_WIN
     /**
@@ -211,6 +205,18 @@ class bluetooth : public QObject, public SignalHandler {
     void zwiftRideRightOnOff(bool pressed);
   public slots:
     void restart();
+    /**
+     * A rider asking, out loud, to go back to discovery. Tears the claimed device down
+     * and scans again, which is the only recovery when the bike returns on a different
+     * address or the driver object itself is wedged - reconnecting the existing
+     * controller cannot reach either case.
+     *
+     * Not free, and not something a watchdog may call: the virtual bike is owned by the
+     * device this deletes, so the training app's connection goes with it. That is why
+     * this is reachable only from the give-up state, where the trainer has already been
+     * gone for five minutes and the ride is over either way.
+     */
+    void rescan();
     void selectGymModeDevice(const QString &deviceName);
     void debug(const QString &string);
     void heartRate(uint8_t heart);
@@ -221,8 +227,6 @@ class bluetooth : public QObject, public SignalHandler {
 #endif
     void canceled();
     void finished();
-    void speedChanged(double);
-    void inclinationChanged(double, double);
     void connectedAndDiscovered();
     void gearDown();
     void gearUp();

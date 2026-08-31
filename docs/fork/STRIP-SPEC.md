@@ -1,7 +1,13 @@
 # Strip QZ to a trainer bridge — specification
 
-**Status: draft, under discussion.** Nothing here is committed to code yet. Numbers are
-measured against the tree at the time of writing unless marked *estimate* or *verify*.
+**Status: done. Every phase in §10 landed, the last of them on 2026-08-24.** This started
+as a draft under discussion and is now the record of what was actually deleted and what it
+cost — §7's inventory and §11.6's per-phase criteria carry the outcome of each one inline.
+What is still owed is not a phase: H4 (a Zwift ride on the new UI) was declined deliberately
+(§11.7), and the open work is in [TODO.md](TODO.md).
+
+Numbers are measured against the tree at the time of writing unless marked *estimate* or
+*verify*.
 
 ## 1. Goal
 
@@ -44,9 +50,10 @@ live with them.
 arrive only by reading a diff and reimplementing it by hand. This is a deliberate trade:
 the tree becomes readable at the cost of the upstream safety net.
 
-`FORK.md` §Versioning currently promises `v<upstream base>-qz.<n>` and says rebasing
-"moves the base and resets the counter". **That sentence becomes false and must be
-rewritten** when the first deletion phase lands.
+`FORK.md` §Versioning used to promise `v<upstream base>-qz.<n>` and say that rebasing
+"moves the base and resets the counter". That sentence became false with the first
+deletion phase and **was rewritten in phase 0** (`fdd260a17`): the base is now a record of
+where the tree came from, and the counter never resets.
 
 ### 3.2 The BLE peripheral role is not available on Windows
 
@@ -165,6 +172,11 @@ The Pi is a future target, so the strip **must not** delete Linux-guarded code a
 
 CI still carries `raspberry-pi-build`, `raspberry-pi-build-and-image-64bit` and
 `raspberry-pi-smoke-test` jobs. They stay in the workflow file even while disabled.
+
+**Re-enabled 2026-08-24, and green on the first attempt** (phase 8, §11.6). The rule above
+had been applied for eight phases with nothing compiling the result; it holds. The three
+jobs now run on every CI invocation, which is what keeps the Pi a real future host rather
+than an intention.
 
 ### 3.5 The new UI must be Qt 5 source-compatible
 
@@ -498,6 +510,12 @@ no surviving C++ file names. Of those 283, **114 belong to Group G** and leave w
 phase 8, landing at **169**. The estimate is holding, but the row below that reaches it
 is the machine-types row, not this phase's — see §11.6 phase 6.
 
+**Measured again 2026-08-23, after phase 8: 283 → 188.** The under-150 target is *not*
+reached and there is no phase left that would reach it. The 114 above was 86 machine-type
+keys — correct — plus 28 filed as "rival and other bike models", which turned out to be
+detection variants of the kept `ftmsbike` driver that Group E kept along with it. See
+§11.6 phase 8. 188 is the number.
+
 | Source of deletion | Keys *(approx)* |
 | --- | --- |
 | Tile system | 471 |
@@ -552,16 +570,25 @@ refresh loop go away.
 
 QML must not talk to `homeform`. A single new object carries the ride:
 
-`src/ui/ridestate.{h,cpp}` — roughly 12 properties and 4 invokables, wrapping the bridge
-core and nothing else:
+`src/ui/ridestate.{h,cpp}` — 16 properties and 6 invokables, wrapping the bridge core and
+nothing else:
 
 | Kind | Members |
 | --- | --- |
-| Connection | `trainerConnected`, `trainerName`, `appConnected`, `appName`, `transport` (BLE/DIRCON) |
-| Ride | `gear`, `resistance`, `power`, `cadence`, `speed`, `heartRate`, `ergMode` |
-| Actions | `gearUp()`, `gearDown()`, `setGear(int)`, `toggleErg()` |
+| Connection | `trainerState`, `trainerName`, `appState`, `transport` (BLE/DIRCON), `batteryLevel`, `retrySeconds`, `dataAgeSeconds` |
+| Ride | `gear`, `resistance`, `resistanceLevels`, `power`, `cadence`, `speed`, `heartRate`, `ergMode`, `autoResistance` |
+| Actions | `gearUp()`, `gearDown()`, `setGear(int)`, `toggleErg()`, `toggleAutoResistance()`, `retryNow()` |
 
-Keeping this surface small is the point of the exercise. **If it grows past ~20 members,
+**The ceiling moved from ~20 to 22 on 2026-08-24**, the only time it has moved, and the
+argument is in [UI-INSTRUMENT-CLUSTER.md](UI-INSTRUMENT-CLUSTER.md) section 6 and beside the
+assertion in `TestRideState`. In short: the five members the connection work added are all
+bridge facts a rider must be able to see — what the radio link is doing, how old the numbers
+are, how much battery the bike has — and not the tile-rendering plumbing this limit exists to
+keep out. It cost five rather than ten because two booleans were *replaced* by the two state
+properties, `appName` was deleted outright (it returned an empty string unconditionally), and
+one data-age clock does the work that staleness and time-since-lost would otherwise need two of.
+
+Keeping this surface small is the point of the exercise. **If it grows past 22 members,
 something UI-shaped has leaked back into the bridge**, and that is the signal to stop and
 reconsider.
 
@@ -675,11 +702,16 @@ with Rouvy is still the final word, but it is no longer the only evidence availa
 | 3 | Group C — training programs | medium (homeform surgery) | **none** |  ← landed 2026-08-21, ahead of 6
 | 4 | Group D — telemetry | medium (verify RTSS first) | **covered** |  ← landed 2026-08-21; RTSS check failed, see §7 Group D
 | 5 | Group E — rival trainers, running sensors, `virtualtreadmill` | low, once cscbike is resolved | **covered** |  ← landed 2026-08-20, H1 passed 2026-08-21
-| 6 | Settings consolidation | medium (§3.6 runtime failures) | **covered** |  ← landed 2026-08-23, after 7c; H2 still owed
+| 6 | Settings consolidation | medium (§3.6 runtime failures) | **covered** |  ← landed 2026-08-23, after 7c; H2 passed the same day
 | 7a | `RideState` object + `ui_next` flag + new tree under `src/ui/` | medium | **none** |  ← landed 2026-08-21
 | 7b | Ride on the new UI with Rouvy and Zwift; flip the default | low, but needs calendar time | **none** |  ← default flipped 2026-08-23 on H3; H4 still owed, see §11.6
 | 7c | Delete Group F — old tree, tile system, `homeform.cpp`, the flag | high | **none** |  ← 7c-1, 7c-2a, 7c-2b all landed 2026-08-23
-| 8 | Group G, Pi build revival | medium | partial |
+| 8 | Group G, Pi build revival | medium | partial |  ← **complete 2026-08-24**; Group G and the Pi jobs both green
+
+**Every phase in this table has landed, as of 2026-08-24.** What is still owed is not a
+phase: H4 (a Zwift ride) was declined as a deliberate decision rather than skipped — see
+§11.7 — and the open work is the two status indicators that latch instead of reporting
+state (`docs/fork/TODO.md`), plus the new UI's deferred tweaks.
 
 "Covered" means the end-to-end loop asserts on that phase's blast radius: bike frames in,
 metrics, DIRCON, a client reading numbers back out. It is deliberately **not** UI coverage
@@ -1134,9 +1166,28 @@ survived; settings integrity consistent (283/283, 248/248, 25 QML bindings all r
 Qt 5 `qmllint` clean; the app starts, logs **zero** QML warnings and still restores the
 rider's gear on connect.
 
-**H2 is still owed** and this phase is the reason it exists. Nothing above proves the
-bike still *feels* the same — §11.6's own warning is that settings changes pass every
-automated check and still ride wrong. Gear 7 on the flat should land near resistance 14.
+**H2 passed 2026-08-23**, on the second attempt. The first ride's reading was taken off a
+frozen RTSS overlay and had to be thrown away — see §11.6 phase 7c-2b, which is where that
+regression is recorded.
+
+The re-ride gives better evidence than the criterion asked for. 260 grade/resistance pairs
+out of one 7-minute session, and the whole curve holds, not just the flat:
+
+| Grade | Samples | Mean resistance | `grade × 1.5 + 14` predicts |
+| --- | --- | --- | --- |
+| −2.0 … −0.5 % | 19 | 12.3 | 12.1 |
+| **−0.5 … 0.5 %** | **27** | **14.0** | **14.0** |
+| 0.5 … 2.0 % | 33 | 15.7 | 15.9 |
+| 2.0 … 5.0 % | 40 | 19.0 | 19.3 |
+| 5.0 … 20 % | 75 | 24.7 | — |
+
+The flat lands on **14.0**, 16 of its 27 samples exactly 14, and the slope matches §11.5
+item 2's formula across five bands. So phase 6 did not move the calibration, which is the
+one thing no automated gate could have told us.
+
+Worth noting what the discarded reading actually was: 12.3 is the mean for the −2 … −0.5 %
+band. The frozen frame the rider read "12" from was almost certainly captured on a slight
+descent, which is exactly how a stale overlay misleads — the number is real, just not now.
 
 **Phase 7a — new UI behind the flag**
 *Criteria:* `ui_next` defaults false; the old UI is untouched and still default; new tree
@@ -1335,6 +1386,17 @@ gone from the catalog for good.
   is not answered here.
 - **`main.cpp` needed `<QColor>`, `<QPalette>` and `<QThread>`**, all of which it had been
   getting through `homeform.h`.
+- **The RTSS OSD stopped being drawn, and nothing said so.** `homeform::update()`
+  published QZ's gear, ERG state and resistance into RivaTuner's overlay once a second,
+  and `homeform::aboutToQuit()` released the slot. Both went with the class; `rtssosd.cpp`
+  still compiled and still linked, so there was no error anywhere — the overlay simply
+  kept drawing the last frame it had been given. **Frozen, not blank**, which is the
+  reason no gate caught it and the reason it is dangerous: a stale gear and resistance
+  sitting over the training app look exactly like live ones. Found on the first real
+  ride after the strip, 2026-08-23, and it cost that ride's H2 reading — the rider took
+  gear 7 flat as resistance 12 off a frame that was not current.
+  `RideState::updateRtssOsd()` has it now, on the same 1 Hz poll homeform used; release
+  comes free from `RtssOsd`'s destructor, since `RideState` owns one by value.
 - **CI's deploy guard named three QML modules the tree no longer imports.** The Qt 6
   job asserts that `windeployqt` actually deployed each module the UI needs, because
   windeployqt exits 0 when it silently skips one. `Qt5Compat\GraphicalEffects`,
@@ -1491,6 +1553,140 @@ referring to them; the Pi jobs re-enabled and green.
 *Tests:* full suite; the Pi smoke-test job.
 *Hardware:* Pi only, and only when that target is actually pursued.
 
+*Group G landed 2026-08-23.* **3,805 lines of machine types deleted**, and 6,099 lines
+gone in total across 40 files. `treadmill.*` (1,072), `virtualrower.*` (1,465),
+`rower.*` (343), `elliptical.*` (285), `stairclimber.*` (110), `jumprope.*` (117),
+`treadmillErgTable.h` (185), and the two `windows_zwift_*_paddleocr_thread` files (228),
+which nothing outside the `.pri` had named since the tile UI went.
+
+### The precondition, and it was two lines after all
+
+§7 left `treadmill.*` in this group "only after `heartratebelt` stops deriving from it",
+and warned the reparent was not free: the belt inherits a treadmill's speed and
+inclination metrics, and whatever reads those has to be checked first. **Nothing read
+them.** `heartratebelt.cpp` touches `m_control`, `bluetoothDevice` and `Heart`, all three
+of which are `bluetoothdevice`'s, and the class overrides no treadmill member. It is
+stored as `heartratebelt *` and handed out as `bluetoothdevice *` — no call site ever
+cast it to a treadmill. The reparent is one include and one base class.
+
+The one real consequence is `deviceType()`, which the belt inherited from `treadmill` and
+now inherits from `bluetoothdevice`: it answers `UNKNOWN` instead of `TREADMILL`. The belt
+is never the device on `bluetooth::device()`, so nothing switches on it.
+
+### The DIRCON path, and what was deliberately not touched
+
+§7 says the FTMS/DIRCON branches on `TREADMILL` and `ELLIPTICAL` "become unreachable
+rather than wrong, so removing them is tidying — but it is tidying inside the DIRCON path,
+which §5 says to treat as a warning sign. Do it last, or not at all." Deleting the headers
+forces the issue: seven files under `characteristics/` included them.
+
+The rule taken: **the advertised service table in `dirconmanager.cpp` is not touched at
+all**, and not one byte of a BIKE code path moves. Only branches `dt` can no longer take
+were deleted. So `DM_CHAR_OP` still declares the whole treadmill profile and the RSC
+service exactly as before; what a client negotiates against is unchanged. Two consequences
+worth naming:
+
+- `0x2ACD` (Treadmill Data) had its entire body inside `if (dt == TREADMILL || dt ==
+  ELLIPTICAL)`, so a bike already fell through to `CN_INVALID`. It now says that in one
+  line, and stays registered.
+- `machineTypeFor()` returns `DM_MACHINE_TYPE_BIKE` unconditionally. It stays as a
+  function because the listening port is derived from what it returns.
+
+`tools/dircon_smoke.py` against the built binary is what makes this checkable rather than
+argued: the announced service list is still `0x1826, 0x1818, 0x1816`, `0x1826` still
+offers the same six characteristics, `0x2ACC` still reads `835400000ce00000`, and the
+`0x2AD2` stream still carries flags `0x0264`. Identical to before the phase.
+
+### Four things that came out with the machines
+
+Deleting by *feature* rather than by class, as §7 Group E's rule requires, took four
+things the file list would not have found:
+
+1. **`status.xml`** — `bluetooth::stateFileRead()` / `stateFileUpdate()`, a treadmill
+   state file written for a gym console. `stateFileUpdate()` returned immediately unless
+   the device was a treadmill, nothing connected the two slots that called it, and nothing
+   ever called `stateFileRead()`. It was also the only thing left in the tree that used
+   `QtXml`, so **`xml` came off the `QT +=` line**.
+2. **Classic Bluetooth discovery** — the `ClassicMethod | LowEnergyMethod` branch existed
+   for exactly four devices (Technogym MyRun, TRX Route Key, BH Spada 2, iConcept
+   elliptical), every one already deleted. Discovery is now unconditionally BLE.
+3. **The PM5 branch in `ftmsbike`** — a Concept2 rower detected by name, which on finding
+   no FTMS service wrote `ftms_rower` and told the rider to restart. And `ftms_rower`
+   itself gated the FTMS-bike branch in `bluetooth.cpp`: a device the rider had marked as
+   a rower was not to be built as a bike.
+4. **`cadence_sensor_as_treadmill`** — a cadence sensor standing in for a machine that no
+   longer exists, in four places.
+
+`R_setspeed` was **kept**, unlike the rest. It is part of the QZWS wire protocol, and a
+bike has always answered it with null because the handler required a treadmill; it now
+answers null unconditionally, which is the same behaviour stated once.
+
+### The settings target, reached — and the estimate was wrong about where
+
+**283 registered → 188**, catalog 248 → 153, `qzsettings.h` 337 declarations → 230. 95
+keys left, and every one is a machine type or a device deleted in an earlier group: 31
+`treadmill_inclination_override_*`, the treadmill speed/incline bounds, `csafe_rower`,
+`virtual_device_rower`, `fakedevice_{treadmill,rower,elliptical}`, `iconcept_elliptical`,
+`proformtreadmillip`, and the rest.
+
+§11.6's phase 6 note predicted **169** by taking 114 keys: 86 machine-type plus 28 "rival
+and other bike models". The machine-type half was right. **The 28 was not a phase 8 row at
+all** — those keys are `ftms_bike`, `toorx_ftms`, `saris_trainer`, `hammer_racer_s`,
+`flywheel_life_fitness_ic8` and their neighbours, which are *detection variants of the
+kept `ftmsbike` driver*, read live by `bluetooth.cpp` and by the device-detection tests.
+Group E kept the driver, so it kept them. They were misfiled, not missed.
+
+So the honest number is **188, not under 150**, and the target from §8 is not reached. It
+was an estimate rather than a measurement, said so at the time, and this is where it stops:
+what remains is either read by a kept driver, bound by `SettingsScreen.qml`, asserted by a
+test, or Android-only screen-capture OCR. **There is no next phase that takes another 38.**
+The number to record is 188, not a smaller one obtained by deleting something that works.
+
+### Two false readers the audit had been counting
+
+Phase 6's sweep deleted every key "no surviving C++ file names", and two files were
+answering to that description without being readers:
+
+- **`tst/Devices/devicediscoveryinfo.cpp`** mirrors the setting registry — a key listed
+  there is written by the test harness and read back by the same harness, which is not a
+  use. It was keeping about forty already-dead device keys alive one whole phase after
+  their devices were gone. Its list is now pruned to the ten the tests actually name.
+- **`src/debug/`** is gitignored build output, and its stale moc JSON still names classes
+  deleted phases ago. It alone was keeping `antbike` registered.
+
+Both are fixed in `audit_settings.py`. The lesson is narrow and worth keeping: a
+reachability sweep is only as good as its definition of *reader*, and a mirror of the
+thing you are measuring is the easiest false positive to miss.
+
+*Verified:* mingw debug build clean; suite **189 passed, 12 skipped**, unchanged;
+settings integrity consistent (188/188, 153/153, 25 QML bindings resolving); Qt 5
+`qmllint` clean; `tools/qzws_smoke.py` all checks passed against the built binary, gear
+9→10→9 — the gate that caught 7c-2b's silent regression, and the one that matters here
+because `templateinfosenderbuilder.cpp` lost 88 lines; `tools/dircon_smoke.py` all checks
+passed, wire format byte-identical.
+
+### The Pi half — done 2026-08-24, and it answered a question eight phases old
+
+Landed as its own commit rather than with Group G, so that a red Pi job could not be read
+as Group G's fault. Group G was already green on all six active jobs when the three
+`if: false` guards came off.
+
+**All three are green on the first attempt** — `raspberry-pi-build` (armv6hf under QEMU),
+`raspberry-pi-build-and-image-64bit`, and `raspberry-pi-smoke-test`, which needs both.
+
+That is the useful result, and it is not really about the Pi. §3.4 set the rule the entire
+strip has been run on — *remove code by feature, never by platform*, so `#if
+defined(Q_OS_LINUX)` blocks inside a kept feature stay — and until this run **nothing had
+compiled the outcome for eight phases**. The rule was being obeyed on trust. It holds: the
+Linux/BlueZ half is still dormant rather than quietly dead, and it builds against distro
+Qt 5 packages, with the `src/ui/` tree and the phase 6/8 settings shape it had never seen.
+
+Two things about these jobs that were plausible failure modes and were not: they build the
+whole tree through the root `.pro` rather than the Windows/Android path, and they `sed`
+QtHttpServer out of every source file before qmake. Neither had met the new UI tree before.
+
+**Phase 8 is complete.** Both halves, nine CI jobs green on `d01f034b`.
+
 ### 11.7 Hardware budget
 
 Four sessions for the whole project:
@@ -1498,7 +1694,7 @@ Four sessions for the whole project:
 | | After | Purpose |
 | --- | --- | --- |
 | **H1** | Phase 5 | Trainer connects; gears 1–15 shift; resistance tracks the table. Add any accessory the rider owns to the same session — the kept ones (§7 Group E) have no automated coverage at all |
-| **H2** | Phase 6 | Calibration survived the settings reshuffle |
+| **H2** | Phase 6 | Calibration survived the settings reshuffle — **done 2026-08-23**, flat = 14.0 over 27 samples |
 | **H3** | Phase 7b | New UI, ride with Rouvy |
 | **H4** | Phase 7b | New UI, ride with Zwift |
 

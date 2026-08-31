@@ -5,38 +5,17 @@ up does not mean re-deriving why it matters. The same standard as the rest of th
 was measured, where the seam is, and what "done" would look like.
 
 Anything here that turns into work of its own gets a document and leaves a one-line pointer
-behind.
+behind. Anything that gets fixed is collapsed into [Resolved](#resolved) at the bottom — the
+date and what closed it, with the detail wherever the work was written up.
 
 ---
 
-## ~~The device-name branches in ftmsbike are unreachable from a test~~
+## Windows drops service discovery requests
 
-**Resolved 2026-08-21.** `applyDeviceProfile()` is that seam - the half of
-`deviceDiscovered()` that does not touch the radio - and `simulatedFtmsBike` calls it from its
-constructor, so a test is now the bike it says it is: the default harness arrives as a YPBM
-with `resistance_lvl_mode` set, ERG unsupported and 32 levels. It went in for
-`TestErgSimConflict`, which needs the YPBM profile to reach the continuous-ERG block at all.
-`RideScenario`'s `bike` directive is still read by nothing; wiring it up is what is left, and
-it is now a small job rather than a blocked one. Original entry below.
-
-**Found 2026-08-18, building Layer B.** `ftmsbike` gates around fifty behaviours on flags set
-from the device name — `YPBM`, `DOMYOS`, `FS_YK`, `D500V2` and the rest — and the one that
-matters most for this trainer is the three-byte Set Target Resistance it wants
-(`ftmsbike.cpp:598`, the level times ten as a 16-bit value) where ordinary FTMS sends two bytes.
-
-Those flags are private members set by `deviceDiscovered()`, which builds a
-`QLowEnergyController` and needs a radio. So the harness cannot reach any of those branches, and
-the write test asserts that whatever QZ chose is a well-formed FTMS frame rather than that it
-chose the right one.
-
-The seam is the same shape as the six already there: lift the name matching out of
-`deviceDiscovered()` into something that takes a name and sets the flags, and let a test call it.
-`RideScenario` already has a `bike` directive for exactly this, parsed since phase 0 and read by
-nothing — this is what would read it.
-
----
-
-## Windows sometimes never finishes discovering the trainer's services, and the retry is silent
+*Retitled 2026-08-24. This was "…and the retry is silent", which it no longer is: both halves
+that were ours are fixed, and what is left is the WinRT timeouts themselves — which the entry
+has always said are probably not ours. It is kept open because the timeouts are still happening
+and nothing here has measured how often.*
 
 **Found 2026-08-21, the phase 5 hardware session.** The first launch found `YPBM001264` and
 connected, then never finished service discovery. All four services arrived, five seconds
@@ -67,106 +46,159 @@ same trainer, 33 seconds apart, same build (`043ba3c`).
 
 The timeouts themselves are probably not ours to fix.
 [WINDOWS-BLE-HARDENING.md](WINDOWS-BLE-HARDENING.md) already records that Windows picks its own
-connection parameters and that discovery requests get dropped by the OS stack. Two things that
-*are* ours, and they are separable:
+connection parameters and that discovery requests get dropped by the OS stack. The two things
+that *were* ours are both fixed (see Resolved): the reconnect is visible on the status chip, and
+`serviceDiscoveryWatchdog` now bounds the discovery phase as well as the subscription pass.
 
-- **The reconnect is invisible.** Between the drop and the retry the UI says nothing, so a
-  recovery that was already in flight looks like a hang — and the natural response, restarting,
-  is the one thing that guarantees it cannot finish. Done would be a connection state the rider
-  can see: searching, connecting, discovering, connected, reconnecting. This is the same missing
-  surface as *QZ does not tell the rider when the bike goes away* below, from the other end — a
-  connection that never completed rather than one that ended — and one indicator answers both.
-- **Nothing bounds the discovery phase.** `serviceDiscoveryWatchdog`
-  (`ftmsbike.cpp:2526`, 10 s) starts in `serviceScanDone()` and so covers the *subscription*
-  pass, which is after discovery finishes. This failure was inside Qt's own
-  `discoverServices()`, before that timer exists, and the only thing that ended it was the
-  controller giving up twenty seconds later. A watchdog armed at `connectToDevice()` and
-  stopped on `DiscoveredState` would turn a twenty-second stall into a deliberate retry — and
-  the retry path is already written and already works.
-
-Worth knowing before designing either: it is intermittent, it recovered on its own the next
-time, and one observation is not a rate.
+Worth knowing before doing anything about the timeouts themselves: it is intermittent, it
+recovered on its own the next time, and one observation is not a rate. **Measuring how often it
+happens is the useful next step**, and now cheap — a stall that used to need a rider watching a
+frozen screen is a logged `service discovery watchdog fired` line, and the 15:57 session on
+2026-08-24 produced three of them in four minutes against a peripheral that had gone away.
 
 ---
 
-## The write log does not say which characteristic was written
+## Recovery from a dead link is bounded, but not immediate
 
-**Found 2026-08-18, building the recorder.** `processWriteQueue()` logs
-`" >> " + bytes + " // " + info` (`ftmsbike.cpp:174`). The `WriteRequest` it is logging carries
-a `characteristic`, and the line does not print it.
+**Left open by the link watchdog, 2026-08-24.** Once the peripheral comes back, QZ takes roughly
+13 s in the common case — 10 s to notice the silence, ~1 s of backoff, ~2 s to reconnect and
+resubscribe — and up to ~18 s if the previous reconnect landed on a dead link and is working
+through its own first-frame grace.
 
-Every `<<` line records its UUID, so a recorded fixture knows exactly which characteristic each
-notification arrived on — and then has to store `?` for every write. In practice they are all
-the control point, but "in practice" is not something a fixture should encode, and the moment
-a write goes somewhere else the recording is quietly wrong rather than visibly incomplete.
+That floor is structural. QZ's only evidence that the link died is **silence**, so recovery
+cannot be faster than the silence budget, and pressing Play on the bike is invisible to it.
 
-One line. `qzlog2ride.py` will pick it up with no change, and recordings made afterwards will be
-complete; older ones keep their `?`.
+The one thing that would make Play visible is a **scan**. A peripheral advertising as
+connectable is proof it is not connected to you, and the fake bike starts advertising the
+instant Play is pressed. Restarting discovery while the link is `lost` — and treating an
+advertisement from the device we think we are connected to as immediate grounds to tear down —
+would cut the latency to about a second.
 
----
+It is a real change rather than a tuning knob: `bluetooth` owns the discovery agent,
+`stopDiscovery()` is called when the device is claimed, and `bluetooth::finished` is not even
+connected on Windows (`#ifndef Q_OS_WIN`), so a mid-session rescan is not a well-trodden path in
+this tree.
 
-## QZ does not tell the rider when the bike goes away
+*(An earlier version of this paragraph said a link that reaches `DiscoveredState` and never sends
+a first frame is left alone. That was true of the watchdog's first draft and was fixed in the
+same commit — `FIRST_FRAME_GRACE_MS`, 15 s from `ConnectedState` — before this entry was
+written. The 17:17 log on 2026-08-24 shows it firing: `no Indoor Bike Data for 15155 ms`.)*
 
-**Reported 2026-08-18, from the fake bike.** Stop the peripheral mid-ride and QZ freezes on the
-last frame it received. The tiles keep showing 204 W at 90 rpm for as long as you care to look
-at them, and nothing on screen says the bike is gone. A rider cannot tell a working session from
-a dead one.
-
-### What actually happens
-
-The transport half is fine, and better than it looks. Since the peripheral started hanging up
-properly (`tools/fakebike-android`, `cancelConnection` on stop), the disconnect reaches QZ
-immediately and cleanly:
-
-```
-14:12:31  last 0x2AD2 notification
-14:12:41  BTLE stateChanged InvalidService   (every service, at once)
-14:12:41  QLowEnergyController::UnconnectedState
-          0 writeCharacteristic timeouts
-```
-
-`ftmsbike::controllerStateChanged()` handles `UnconnectedState` correctly: it clears `initDone`,
-resets the handshake, and starts `reconnectTimer` with exponential backoff. So QZ *does* try to
-get the bike back.
-
-**Nothing above that layer reacts.**
-
-- Every `connect(device, SIGNAL(disconnected()), this, SLOT(restart()))` in
-  `src/devices/bluetooth.cpp` is commented out — fourteen of them. `bluetooth` therefore never
-  returns to discovery and never tells anyone the device went away.
-- `emit disconnected()` fires from the controller *error* handler
-  (`ftmsbike.cpp:2694`), not from a clean `UnconnectedState`, so even an uncommented
-  connection would miss the ordinary case.
-- The metrics are never invalidated. Nothing marks a reading stale, so the last frame stands
-  for ever.
-
-### Why it matters beyond the test rig
-
-A trainer that drops mid-ride — flat battery, out of range, another central stealing it — leaves
-a rider looking at plausible numbers that stopped being true minutes ago, and a FIT file that
-records them. The reconnect backoff may well be working perfectly underneath, and there is no way
-to know from the screen.
-
-It is also the one behaviour `dropout.ride` was written for and cannot reach: on the DIRCON side
-QZ keeps pushing its own timer's values whatever the bike does
-([VIRTUAL-BIKE.md](VIRTUAL-BIKE.md), phase 3), and only a real radio can produce a genuine gap.
-
-### What makes it fixable now
-
-It is reproducible on demand for the first time. Press Stop in the fake bike and the disconnect
-happens exactly when you choose, as often as you like, with no trainer and no waiting for a
-battery to die. That is the whole argument for having built the peripheral.
+What a teardown cannot fix is the Windows un-bonded case in
+[BUILDING-ON-WINDOWS.md](BUILDING-ON-WINDOWS.md) — services enumerate, no notifications are ever
+delivered, and the remedy is an OS-level re-pair. QZ now loops on it visibly, with the backoff
+climbing to the 5-minute ceiling, rather than sitting silent; that is honest but it is not a
+cure, and nothing here has yet confirmed the ceiling firing on hardware.
 
 ### Done looks like
 
-- A disconnect QZ noticed is visible on screen without reading a log.
-- Metrics stop being presented as current once they are not.
-- The device returns to searching, or says why it is not going to.
-- Reconnection, when the bike comes back, does not need the app restarted.
+- Pressing Play on a bike QZ has lost gets it back in about a second, not thirteen.
+- A rescan started mid-session does not disturb a link that is merely slow.
 
-Open question, and a product decision rather than an engineering one: whether the tiles should
-clear, grey out, or hold the last value with a marker. Holding a number with no marker is the
-only option that is definitely wrong.
+---
+
+## The last-device address is remembered before the device has proved it is a trainer
+
+**Left open 2026-08-24 by the wrong-device fix below.** `bluetooth::deviceDiscovered()` calls
+`setLastBluetoothDevice(b)` at claim time — the moment the name matches, before a connection is
+attempted, let alone before a frame arrives. So the address `connectToLastDeviceIfIdle()` falls
+back on is whatever QZ last *tried*, not what last worked, and a ghost survives into the next
+launch to be tried again.
+
+It cost nothing in the 17:17 session, because the address it re-stored was the same stale one it
+had come from. It is still the wrong invariant: the fallback exists to reach a device Windows is
+already holding, and it should be seeded from a device that has actually delivered.
+
+The question to answer first is what counts as proof. `connectedAndDiscovered` is the obvious
+hook and is wrong — it fires on a descriptor write, which the 17:17 ghost would have reached had
+it carried an FTMS service. The honest signal is the same one the watchdog uses: the first
+Indoor Bike Data frame, which is where `noteLinkIsDelivering()` already runs.
+
+Worth doing together with it: nothing ever clears the stored pair, so an address that is
+permanently wrong can only be displaced by a successful connection to something else.
+
+### Done looks like
+
+- The stored address is one a frame has arrived from, not one a name matched.
+- A ghost address does not survive a restart.
+
+---
+
+## The header hides under the display cutout, and the insets that would move it are dropped
+
+**Found 2026-08-22 on the A34 (SM-A346M), from the device's own logs. Re-scoped 2026-08-24:**
+the original write-up was against `main.qml` and the old `ToolBar`, both deleted with group F in
+7c-2b. The C++/Java half is untouched and still broken, and the new UI has no inset handling of
+its own, so the fault survives the tree it was found in.
+
+`AndroidStatusBar.height` is 0 for the entire life of the process — see the comment at
+[ToastArea.qml:9](../../src/ui/ToastArea.qml#L9), which is the reason that file does not use it.
+Java computes the insets correctly and hands them over 54 ms before Qt exists:
+
+```
+17:28:40.083 CustomQtActivity: onApplyWindowInsets - Top:27 Bottom:48 Left:0 Right:0
+17:28:40.083 CustomQtActivity: Raw insets   - SystemTop:75 SystemBottom:135 SystemLeft:0 SystemRight:0
+17:28:40.083 CustomQtActivity: Cutout insets - Top:75 Bottom:0 Left:0 Right:0
+17:28:40.137 QT: qt_process_init() called
+```
+
+`AndroidStatusBar::onInsetsChanged()` logs every change it accepts. That line appears **zero**
+times in a capture taken with `log_debug` on — the same capture carrying dozens of QML warnings
+from the same handler, so nothing was suppressing it. The values never reach C++.
+
+### Three independent reasons it never arrives
+
+[CustomQtActivity.java:119](../../src/android/src/CustomQtActivity.java#L119) already knows about
+the race and gives up on it:
+
+```java
+try {
+    onInsetsChanged(top, bottom, left, right, ...);
+} catch (UnsatisfiedLinkError ignored) {
+    // Qt not ready yet; insets will be re-applied once Qt initializes.
+}
+```
+
+Nothing re-applies them. `onApplyWindowInsets` fires once on this phone and never again, so the
+one delivery that mattered is the one that was swallowed. The comment describes a mechanism that
+was never built.
+
+Second, and true even if the timing were fixed: `registerQmlType()` installs a singleton factory
+returning `new AndroidStatusBar()` ([androidstatusbar.cpp:28](../../src/androidstatusbar.cpp#L28))
+and the constructor is what assigns `m_instance`. **No QML in this tree imports
+`AndroidStatusBar` any more** — the old `main.qml` was the only importer — so the singleton is
+never constructed, `instance()` is null forever, and the JNI entry point at
+[androidstatusbar.cpp:73](../../src/androidstatusbar.cpp#L73) returns having done nothing. This
+was "until QML first dereferences it" before 7c-2b; it is now unconditional.
+
+Third: Java divides by `density` and sends dp, while Qt for Android measures QML in physical
+pixels. 27 is not 75, so even a delivered value would be in the wrong unit.
+
+### What the new UI does instead
+
+Nothing. [Main.qml:60](../../src/ui/Main.qml#L60) is a bare `Item` with
+`implicitHeight: unit * 4.4` and the tab strip anchored to its bottom, so on a device with a
+cutout the tab row is what gets sliced. It presents better than the old drawer button did — a
+tab is a wider hit target than an icon — which is exactly why it is worth fixing before someone
+concludes it is fine.
+
+### Why it has not shown up in a test
+
+The emulator has no cutout. On `qz_test` (API 34, generic profile) the header renders complete,
+because a top inset of 0 costs nothing when the true inset is also 0. Every device with a notch
+or a punch-hole is affected and no AVD in use here is, so the whole existing test path is blind
+to it.
+
+This is upstream behaviour, not a strip regression: the guard was added by `07059849c`
+("UnsatisfiedLinkError crash") and nothing in group A–F touched the inset path.
+
+### Done looks like
+
+- The header clears the status bar on the A34, with the whole tab strip touchable.
+- `AndroidStatusBar.height` is non-zero, in the right unit, by the time the first frame is
+  drawn, and still correct after a rotation.
+- A device with a cutout and one without both render correctly, since the fix must not add
+  padding where there is no inset to clear.
 
 ---
 
@@ -218,14 +250,16 @@ Rouvy still finds nothing.
 
 `ServerPrivate::writeToAllInterfaces()` is the suspect, on reading rather than measurement.
 It snapshots `socket.multicastInterface()`, walks the interfaces, and restores the snapshot
-at the end. On this phone Qt enumerates nothing, so the walk does nothing and the restore
-writes back an **invalid** interface - which plausibly clears the `IP_MULTICAST_IF` that
-the join fallback had just set. The datagram then falls to `socket.writeDatagram(...)`,
-which follows a routing table whose only entry is the `swlan0` link route.
+at the end ([server.cpp:144](../../src/qmdnsengine/src/src/server.cpp#L144)). On this phone Qt
+enumerates nothing, so the walk does nothing and the restore writes back an **invalid**
+interface - which plausibly clears the `IP_MULTICAST_IF` that the join fallback had just set.
+The datagram then falls to `socket.writeDatagram(...)`, which follows a routing table whose only
+entry is the `swlan0` link route.
 
 If that is right, QZ can hear the query and cannot be heard answering it, which is exactly
 the symptom. Two lines would settle it: skip the restore when the snapshot is invalid, and
-re-apply `IP_MULTICAST_IF` before the fallback send.
+re-apply `IP_MULTICAST_IF` before the fallback send. Neither has been done — both lines are
+still as described.
 
 Unresolved either way: whether Rouvy's discovery runs at all with no connected Wi-Fi
 network. `mdnsd` has joined the group on `swlan0`, which is a good sign, but NsdManager
@@ -243,7 +277,7 @@ through that.
 
 **Found 2026-08-20, pinning the grade formula.** `CharacteristicWriteProcessor::changeSlope()`
 computes two surface corrections from the FTMS Set Indoor Bike Simulation Parameters frame
-(`characteristicwriteprocessor.cpp`):
+([characteristicwriteprocessor.cpp:58](../../src/characteristics/characteristicwriteprocessor.cpp#L58)):
 
 ```cpp
 const double fCRR = crr / 10000.0;
@@ -275,75 +309,138 @@ bike.
 
 ---
 
-## The toolbar hides under the display cutout, and the insets that would move it are dropped
+## The write log does not say which characteristic was written
 
-**Found 2026-08-22 on the A34 (SM-A346M), from the device's own logs.** The header `ToolBar` is
-laid out from y=0 while the status bar covers the top 75 px of it, so the drawer button, the
-title and the two right-hand buttons are all sliced in half. The bottom sliver stays touchable
-and the drawer does open from it, which is why this presents as "the button sometimes does
-nothing" rather than as a layout fault: a finger aimed at where the icon looks centred lands
-above the window.
+**Found 2026-08-18, building the recorder.** `processWriteQueue()` logs
+`" >> " + bytes + " // " + info`
+([ftmsbike.cpp:208](../../src/devices/ftmsbike/ftmsbike.cpp#L208)). The `WriteRequest` it is
+logging carries a `characteristic`, and the line does not print it.
 
-`getTopPadding()` in `main.qml:33` is what should prevent it - on Android with API >= 31 it
-returns `AndroidStatusBar.height` (`main.qml:44-46`). That property is 0 for the entire life of
-the process.
+Every `<<` line records its UUID, so a recorded fixture knows exactly which characteristic each
+notification arrived on — and then has to store `?` for every write. In practice they are all
+the control point, but "in practice" is not something a fixture should encode, and the moment
+a write goes somewhere else the recording is quietly wrong rather than visibly incomplete.
 
-### What the log establishes
+One line. `qzlog2ride.py` will pick it up with no change, and recordings made afterwards will be
+complete; older ones keep their `?`.
 
-Java computes the insets correctly and hands them over 54 ms before Qt exists:
+---
 
-```
-17:28:40.083 CustomQtActivity: onApplyWindowInsets - Top:27 Bottom:48 Left:0 Right:0
-17:28:40.083 CustomQtActivity: Raw insets   - SystemTop:75 SystemBottom:135 SystemLeft:0 SystemRight:0
-17:28:40.083 CustomQtActivity: Cutout insets - Top:75 Bottom:0 Left:0 Right:0
-17:28:40.137 QT: qt_process_init() called
-```
+## The build banner reports a stale commit on an incremental build
 
-`AndroidStatusBar::onInsetsChanged()` logs every change it accepts. That line appears **zero**
-times in a capture taken with `log_debug` on - the same capture carrying dozens of QML warnings
-from the same handler, so nothing was suppressing it. The values never reach C++.
+**Found 2026-08-24, checking which binary produced a log.** The `QZ build` line said
+`69009d225`. The binary had been built from `4af0cb28d`, and HEAD was `efa6b2891` by then — so
+the banner named a commit two ahead of nothing and one behind reality.
 
-### Two independent reasons it never arrives
+`QZ_GIT_SHA` is a `-D` on the compile line (`src/qdomyos-zwift.pri:96`). `qmake` re-evaluates it
+on every run, but `nmake` decides what to rebuild from file timestamps, and nothing in
+`main.cpp`'s dependency list changes when only a define does. So `main.o` keeps whatever SHA it
+was compiled with until something else forces it to rebuild, and the banner reports the commit
+of the last `main.cpp` *compile* rather than of the build.
 
-`CustomQtActivity.java:119` already knows about the race and gives up on it:
+It is correct after `-Clean` and silently wrong otherwise, which is the bad combination: it
+looks authoritative and there is no signal that it is stale.
 
-```java
-try {
-    onInsetsChanged(top, bottom, left, right, ...);
-} catch (UnsatisfiedLinkError ignored) {
-    // Qt not ready yet; insets will be re-applied once Qt initializes.
-}
-```
+The comment above that block says the stamp exists because *"answering 'am I running the new
+binary?' by grepping ASCII out of the .exe cost more than one debugging round"*. That is exactly
+what it cost again — and grepping ASCII does not work either, since `QStringLiteral` stores
+UTF-16, so the search has to be `s.encode('utf-16-le')`.
 
-Nothing re-applies them. `onApplyWindowInsets` fires once on this phone and never again, so the
-one delivery that mattered is the one that was swallowed. The comment describes a mechanism that
-was never built.
+[BUILDING-ON-WINDOWS.md](BUILDING-ON-WINDOWS.md) tells a reader to use this banner to confirm
+that an `-DeployTo` of the `.exe` alone is still valid against the deployed Qt DLLs. That advice
+is currently unsound.
 
-Second, and true even if the timing were fixed: `registerQmlType()` installs a singleton factory
-returning `new AndroidStatusBar()` (`androidstatusbar.cpp:28`), and the constructor assigns
-`m_instance = this` (`androidstatusbar.cpp:14`). Until QML first dereferences the singleton,
-`AndroidStatusBar::instance()` is null and the JNI entry point returns having done nothing.
-Repairing only the Java side would land the insets in an object no binding is watching.
-
-Worth settling in the same pass: Java divides by `density` and sends dp, while Qt for Android
-measures QML in physical pixels. 27 is not 75, so even a delivered value looks like the wrong
-unit.
-
-### Why it has not shown up before
-
-The emulator has no cutout. On `qz_test` (API 34, generic profile) the toolbar renders complete -
-title, both right-hand buttons, nothing clipped - because a `getTopPadding()` of 0 costs nothing
-when the true inset is also 0. Every device with a notch or a punch-hole is affected and no AVD
-in use here is, so the whole existing test path is blind to it.
-
-This is upstream behaviour, not a strip regression: the guard was added by `07059849c`
-("UnsatisfiedLinkError crash") and nothing in group A-F has touched the inset path since.
+Cheapest honest fix is to make the SHA a generated header that `main.cpp` includes, so the
+dependency is a file and the rebuild follows from it. Writing it only when the contents change
+keeps incremental builds cheap.
 
 ### Done looks like
 
-- The header clears the status bar on the A34, with the drawer button whole and touchable along
-  its full height.
-- `AndroidStatusBar.height` is non-zero by the time the first frame is drawn, and still correct
-  after a rotation.
-- A device with a cutout and one without both render correctly, since the fix must not add
-  padding where there is no inset to clear.
+- The banner names the commit the binary was built from, on an incremental build.
+- Or, failing that, it says `unknown` rather than something plausible and wrong.
+
+---
+
+## `RideScenario`'s `bike` directive is still read by nothing
+
+**Left over from the device-profile seam, 2026-08-21.** `applyDeviceProfile()` exists and
+`simulatedFtmsBike` calls it from its constructor, so a test can now be the bike it says it is —
+but it is hard-coded to the YPBM profile. The scenario format has carried a `bike` directive
+since phase 0 ([ridescenario.h:25](../../src/devices/simulatedbike/ridescenario.h#L25)) and
+nothing parses it into that call.
+
+Small job now that the seam is there, and the thing that would let one scenario file exercise a
+different device profile without a new harness.
+
+---
+
+# Resolved
+
+Collapsed records. The detail is wherever the work was written up.
+
+**~~QZ does not tell the rider when the bike goes away~~** — *resolved 2026-08-24.* The UI
+refactor replaced `trainerConnected`/`appConnected` (booleans that latched on the first frame and
+never came back down) with `trainerState`/`appState`, fed by `LinkStatus` and a frame-age test;
+each chip carries its own age, the reconnect countdown is visible, and the ladder stops at a
+5-minute ceiling. The product question — clear, grey out, or hold with a marker — was answered
+**hold with a marker**: the last reading stays, dimmed, with its age in amber. See
+[UI-INSTRUMENT-CLUSTER.md](UI-INSTRUMENT-CLUSTER.md) section 3.
+
+**~~Windows never reports the disconnect at all~~** — *found and fixed 2026-08-24.* The entry
+above had claimed the transport half was fine, quoting a log with `InvalidService` on every
+service; no desktop log in this tree contains `InvalidService` at all, so that observation was
+Android and read as general. On Qt 6 / WinRT the peripheral calling `cancelConnection()` produces
+**nothing** — the controller sat in `DiscoveredState` for 2m06s after the last frame. Fixed by
+`ftmsbike::update()` hanging up on a Discovered link that has not delivered for 10 s (15 s grace
+before the first frame ever arrives), with unacknowledged writes shortening the wait to 2 s as
+corroboration only; plus `retryNow()` hanging up first, since `connectToDevice()` returns early
+unless the controller is `Unconnected`, and `bluetooth::rescan()` becoming reachable. The backoff
+and the ceiling reset in `noteLinkIsDelivering()`, on a frame — not in the `connected` lambda,
+where a bike that connects and never streams reset them every lap. Covered by
+`tst/Devices/TestFtmsLinkWatchdog.h`. What it does not make instant is its own entry above.
+
+**~~A connection that succeeds against the wrong device~~** — *found and fixed 2026-08-24.* With
+no trainer to find, discovery came up empty and `connectToLastDeviceIfIdle()` handed the stored
+address to `deviceDiscovered()`. Windows answered in **45 ms** — out of the bond record, not over
+the air; a real connect in these logs takes ~2 s — and enumerated six cached services: exactly
+the seven the working session had, minus `0x1826`. Nothing subscribed, no frame could arrive, and
+QZ reported a live trainer until the stall watchdog pulled it down 15 s later, repeatedly. The
+stored address was stale because the fake bike is a phone and Android randomises its BLE address;
+the fallback is left alone, being correct for the real YPBM. Fixed where a *positive* answer
+exists: `serviceScanDone()` refuses a device with no Fitness Machine service and hangs up, and
+after `NO_FTMS_BEFORE_RESCAN` such connections in a row emits `deviceHasNoFtmsService()` —
+connected **queued**, because the slot deletes the sender — to `bluetooth::rescan()`, since
+reconnecting can only reach the same wrong device. Guarded on `everDeliveredThisSession`: a
+trainer that streamed and then dropped is never torn down automatically. This also promotes the
+stale GATT cache in [BUILDING-ON-WINDOWS.md](BUILDING-ON-WINDOWS.md) from "currently cosmetic" to
+a fault with a symptom. Not unit-tested — the check needs a live `QLowEnergyController`, which
+the Layer B harness by design does not have.
+
+**~~The reconnect is invisible~~** — *fixed 2026-08-24* by the same refactor: the chip shows
+searching, connecting, discovering, live, stale, lost and gave up, with the countdown to the next
+attempt and `servicesFound` ticking up so a crawl is distinguishable from a stall.
+
+**~~Nothing bounds the discovery phase~~** — *fixed 2026-08-24.* `serviceDiscoveryWatchdog` is
+armed at `ConnectedState` and stopped at `DiscoveredState`, so it covers discovery as well as the
+subscription pass it always covered; `serviceScanDone()` re-arms it so each phase gets its own
+budget. Armed at `ConnectedState` rather than at `connectToDevice()` deliberately — the connect
+attempt has its own ~23 s timeout in the WinRT stack below us, and racing it would turn a slow
+radio into a retry loop. `serviceDiscoveryTimeout()` branches: with services present it forces
+the subscription pass, without them it hangs up.
+
+**~~The device-name branches in ftmsbike are unreachable from a test~~** — *resolved 2026-08-21.*
+`applyDeviceProfile()` is the seam — the half of `deviceDiscovered()` that does not touch the
+radio — and `simulatedFtmsBike` calls it from its constructor, so the default harness arrives as
+a YPBM with `resistance_lvl_mode` set, ERG unsupported and 32 levels. It went in for
+`TestErgSimConflict`, which needs that profile to reach the continuous-ERG block at all. The
+`bike` directive it was meant to read is its own entry above.
+
+**~~The QML destruction-order warnings at exit~~** — *fixed 2026-08-23.* Fourteen
+`TypeError: Cannot read property 'trainerConnected' of null` at every quit; `RideState` is
+declared before the engine now, so the engine is torn down first. Worth recording only because
+those warnings are what surfaced the latching-status problem above.
+
+**Not fixed, and nothing depends on them:** `bluetooth` still never clears the device on a clean
+disconnect, and the fourteen commented-out `disconnected()` connections in
+`src/devices/bluetooth.cpp` are still there. The link phase is read off the surviving bike object
+instead.

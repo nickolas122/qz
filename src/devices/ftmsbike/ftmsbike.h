@@ -94,6 +94,9 @@ class ftmsbike : public bike {
     bool ergModeSupportedAvailableBySoftware() override { return !FS_YK; }
     bool inclinationAvailableBySoftware() override { return !resistance_lvl_mode; }
 
+    LinkStatus linkStatus() const override;
+    void retryNow() override;
+
   private:
   protected:
     /**
@@ -216,10 +219,137 @@ class ftmsbike : public bike {
     // not report why an attempt failed - so this is a guess offered after enough
     // failures that it is worth guessing. Undiagnosable but common beats silent.
     static constexpr int MULTI_CENTRAL_WARN_AFTER = 5;
+    // Five minutes after the bike went away, stop trying. The limit is wall-clock rather
+    // than a count of attempts, and measurement has made the case stronger than the
+    // arithmetic that first argued it: a failed connect on the WinRT backend takes about
+    // 23 seconds to come back, so the backoff's first four steps are invisible against it
+    // and the real period between attempts was 25, 26, 27, 31 and 37 seconds
+    // (debug-Mon_Aug_24_14_14_06_2026.log). Five minutes is therefore seven or eight
+    // attempts here and would be fourteen on a stack that failed instantly - the same
+    // ceiling meaning two different things. "Try 11" tells a rider nothing about how much
+    // patience is left; "lost 4 minutes ago" does, on every platform. Retrying past this
+    // point is not recovery, it is a radio kept warm for a bike that has been switched off.
+    static constexpr qint64 RECONNECT_CEILING_MS = 300000;
     QTimer reconnectTimer;
     int reconnectDelayMs = RECONNECT_INITIAL_MS;
     int consecutiveConnectFailures = 0;
     bool multiCentralToastShown = false;
+
+    // --- the link went quiet but nobody hung up -----------------------------------
+    //
+    // Everything above is driven by QLowEnergyController::stateChanged, and on
+    // Windows/Qt 6 that signal does not always arrive. Three sessions on 2026-08-24
+    // (C:\QZ\lite-version, build 69009d2, WinRT backend) have the peripheral calling
+    // cancelConnection() and QZ receiving nothing at all: no UnconnectedState, no
+    // controller error, no service state change. The controller sits in
+    // DiscoveredState for as long as you care to look at it, so the reconnect ladder
+    // - which works, and is proven to work by the same day's third log - is simply
+    // never armed. The only exit was restarting the app.
+    //
+    // So the driver decides for itself. Indoor Bike Data is what a live link is made
+    // of; if it stops arriving on a controller that still claims to be connected, we
+    // hang up on our own side and let the existing UnconnectedState path do the rest.
+    // No new retry logic - this only supplies the trigger Windows will not.
+    /** How long 0x2AD2 may be absent on a Discovered link before we hang up. */
+    static constexpr qint64 DATA_STALL_MS = 10000;
+    /** With the write queue also timing out, the diagnosis is certain and can be quicker. */
+    static constexpr qint64 DATA_STALL_CORROBORATED_MS = 2000;
+    /** Unacknowledged writes needed before they count as corroboration. */
+    static constexpr int WRITE_TIMEOUTS_FOR_STALL = 3;
+    /** Re-issue a teardown this long after one that the stack never completed. */
+    static constexpr qint64 STALL_TEARDOWN_REISSUE_MS = 5000;
+    /**
+     * How long a link that has connected but never delivered a frame is given, measured
+     * from ConnectedState. Longer than DATA_STALL_MS because service discovery and the
+     * control-point handshake both happen inside it - in practice about two seconds, so
+     * this is generous on purpose.
+     *
+     * This being a longer budget rather than an exemption is the whole point, and the
+     * first version got it wrong: it disarmed the watchdog entirely until a frame had
+     * arrived, so a reconnect that landed on a link Windows called Discovered and that
+     * never delivered anything was never torn down again. The 15:40 session on
+     * 2026-08-24 sat in exactly that state for 45 seconds until the app was killed -
+     * the same dead end as before, moved one step later. A link that is not delivering
+     * is not a link, however new it is.
+     */
+    static constexpr qint64 FIRST_FRAME_GRACE_MS = 15000;
+    /**
+     * Has *this* link delivered a frame? Chooses the budget above, and gates the
+     * write-timeout corroboration - which is evidence about a link that was working and
+     * stopped, not about one that never started.
+     */
+    bool everReceivedFrame = false;
+    /**
+     * Has this object *ever* delivered, on any link? Never cleared. Kept for the record
+     * a log reader wants; it is deliberately *not* what gates the automatic rescan.
+     *
+     * It used to be. That guard read "never rescan a driver that has produced a ride",
+     * which sounds prudent and was wrong: the 20:10 session on 2026-08-24 delivered data,
+     * the bike stopped, and QZ then connected six times to a device with no Fitness
+     * Machine service without ever escalating - the backoff climbing to 30 s and the only
+     * exit being the five-minute ceiling. To reach that state the link must have dropped
+     * and reconnected onto the wrong device three times over; no ride survives that, so
+     * the guard was protecting nothing and costing five minutes.
+     */
+    bool everDeliveredThisSession = false;
+    /** Connections that completed discovery without a 0x1826 service, in a row. */
+    int consecutiveNoFtmsConnections = 0;
+    /**
+     * How many of those before concluding the address itself is wrong. Reconnecting can
+     * only reach the same device again; only discovery can find a different one.
+     */
+    static constexpr int NO_FTMS_BEFORE_RESCAN = 3;
+    /**
+     * How stale the data has to be before an automatic rescan is allowed. The rescan
+     * deletes this object and the virtual bike with it, so a training app loses its
+     * connection - which is right once the trainer is gone and wrong while it is not.
+     * On a session that never had data this delays nothing, because lastFrameEverAt is
+     * invalid and the test short-circuits. On one that did, it dominates: the 21:01 session
+     * escalated on the fifth no-FTMS connection rather than the third, about thirty seconds
+     * after the last frame, which is the intent rather than a surprise.
+     */
+    static constexpr qint64 RESCAN_MIN_DATA_AGE_MS = 30000;
+    /**
+     * When a frame last actually arrived. Invalid until one ever does, and never touched
+     * by anything else.
+     *
+     * It exists because lastRefreshCharacteristicChanged2AD2 cannot answer this. That
+     * member is the *display* clock and is deliberately rebased to now on every connect,
+     * so a fresh link does not open reading "No data for 143 s" - which means by the time
+     * serviceScanDone() runs, a few hundred milliseconds later, it always reports about
+     * 0.4 s however long the bike has really been gone. The first version of the rescan
+     * guard asked it how stale the data was and was therefore never satisfiable: the 20:32
+     * session on 2026-08-24 made twelve consecutive no-FTMS connections without once
+     * escalating, and took the full five minutes to the ceiling instead.
+     *
+     * Two different questions were sharing one timestamp. They get one each now.
+     */
+    QDateTime lastFrameEverAt;
+    /** Set once the decision to abandon this address is taken, to stop scheduling retries. */
+    bool abandoningAddress = false;
+    /** When we last called disconnectFromDevice() over a stall. Invalid if never. */
+    QDateTime stallTeardownAt;
+    /** Consecutive writes the bike never acknowledged. Reset by any write that lands. */
+    int consecutiveWriteTimeouts = 0;
+    /** A frame arrived: clear the teardown grace, and on the first one end the outage. */
+    void noteLinkIsDelivering();
+    /** True while the controller claims Discovered but no data has arrived for the budget. */
+    bool linkHasStalled() const;
+    /** Hang up on our own side so the reconnect ladder gets its UnconnectedState. */
+    void tearDownStalledLink();
+
+    // The link's own view of itself, for LinkStatus. Kept here rather than derived from
+    // m_control->state() because two of the phases are ours and not Qt's: GaveUp has no
+    // QLowEnergyController equivalent, and Lost has to outlive the controller returning
+    // to UnconnectedState, which is where a reconnect starts from.
+    LinkStatus::Phase linkPhase = LinkStatus::Idle;
+    /** When the link last dropped. Invalid while it is up. What the ceiling is measured from. */
+    QDateTime linkLostAt;
+    int servicesSeen = 0;
+    /** Cleared on a fresh connect, so the ceiling toast is once per outage, not per attempt. */
+    bool gaveUpToastShown = false;
+    /** 0x2A19 is optional. Without this, a battery that has never been read is 0%. */
+    bool batteryLevelKnown = false;
 
     /** Tear down the service objects and everything pointing into them. */
     void discardServiceObjects();
@@ -280,7 +410,6 @@ class ftmsbike : public bike {
     bool FIT_BK = false;
     bool YS_G1MPLUS = false;
     bool EXPERT_SX9 = false;
-    bool PM5 = false;
     bool THINK_X = false;
     bool WLT8828 = false;
     bool VANRYSEL_HT = false;
@@ -377,12 +506,59 @@ class ftmsbike : public bike {
     virtual void performWrite(const WriteRequest &request, const QByteArray &data);
 
     /**
+     * @brief Hang up on our own side. Default: m_control->disconnectFromDevice().
+     *
+     * A seam for the same reason as the four above: the stall watchdog's whole output is
+     * this one call, and without somewhere to observe it the decision to make it - which
+     * is the part with the arithmetic in it - could not be tested at all.
+     */
+    virtual void closeLink();
+
+    /**
+     * @brief Milliseconds since the last Indoor Bike Data frame.
+     *
+     * Default: measured from lastRefreshCharacteristicChanged2AD2. The seam exists because
+     * the alternative for a test is to wait ten real seconds, and a suite that waits is a
+     * suite nobody runs.
+     */
+    virtual qint64 msSinceLastFrame() const;
+
+    /**
+     * @brief Milliseconds since a frame really arrived, or -1 if one never has.
+     *
+     * The counterpart to msSinceLastFrame(), and the distinction is the whole point: that
+     * one is the display clock and is rebased on every connect, this one is not touched by
+     * anything but a frame. Anything asking how long the bike has been gone wants this.
+     */
+    qint64 msSinceRealFrame() const;
+
+    /**
+     * @brief Forget what belonged to the link that just ended, on connecting a new one.
+     *
+     * Extracted from the controller's connected handler so that what a connection does and
+     * does not reset is one readable list rather than a lambda - and so a test can ask
+     * whether connecting rewinds a clock it has no business touching.
+     */
+    void resetForNewLink();
+
+    /**
      * @brief Apply @p device's name-derived profile: resistance mode, ERG support, ceiling.
      *
      * Called by deviceDiscovered() before the controller is built. Split out so a test can
      * be a *particular* bike without a radio - see VIRTUAL-BIKE.md, Layer B.
      */
     void applyDeviceProfile(const QBluetoothDeviceInfo &device);
+
+  Q_SIGNALS:
+    /**
+     * Discovery keeps completing against a device with no Fitness Machine service, so the
+     * address this driver was given is wrong and reconnecting to it can only find the same
+     * wrong device again. Only discovery can find a different one, and this driver does not
+     * own the discovery agent - bluetooth does.
+     *
+     * Connect it queued. The slot deletes this object.
+     */
+    void deviceHasNoFtmsService();
 
   public slots:
     void deviceDiscovered(const QBluetoothDeviceInfo &device);

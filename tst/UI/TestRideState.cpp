@@ -45,18 +45,39 @@ QSet<QString> invokableNames(const QMetaObject *mo) {
 
 const QSet<QString> kProperties = {
     // Connection
-    QStringLiteral("trainerConnected"), QStringLiteral("trainerName"),
-    QStringLiteral("appConnected"), QStringLiteral("appName"), QStringLiteral("transport"),
+    QStringLiteral("trainerState"), QStringLiteral("trainerName"),
+    QStringLiteral("appState"), QStringLiteral("transport"),
+    QStringLiteral("batteryLevel"), QStringLiteral("retrySeconds"),
+    QStringLiteral("dataAgeSeconds"),
     // Ride
-    QStringLiteral("gear"), QStringLiteral("resistance"), QStringLiteral("power"),
-    QStringLiteral("cadence"), QStringLiteral("speed"), QStringLiteral("heartRate"),
-    QStringLiteral("ergMode"),
+    QStringLiteral("gear"), QStringLiteral("resistance"), QStringLiteral("resistanceLevels"),
+    QStringLiteral("power"), QStringLiteral("cadence"), QStringLiteral("speed"),
+    QStringLiteral("heartRate"), QStringLiteral("ergMode"),
     QStringLiteral("autoResistance"),
 };
 
 const QSet<QString> kInvokables = {
     QStringLiteral("gearUp"), QStringLiteral("gearDown"), QStringLiteral("setGear"),
     QStringLiteral("toggleErg"), QStringLiteral("toggleAutoResistance"),
+    QStringLiteral("retryNow"),
+};
+
+/**
+ * The complete vocabularies of the two state properties.
+ *
+ * They are strings rather than a Q_ENUM because RideState reaches QML as a context
+ * property (see the header), which means nothing but this test stops a typo in a state
+ * name from silently becoming a state no QML branch matches. So it is pinned here: a new
+ * state must be added deliberately, in both places.
+ */
+const QSet<QString> kTrainerStates = {
+    QStringLiteral("searching"), QStringLiteral("connecting"), QStringLiteral("discovering"),
+    QStringLiteral("live"),      QStringLiteral("stale"),      QStringLiteral("lost"),
+    QStringLiteral("gaveup"),
+};
+
+const QSet<QString> kAppStates = {
+    QStringLiteral("idle"), QStringLiteral("live"), QStringLiteral("stale"), QStringLiteral("past"),
 };
 
 class RideStateContractTest : public ::testing::Test {
@@ -95,13 +116,26 @@ TEST_F(RideStateContractTest, ExposesExactlyTheContractedInvokables) {
 }
 
 /**
- * The section 9.2 tripwire, mechanised: past twenty members, something UI-shaped has
- * leaked back into the bridge. Failing here is not a licence to raise the number - it is
- * the moment to ask what the new member is really for.
+ * The section 9.2 tripwire, mechanised: past the ceiling, something UI-shaped has leaked
+ * back into the bridge. Failing here is not a licence to raise the number - it is the
+ * moment to ask what the new member is really for.
+ *
+ * It was 20 until 2026-08-24, when the connection work moved it to 22. That is the only
+ * time it has moved, and the argument was this: the five members added were a trainer
+ * state, a training-app state, the trainer's battery, its resistance range and the
+ * reconnect countdown - every one a fact about the bridge that a rider has to be able to
+ * see, and none of them the tile-rendering plumbing the ceiling exists to keep out. It
+ * cost 20 rather than 25 because two booleans were *replaced* by the two states rather
+ * than joined by them, `appName` was deleted outright (it returned an empty string
+ * unconditionally, and the QML branch reading it could never be taken), and one data-age
+ * clock does the work that "how stale" and "how long lost" would otherwise have needed
+ * two of.
+ *
+ * The next member to arrive gets the same treatment or it does not go in.
  */
-TEST_F(RideStateContractTest, SurfaceHasNotGrownPastTwentyMembers) {
+TEST_F(RideStateContractTest, SurfaceHasNotGrownPastTheCeiling) {
     const int members = propertyNames(state->metaObject()).size() + invokableNames(state->metaObject()).size();
-    EXPECT_LE(members, 20) << "RideState is up to " << members
+    EXPECT_LE(members, 22) << "RideState is up to " << members
                            << " members. See STRIP-SPEC.md section 9.2 before raising this.";
 }
 
@@ -115,10 +149,38 @@ TEST_F(RideStateContractTest, EveryPropertyIsReadableWithoutADevice) {
 }
 
 TEST_F(RideStateContractTest, ReportsNothingConnectedWithoutADevice) {
-    EXPECT_FALSE(state->trainerConnected());
+    // "searching", not "idle": with no device matched, discovery is what QZ is doing.
+    EXPECT_EQ(state->trainerState(), QStringLiteral("searching"));
     EXPECT_TRUE(state->trainerName().isEmpty());
-    EXPECT_FALSE(state->appConnected());
+    EXPECT_EQ(state->appState(), QStringLiteral("idle"));
     EXPECT_TRUE(state->transport().isEmpty());
+}
+
+/**
+ * The states are strings, so nothing but this stops a typo becoming a state no QML
+ * branch matches - which would render as an empty chip rather than as an error.
+ */
+TEST_F(RideStateContractTest, StatesComeFromTheContractedVocabularies) {
+    EXPECT_TRUE(kTrainerStates.contains(state->trainerState()))
+        << "trainerState returned '" << state->trainerState().toStdString() << "'";
+    EXPECT_TRUE(kAppStates.contains(state->appState()))
+        << "appState returned '" << state->appState().toStdString() << "'";
+}
+
+/**
+ * The three that carry "no answer" as a value rather than as a zero. A battery of 0 and
+ * a data age of 0 are both real readings, so none of them may default to one.
+ */
+TEST_F(RideStateContractTest, UnknownsReadAsMinusOneWithoutADevice) {
+    EXPECT_EQ(state->batteryLevel(), -1);
+    EXPECT_EQ(state->retrySeconds(), -1);
+    EXPECT_EQ(state->dataAgeSeconds(), -1);
+    EXPECT_EQ(state->resistanceLevels(), 0);
+}
+
+TEST_F(RideStateContractTest, RetryingWithoutADeviceIsANoOp) {
+    state->retryNow();
+    EXPECT_EQ(state->trainerState(), QStringLiteral("searching"));
 }
 
 /**

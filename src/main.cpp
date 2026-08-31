@@ -9,15 +9,14 @@
 #endif
 #endif
 #include <QQmlContext>
-#include <QTranslator>
-#include <QLocale>
 #include "logwriter.h"
 #include "qzforkversion.h"
 #include "bluetooth.h"
 #include "devices/dircon/dirconmanager.h"
-#ifdef Q_OS_WIN
+// Not Q_OS_WIN-guarded any more. The class is compiled on every platform - the .pri has
+// always listed it unconditionally - and reports available() == false where XInput is
+// not there, which is what the mapping screen needs an object to ask.
 #include "gamepadcontroller.h"
-#endif
 #include "qznotify.h"
 #include "qzpaths.h"
 // Reached through homeform.h until 7c-2b deleted it. The dark-palette block below has
@@ -62,6 +61,7 @@
 #endif
 
 
+#include "ui/language.h"
 #include "ui/ridestate.h"
 #include "handleurl.h"
 #include "mywhooshlink.h"
@@ -81,12 +81,6 @@ bool bike_power_sensor = false;
 bool battery_service = false;
 bool service_changed = false;
 bool bike_wheel_revs = false;
-bool run_cadence_sensor = false;
-bool horizon_treadmill_7_8 = false;
-bool horizon_treadmill_force_ftms = false;
-bool nordictrack_10_treadmill = false;
-bool proform_performance_300i_treadmill = false;
-bool reebok_fr30_treadmill = false;
 bool zwift_play = false;
 bool zwift_click = false;
 bool zwift_play_emulator = false;
@@ -147,14 +141,6 @@ void displayHelp() {
     printf("  -bike-power-sensor            Enable bike power sensor\n");
     printf("  -bike-wheel-revs              Enable bike wheel revolution tracking\n");
     printf("  -power-sensor-name <name>     Set power sensor name\n");
-
-    printf("\nTreadmill specific options:\n");
-    printf("  -run-cadence-sensor           Enable run cadence sensor\n");
-    printf("  -horizon-treadmill-7-8        Enable Horizon 7.8 treadmill support\n");
-    printf("  -horizon-treadmill-force-ftms Force FTMS for Horizon treadmill\n");
-    printf("  -nordictrack-10-treadmill     Enable NordicTrack 10 treadmill support\n");
-    printf("  -proform-perf-300i-treadmill  Enable Proform Performance 300i support\n");
-    printf("  -reebok_fr30_treadmill        Enable Reebok FR30 treadmill support\n");
 
     printf("\nBluetooth options:\n");
     printf("  -no-reconnection              Disable bluetooth reconnection\n");
@@ -295,18 +281,6 @@ QCoreApplication *createApplication(int &argc, char *argv[]) {
             service_changed = true;
         if (!qstrcmp(argv[i], "-bike-wheel-revs"))
             bike_wheel_revs = true;
-        if (!qstrcmp(argv[i], "-run-cadence-sensor"))
-            run_cadence_sensor = true;
-        if (!qstrcmp(argv[i], "-horizon-treadmill-7-8"))
-            horizon_treadmill_7_8 = true; 
-        if (!qstrcmp(argv[i], "-horizon-treadmill-force-ftms"))
-            horizon_treadmill_force_ftms = true; 
-        if (!qstrcmp(argv[i], "-nordictrack-10-treadmill"))
-            nordictrack_10_treadmill = true;
-        if (!qstrcmp(argv[i], "-proform-perf-300i-treadmill"))
-            proform_performance_300i_treadmill = true;
-        if (!qstrcmp(argv[i], "-reebok_fr30_treadmill"))
-            reebok_fr30_treadmill = true;
         if (!qstrcmp(argv[i], "-zwift_play"))
             zwift_play = true;
         if (!qstrcmp(argv[i], "-zwift_click"))
@@ -563,12 +537,6 @@ int main(int argc, char *argv[]) {
         settings.setValue(QZSettings::battery_service, battery_service);
         settings.setValue(QZSettings::service_changed, service_changed);
         settings.setValue(QZSettings::bike_wheel_revs, bike_wheel_revs);
-        settings.setValue(QZSettings::run_cadence_sensor, run_cadence_sensor);
-        settings.setValue(QZSettings::horizon_treadmill_7_8, horizon_treadmill_7_8);
-        settings.setValue(QZSettings::horizon_treadmill_force_ftms, horizon_treadmill_force_ftms);
-        settings.setValue(QZSettings::nordictrack_10_treadmill, nordictrack_10_treadmill);
-        settings.setValue(QZSettings::proform_performance_300i, proform_performance_300i_treadmill);
-        settings.setValue(QZSettings::reebok_fr30_treadmill, reebok_fr30_treadmill);
         settings.setValue(QZSettings::zwift_click, zwift_click);
         settings.setValue(QZSettings::zwift_play, zwift_play);
         settings.setValue(QZSettings::zwift_play_emulator, zwift_play_emulator);
@@ -739,40 +707,14 @@ int main(int argc, char *argv[]) {
         fontManager.initializeEmojiFont();
 #endif
 
-        // Load translations based on explicit app setting or system locale.
-        QTranslator *translator = new QTranslator(app.data());
-        QString configuredLanguage =
-            settings.value(QZSettings::app_language, QZSettings::default_app_language).toString().trimmed();
-        QString locale = configuredLanguage.compare(QStringLiteral("auto"), Qt::CaseInsensitive) == 0 ||
-                                 configuredLanguage.isEmpty()
-                             ? QLocale::system().name()
-                             : configuredLanguage;
-        locale.replace(QLatin1Char('-'), QLatin1Char('_'));
-
-        auto tryLoadTranslation = [&](const QString &localeKey, const QString &sourceLabel) -> bool {
-            if (localeKey.isEmpty()) {
-                return false;
-            }
-            if (translator->load(QStringLiteral(":/translations/translations/qdomyos-zwift_") + localeKey)) {
-                app->installTranslator(translator);
-                qDebug() << "Translation loaded successfully for" << sourceLabel << ":" << localeKey;
-                return true;
-            }
-            return false;
-        };
-
-        // "en" is the built-in source language, so we don't load any translator for it.
-        if (locale.startsWith(QStringLiteral("en"), Qt::CaseInsensitive)) {
-            qDebug() << "Language setting resolves to English. Using built-in source strings.";
-        } else {
-            bool loaded = tryLoadTranslation(locale, QStringLiteral("locale"));
-            if (!loaded && locale.contains(QLatin1Char('_'))) {
-                loaded = tryLoadTranslation(locale.section(QLatin1Char('_'), 0, 0), QStringLiteral("language"));
-            }
-            if (!loaded) {
-                qDebug() << "No translation available for locale:" << locale << "- using default (English)";
-            }
-        }
+        // The whole of what the UI is allowed to know about a ride. Section 9.2 caps
+        // this surface at 20 members and TestRideState holds it to the list.
+        //
+        // Declared before the engine on purpose. Locals are destroyed in reverse, so
+        // an engine built first is torn down last - and tearing down a QML tree
+        // re-evaluates its bindings, which by then were reading a context property
+        // whose object had already gone. That cost 14 TypeErrors at every exit.
+        RideState rideState(&bl);
 
         QQmlApplicationEngine engine;
         const QUrl url(QStringLiteral("qrc:/ui/Main.qml"));
@@ -803,10 +745,34 @@ int main(int argc, char *argv[]) {
         FileSearcher fileSearcher;
         engine.rootContext()->setContextProperty("fileSearcher", &fileSearcher);
 
-        // The whole of what the UI is allowed to know about a ride. Section 9.2 caps
-        // this surface at 20 members and TestRideState holds it to the list.
-        RideState rideState(&bl);
         engine.rootContext()->setContextProperty("rideState", &rideState);
+
+        // The language, and the only thing that can change it. Built here rather than
+        // before the engine because it needs one to retranslate, and before
+        // engine.load() below so the first tree is built in the rider's language.
+        //
+        // Parented to rideState for the reason spelled out above it: a local declared
+        // after the engine is destroyed before the engine, and the QML tree reads this
+        // object's `current` while it is being torn down. rideState outlives the engine,
+        // so anything parented to it does too - which is also why `pad` below is.
+        QzLanguage *language = new QzLanguage(&engine, &rideState);
+        engine.rootContext()->setContextProperty("language", language);
+
+        // A gamepad is the only shifter that works once the training app owns the
+        // screen. It used to reach the bike through homeform's keyboard entry points,
+        // which were the same ones the shortcuts and the gear tile used; all three are
+        // gone, and RideState carries the same three actions straight to the device.
+        //
+        // Built on every platform now, not just Windows: the class already reports
+        // available() == false where XInput is not there, and the mapping screen needs
+        // an object to ask. A screen that cannot say "not supported here" would have to
+        // pretend instead, which is the failure section 3.2.1 exists to prevent.
+        // Created before engine.load() because the screen binds to it.
+        gamepadcontroller *pad = new gamepadcontroller(&rideState);
+        QObject::connect(pad, &gamepadcontroller::gearUp, &rideState, &RideState::gearUp);
+        QObject::connect(pad, &gamepadcontroller::gearDown, &rideState, &RideState::gearDown);
+        QObject::connect(pad, &gamepadcontroller::ergToggle, &rideState, &RideState::toggleErg);
+        engine.rootContext()->setContextProperty("gamepad", pad);
 
         // Where the bridge posts "battery at 40%", "restart to apply", "another device
         // has the bike". Drivers emit into QzNotify and ToastArea.qml shows what lands.
@@ -845,18 +811,6 @@ int main(int argc, char *argv[]) {
         // that caches discovery results and does not retry a failed connect will
         // otherwise hold a record for a port nobody is listening on.
         DirconManager::startIdleEndpoint();
-
-#ifdef Q_OS_WIN
-        // A gamepad is the only shifter that works once the training app owns the
-        // screen. It used to reach the bike through homeform's keyboard entry points,
-        // which were the same ones the shortcuts and the gear tile used; all three are
-        // gone, and RideState carries the same three actions straight to the device.
-        gamepadcontroller *pad = new gamepadcontroller(&rideState);
-        QObject::connect(pad, &gamepadcontroller::gearUp, &rideState, &RideState::gearUp);
-        QObject::connect(pad, &gamepadcontroller::gearDown, &rideState, &RideState::gearDown);
-        QObject::connect(pad, &gamepadcontroller::ergToggle, &rideState, &RideState::toggleErg);
-#endif
-
 
         {
 #ifdef Q_OS_ANDROID

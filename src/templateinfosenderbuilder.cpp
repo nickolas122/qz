@@ -1,10 +1,5 @@
 #include "templateinfosenderbuilder.h"
 #include "devices/bike.h"
-#include "treadmill.h"
-// Reached here through homeform.h until phase 7c took that include out. The casts
-// below have always needed them; nothing else changed.
-#include "devices/elliptical.h"
-#include "devices/rower.h"
 #include <QDirIterator>
 #include <QDateTime>
 #include <QFile>
@@ -211,16 +206,12 @@ void TemplateInfoSenderBuilder::onSetResistance(const QJsonValue &msgContent, Te
     if (device && msgContent.isObject() && (obj = msgContent.toObject()).contains(QStringLiteral("value")) &&
         (resVal = msgContent[QStringLiteral("value")]).isDouble()) {
         BLUETOOTH_TYPE tp = device->deviceType();
-        if (tp == BIKE || tp == ROWING) {
+        if (tp == BIKE) {
             int res;
             if ((res = resVal.toInt()) >= 0 && res < std::numeric_limits<resistance_t>::max()) {
                 ((bike *)device)->changeResistance((resistance_t)res);
                 outObj[QStringLiteral("value")] = res;
             }
-        } else {
-            double resd;
-            ((treadmill *)device)->changeInclination(resVal.toDouble(), resd = resVal.toDouble());
-            outObj[QStringLiteral("value")] = resd;
         }
     }
     QJsonObject main;
@@ -253,7 +244,7 @@ void TemplateInfoSenderBuilder::onSetPower(const QJsonValue &msgContent, Templat
     outObj[QStringLiteral("value")] = QJsonValue(QJsonValue::Null);
     if (device && msgContent.isObject() && (obj = msgContent.toObject()).contains(QStringLiteral("value")) &&
         (resVal = msgContent[QStringLiteral("value")]).isDouble() &&
-        (device->deviceType() == BIKE || device->deviceType() == ROWING)) {
+        device->deviceType() == BIKE) {
         int val;
         if ((val = resVal.toInt()) > 0) {
             ((bike *)device)->changePower((uint32_t)val);
@@ -273,7 +264,7 @@ void TemplateInfoSenderBuilder::onSetCadence(const QJsonValue &msgContent, Templ
     outObj[QStringLiteral("value")] = QJsonValue(QJsonValue::Null);
     if (device && msgContent.isObject() && (obj = msgContent.toObject()).contains(QStringLiteral("value")) &&
         (resVal = msgContent[QStringLiteral("value")]).isDouble() &&
-        (device->deviceType() == BIKE || device->deviceType() == ROWING)) {
+        device->deviceType() == BIKE) {
         int val;
         if ((val = resVal.toInt()) > 0) {
             ((bike *)device)->changeCadence((uint16_t)val);
@@ -288,16 +279,11 @@ void TemplateInfoSenderBuilder::onSetCadence(const QJsonValue &msgContent, Templ
 }
 
 void TemplateInfoSenderBuilder::onSetSpeed(const QJsonValue &msgContent, TemplateInfoSender *tempSender) {
-    QJsonObject obj, outObj;
-    QJsonValue resVal;
-    double vald;
+    // Answers null, always. That is what a bike already got: the old body required a
+    // treadmill to do anything. R_setspeed stays because it is QZWS wire protocol.
+    Q_UNUSED(msgContent)
+    QJsonObject outObj;
     outObj[QStringLiteral("value")] = QJsonValue(QJsonValue::Null);
-    if (device && msgContent.isObject() && (obj = msgContent.toObject()).contains(QStringLiteral("value")) &&
-        (resVal = msgContent[QStringLiteral("value")]).isDouble() &&
-        device->deviceType() == TREADMILL && (vald = resVal.toDouble()) >= 0) {
-        ((treadmill *)device)->changeSpeed(vald);
-        outObj[QStringLiteral("value")] = vald;
-    }
     QJsonObject main;
     main[QStringLiteral("msg")] = QStringLiteral("R_setspeed");
     main[QStringLiteral("content")] = outObj;
@@ -621,9 +607,6 @@ void TemplateInfoSenderBuilder::buildContext(bool forceReinit) {
             }
         }
         obj.setProperty(QStringLiteral("BIKE_TYPE"), (int)BIKE);
-        obj.setProperty(QStringLiteral("ELLIPTICAL_TYPE"), (int)ELLIPTICAL);
-        obj.setProperty(QStringLiteral("ROWING_TYPE"), (int)ROWING);
-        obj.setProperty(QStringLiteral("TREADMILL_TYPE"), (int)TREADMILL);
         obj.setProperty(QStringLiteral("UNKNOWN_TYPE"), (int)UNKNOWN);
     }
     if (!device) {
@@ -739,63 +722,6 @@ void TemplateInfoSenderBuilder::buildContext(bool forceReinit) {
                             (dep = ((bike *)device)->lastRequestedResistance()).value());
             obj.setProperty(QStringLiteral("inclination"),
                             (dep = ((bike *)device)->currentInclination()).value());
-            obj.setProperty(QStringLiteral("inclination_avg"), dep.average());
-        } else if (tp == ROWING) {
-            obj.setProperty(QStringLiteral("gears"), ((rower *)device)->gears());
-            el = ((rower *)device)->lastRequestedPace();
-            obj.setProperty(QStringLiteral("target_speed"), ((rower *)device)->lastRequestedSpeed().value());
-            obj.setProperty(QStringLiteral("target_pace_s"), el.second());
-            obj.setProperty(QStringLiteral("target_pace_m"), el.minute());
-            obj.setProperty(QStringLiteral("target_pace_h"), el.hour());
-            obj.setProperty(QStringLiteral("peloton_resistance"),
-                            (dep = ((rower *)device)->pelotonResistance()).value());
-            obj.setProperty(QStringLiteral("peloton_resistance_avg"), dep.average());
-            obj.setProperty(QStringLiteral("cadence"), (dep = ((rower *)device)->currentCadence()).value());
-            obj.setProperty(QStringLiteral("cadence_avg"), dep.average());
-            obj.setProperty(QStringLiteral("cadence_lapavg"), dep.lapAverage());
-            obj.setProperty(QStringLiteral("cadence_lapmax"), dep.lapMax());
-
-            // use to preserve compatibility to dochart.js
-            obj.setProperty(QStringLiteral("req_cadence"), (dep = ((rower *)device)->lastRequestedCadence()).value());
-            obj.setProperty(QStringLiteral("target_cadence"), (dep = ((rower *)device)->lastRequestedCadence()).value());
-            
-            obj.setProperty(QStringLiteral("resistance"), (dep = ((rower *)device)->currentResistance()).value());
-            obj.setProperty(QStringLiteral("resistance_avg"), dep.average());
-            obj.setProperty(QStringLiteral("cranks"), ((rower *)device)->currentCrankRevolutions());
-            obj.setProperty(QStringLiteral("cranktime"), ((rower *)device)->lastCrankEventTime());
-            obj.setProperty(QStringLiteral("strokescount"), ((rower *)device)->currentStrokesCount().value());
-            obj.setProperty(QStringLiteral("strokeslength"), ((rower *)device)->currentStrokesLength().value());
-        } else if (tp == TREADMILL) {
-            obj.setProperty(QStringLiteral("target_speed"), ((treadmill *)device)->lastRequestedSpeed().value());
-            el = ((treadmill *)device)->lastRequestedPace();
-            obj.setProperty(QStringLiteral("target_pace_s"), el.second());
-            obj.setProperty(QStringLiteral("target_pace_m"), el.minute());
-            obj.setProperty(QStringLiteral("target_pace_h"), el.hour());
-            obj.setProperty(QStringLiteral("target_inclination"),
-                            ((treadmill *)device)->lastRequestedInclination().value());
-            obj.setProperty(QStringLiteral("cadence"), (dep = ((treadmill *)device)->currentCadence()).value());
-            obj.setProperty(QStringLiteral("cadence_avg"), dep.average());
-            obj.setProperty(QStringLiteral("cadence_lapavg"), dep.lapAverage());
-            obj.setProperty(QStringLiteral("cadence_lapmax"), dep.lapMax());
-            obj.setProperty(QStringLiteral("inclination"), (dep = ((treadmill *)device)->currentInclination()).value());
-            obj.setProperty(QStringLiteral("inclination_avg"), dep.average());
-            obj.setProperty(QStringLiteral("inclination_lapavg"), dep.lapAverage());
-            obj.setProperty(QStringLiteral("inclination_lapmax"), dep.lapMax());
-            obj.setProperty(QStringLiteral("stridelength"),
-                            (dep = ((treadmill *)device)->currentStrideLength()).value());
-            obj.setProperty(QStringLiteral("groundcontact"),
-                            (dep = ((treadmill *)device)->currentGroundContact()).value());
-            obj.setProperty(QStringLiteral("verticaloscillation"),
-                            (dep = ((treadmill *)device)->currentVerticalOscillation()).value());
-        } else if (tp == ELLIPTICAL) {
-            obj.setProperty(QStringLiteral("resistance"), (dep = ((elliptical *)device)->currentResistance()).value());
-            obj.setProperty(QStringLiteral("resistance_avg"), dep.average());
-            obj.setProperty(QStringLiteral("cadence"), (dep = ((elliptical *)device)->currentCadence()).value());
-            obj.setProperty(QStringLiteral("cadence_avg"), dep.average());
-            obj.setProperty(QStringLiteral("cadence_lapavg"), dep.lapAverage());
-            obj.setProperty(QStringLiteral("cadence_lapmax"), dep.lapMax());
-            obj.setProperty(QStringLiteral("inclination"),
-                            (dep = ((elliptical *)device)->currentInclination()).value());
             obj.setProperty(QStringLiteral("inclination_avg"), dep.average());
         }
     }

@@ -1,7 +1,5 @@
 #include "characteristicwriteprocessore005.h"
-#include "devices/elliptical.h"
 #include "devices/ftmsbike/ftmsbike.h"
-#include "devices/treadmill.h"
 #include <QtMath>
 
 // The opcodes of the Wahoo proprietary control characteristic (0xe005) that QZ
@@ -57,7 +55,6 @@ int CharacteristicWriteProcessorE005::writeProcess(quint16 uuid, const QByteArra
                 qDebug() << "erg mode" << watts;
                 changePower(watts);
             }
-        } else if (dt == TREADMILL || dt == ELLIPTICAL) {
         }
         reply.append((quint8)FTMS_RESPONSE_CODE);
         reply.append((quint8)data.at(0));

@@ -1,5 +1,5 @@
 include(../defaults.pri)
-QT += bluetooth widgets xml positioning quick websockets texttospeech location multimedia
+QT += bluetooth widgets positioning quick websockets texttospeech location multimedia
 QTPLUGIN += qavfmediaplayer
 QT+= charts core-private sql concurrent
 
@@ -23,7 +23,15 @@ qtHaveModule(httpserver) {
 #		}
 }
 
-CONFIG += c++17 console app_bundle optimize_full ltcg
+CONFIG += c++17 app_bundle optimize_full ltcg
+
+# No `console`. On Windows that flag links the app as a console subsystem binary, so
+# every launch - including from Explorer - opens a black cmd window beside the app and
+# keeps it there for the whole ride. Nothing is read from it: qInstallMessageHandler
+# sends every line to debug-<timestamp>.log in the writable app dir (see myMessageOutput
+# in main.cpp), which is what the logs quoted in docs/fork/ are. It is not needed
+# elsewhere either - `console` is a Windows-only flag - and the tests keep their own
+# copy in tst/qdomyos-zwift-tests.pro, where a console binary is the right answer.
 
 CONFIG += qmltypes
 
@@ -116,11 +124,9 @@ SOURCES += \
     $$PWD/androidqlog.cpp \
     $$PWD/devices/coresensor/coresensor.cpp \
     $$PWD/devices/elitesquarecontroller/elitesquarecontroller.cpp \
-    $$PWD/devices/jumprope.cpp \
     $$PWD/devices/cycplusbc2controller/cycplusbc2controller.cpp \
     $$PWD/devices/sramAXSController/sramAXSController.cpp \
     $$PWD/devices/thinkridercontroller/thinkridercontroller.cpp \
-    $$PWD/devices/stairclimber.cpp \
     $$PWD/logwriter.cpp \
     $$PWD/filesearcher.cpp \
 devices/eliteariafan/eliteariafan.cpp \
@@ -133,7 +139,6 @@ windowsblebond.cpp \
 gamepadcontroller.cpp \
 rtssosd.cpp \
 devices/wahookickrheadwind/wahookickrheadwind.cpp \
-windows_zwift_workout_paddleocr_thread.cpp \
 zwift_play/zwiftclickremote.cpp \
 characteristics/characteristicnotifier2a53.cpp \
 characteristics/characteristicnotifier2a5b.cpp \
@@ -170,7 +175,6 @@ devices/dircon/dirconpacket.cpp \
 devices/dircon/dirconprocessor.cpp \
 devices/eliterizer/eliterizer.cpp \
 devices/elitesterzosmart/elitesterzosmart.cpp \
-devices/elliptical.cpp \
 filedownloader.cpp \
 devices/fitmetria_fanfit/fitmetria_fanfit.cpp \
 devices/ftmsbike/ftmsbike.cpp \
@@ -182,7 +186,6 @@ metric.cpp \
 qznotify.cpp \
 qzpaths.cpp \
 qzsettings.cpp \
-devices/rower.cpp \
 screencapture.cpp \
 sessionline.cpp \
 signalhandler.cpp \
@@ -192,11 +195,9 @@ devices/simulatedbike/simulatedbike.cpp \
 devices/stagesbike/stagesbike.cpp \
 templateinfosender.cpp \
 templateinfosenderbuilder.cpp \
-devices/treadmill.cpp \
-virtualdevices/virtualrower.cpp \
 virtualdevices/virtualbike.cpp \
 scanrecordresult.cpp \
-windows_zwift_incline_paddleocr_thread.cpp \
+ui/language.cpp \
 ui/ridestate.cpp
    
 macx: SOURCES += macos/lockscreen.mm
@@ -220,19 +221,15 @@ HEADERS += \
     $$PWD/characteristics/characteristicwriteprocessor0003.h \
     $$PWD/devices/coresensor/coresensor.h \
     $$PWD/devices/elitesquarecontroller/elitesquarecontroller.h \
-    $$PWD/devices/jumprope.h \
     $$PWD/devices/cycplusbc2controller/cycplusbc2controller.h \
     $$PWD/devices/sramAXSController/sramAXSController.h \
     $$PWD/devices/thinkridercontroller/thinkridercontroller.h \
-    $$PWD/devices/stairclimber.h \
     $$PWD/ergtable.h \
     $$PWD/inclinationresistancetable.h \
     $$PWD/logwriter.h \
     $$PWD/filesearcher.h \
-    $$PWD/treadmillErgTable.h \
     $$PWD/wheelcircumference.h \
 devices/eliteariafan/eliteariafan.h \
-windows_zwift_workout_paddleocr_thread.h \
 zwift-api/PlayerStateWrapper.h \
 zwift-api/zwift_client_auth.h \
 zwift_play/abstractZapDevice.h \
@@ -287,6 +284,7 @@ qmdnsengine/src/src/service_p.h \
 devices/bike.h \
 devices/bluetooth.h \
 devices/bluetoothdevice.h \
+devices/linkstatus.h \
 characteristics/characteristicnotifier.h \
 characteristics/characteristicnotifier2a37.h \
 characteristics/characteristicnotifier2a63.h \
@@ -299,7 +297,6 @@ devices/dircon/dirconpacket.h \
 devices/dircon/dirconprocessor.h \
 devices/eliterizer/eliterizer.h \
 devices/elitesterzosmart/elitesterzosmart.h \
-devices/elliptical.h \
 filedownloader.h \
 devices/fitmetria_fanfit/fitmetria_fanfit.h \
 devices/ftmsbike/ftmsbike.h \
@@ -320,7 +317,6 @@ qznotify.h \
 qzpaths.h \
 qzsettings.h \
 qzforkversion.h \
-devices/rower.h \
 screencapture.h \
 sessionline.h \
 signalhandler.h \
@@ -330,52 +326,27 @@ devices/simulatedbike/simulatedbike.h \
 devices/stagesbike/stagesbike.h \
 templateinfosender.h \
 templateinfosenderbuilder.h \
-devices/treadmill.h \
 virtualdevices/virtualbike.h \
-virtualdevices/virtualrower.h \
 scanrecordresult.h \
-windows_zwift_incline_paddleocr_thread.h \
+ui/language.h \
 ui/ridestate.h
 
 
 exists(secret.h): HEADERS += secret.h
 
 
-# Translation files - 30 most used languages worldwide
+# Translations. Two languages, because two are read here: English, which is the source
+# language the .qml files are written in and therefore needs no catalogue, and Brazilian
+# Portuguese, which is the one this fork is ridden in.
+#
+# Upstream ships thirty. They were dropped rather than left in place: every one of them
+# was a catalogue of homeform's strings, and homeform is deleted - so each .qm still
+# built, still shipped, and translated nothing that is on screen any more. See
+# translations/README.md.
 CONFIG += lrelease
 LRELEASE_DIR = $$PWD/translations
 
-TRANSLATIONS += \
-    $$PWD/translations/qdomyos-zwift_it.ts \
-    $$PWD/translations/qdomyos-zwift_de.ts \
-    $$PWD/translations/qdomyos-zwift_fr.ts \
-    $$PWD/translations/qdomyos-zwift_es.ts \
-    $$PWD/translations/qdomyos-zwift_pt.ts \
-    $$PWD/translations/qdomyos-zwift_pt_BR.ts \
-    $$PWD/translations/qdomyos-zwift_ru.ts \
-    $$PWD/translations/qdomyos-zwift_zh_CN.ts \
-    $$PWD/translations/qdomyos-zwift_zh_TW.ts \
-    $$PWD/translations/qdomyos-zwift_ja.ts \
-    $$PWD/translations/qdomyos-zwift_ko.ts \
-    $$PWD/translations/qdomyos-zwift_ar.ts \
-    $$PWD/translations/qdomyos-zwift_hi.ts \
-    $$PWD/translations/qdomyos-zwift_tr.ts \
-    $$PWD/translations/qdomyos-zwift_vi.ts \
-    $$PWD/translations/qdomyos-zwift_pl.ts \
-    $$PWD/translations/qdomyos-zwift_uk.ts \
-    $$PWD/translations/qdomyos-zwift_nl.ts \
-    $$PWD/translations/qdomyos-zwift_th.ts \
-    $$PWD/translations/qdomyos-zwift_id.ts \
-    $$PWD/translations/qdomyos-zwift_ro.ts \
-    $$PWD/translations/qdomyos-zwift_cs.ts \
-    $$PWD/translations/qdomyos-zwift_el.ts \
-    $$PWD/translations/qdomyos-zwift_sv.ts \
-    $$PWD/translations/qdomyos-zwift_hu.ts \
-    $$PWD/translations/qdomyos-zwift_fi.ts \
-    $$PWD/translations/qdomyos-zwift_no.ts \
-    $$PWD/translations/qdomyos-zwift_da.ts \
-    $$PWD/translations/qdomyos-zwift_he.ts \
-    $$PWD/translations/qdomyos-zwift_ca.ts
+TRANSLATIONS +=     $$PWD/translations/qdomyos-zwift_pt_BR.ts
 
 # Qt compiles .ts to .qm files before building the resource file.
 # .qm files are ignored by git and embedded through translations.qrc.

@@ -1,54 +1,19 @@
 import QtQuick 2.12
 import QtQuick.Controls 2.12
-import QtQuick.Controls.Material 2.12
 import QtQuick.Layouts 1.3
-import Qt.labs.settings 1.0
 
 // Screen 3 of STRIP-SPEC.md section 9.6: one scrollable page, organised around what a
 // rider changes rather than around vendors. No nesting and no accordions.
 //
-// Section 9.6 named four groups and section 8 added Accessories as a fifth, on the
-// grounds that forcing a fan into "Display" would be worse than admitting the group.
-// Phase 6 kept both decisions and added nothing further: rider weight sits under Bike
-// because it is an input to the same resistance model `bike_weight` feeds, not because
-// there was nowhere else to put it.
-//
-// What is *not* here is deliberate. 283 settings survive phase 6 and most are device
-// detection and protocol quirks that a rider never opens a screen to change. This page
-// carries the ones that get touched between rides.
+// The Settings block itself moved up to Main.qml so the ride screen can read miles_unit;
+// nothing was added to it. Five groups, as before. The only row here that leads anywhere
+// is Gamepad, and its subtitle is its own current binding - so the summary and the route
+// to change it are the same control, and the groups stay flat.
 Item {
     id: settingsScreen
 
     readonly property real unit: window.unit
-
-    Settings {
-        id: qzSettings
-        property int bike_resistance_offset: 4
-        property double bike_resistance_gain_f: 1.0
-        property int bike_resistance_start: 0
-        property double bike_weight: 0.0
-        property double weight: 75.0
-        property int resistance_slew_up: 0
-        property int resistance_slew_down: 0
-        property bool gears_zwift_ratio: false
-        property double gear_crankset_size: 50.0
-        property double gear_cog_size: 33.0
-        property double gears_gain: 1.0
-        property bool gears_restore_value: false
-        property int gears_neutral_gear: 0
-        property bool dircon_yes: true
-        property int dircon_id: 0
-        property bool virtual_device_bluetooth: true
-        property bool rouvy_compatibility: false
-        property bool mywhoosh_link_enabled: false
-        property bool zwift_erg: false
-        property bool gamepad_enabled: false
-        property bool zwift_play: false
-        property bool zwift_click: false
-        property bool fitmetria_fanfit_enable: false
-        property bool miles_unit: false
-        property bool log_debug: false
-    }
+    readonly property var theme: window.theme
 
     Flickable {
         anchors.fill: parent
@@ -59,10 +24,9 @@ Item {
 
         ColumnLayout {
             id: column
-            width: settingsScreen.width - unit * 2
-            x: unit
-            y: unit
-            spacing: unit / 2
+            width: settingsScreen.width - unit * 2.7
+            x: unit * 1.33
+            spacing: 0
 
             SettingsGroup { title: qsTr("Bike") }
 
@@ -76,6 +40,7 @@ Item {
                 label: qsTr("Resistance gain")
                 value: qzSettings.bike_resistance_gain_f
                 decimals: 2
+                step: 0.05
                 onCommitted: qzSettings.bike_resistance_gain_f = newValue
             }
 
@@ -89,6 +54,7 @@ Item {
                 label: qsTr("Rider weight (kg)")
                 value: qzSettings.weight
                 decimals: 1
+                step: 0.5
                 onCommitted: qzSettings.weight = newValue
             }
 
@@ -96,17 +62,20 @@ Item {
                 label: qsTr("Bike weight (kg)")
                 value: qzSettings.bike_weight
                 decimals: 1
+                step: 0.5
                 onCommitted: qzSettings.bike_weight = newValue
             }
 
             SettingsNumber {
-                label: qsTr("Resistance slew up (per second, 0 = off)")
+                label: qsTr("Resistance slew up")
+                note: qsTr("Per second. 0 is off.")
                 value: qzSettings.resistance_slew_up
                 onCommitted: qzSettings.resistance_slew_up = Math.round(newValue)
             }
 
             SettingsNumber {
-                label: qsTr("Resistance slew down (per second, 0 = off)")
+                label: qsTr("Resistance slew down")
+                note: qsTr("Per second. 0 is off.")
                 value: qzSettings.resistance_slew_down
                 onCommitted: qzSettings.resistance_slew_down = Math.round(newValue)
             }
@@ -137,11 +106,13 @@ Item {
                 label: qsTr("Shift size")
                 value: qzSettings.gears_gain
                 decimals: 2
+                step: 0.05
                 onCommitted: qzSettings.gears_gain = newValue
             }
 
             SettingsNumber {
-                label: qsTr("Neutral gear (0 = none)")
+                label: qsTr("Neutral gear")
+                note: qsTr("0 is none.")
                 value: qzSettings.gears_neutral_gear
                 onCommitted: qzSettings.gears_neutral_gear = Math.round(newValue)
             }
@@ -157,7 +128,7 @@ Item {
             SettingsGroup { title: qsTr("Training-app connection") }
 
             SettingsSwitch {
-                label: qsTr("Wi-Fi (DIRCON)")
+                label: qsTr("Wi‑Fi (DIRCON)")
                 checked: qzSettings.dircon_yes
                 onToggled: qzSettings.dircon_yes = checked
             }
@@ -175,6 +146,7 @@ Item {
                 // Section 3.2.1 again: the switch is honest about the platform rather
                 // than pretending the peripheral role exists on Windows.
                 enabled: OS_VERSION !== "Other"
+                note: OS_VERSION === "Other" ? qsTr("Not available on Windows") : ""
                 checked: qzSettings.virtual_device_bluetooth && OS_VERSION !== "Other"
                 onToggled: qzSettings.virtual_device_bluetooth = checked
             }
@@ -201,8 +173,17 @@ Item {
 
             SettingsSwitch {
                 label: qsTr("Gamepad shifting")
+                // The subtitle is the binding, so the row answers "what is it set to"
+                // without being opened. The chevron is the only route off this page.
+                note: gamepad.available
+                      ? gamepad.gearUpButtons.concat(gamepad.gearDownButtons)
+                                             .concat(gamepad.ergButtons)
+                                             .join(" · ").toUpperCase()
+                      : qsTr("No gamepad support on this platform")
+                hasDetail: gamepad.available
                 checked: qzSettings.gamepad_enabled
                 onToggled: qzSettings.gamepad_enabled = checked
+                onDetailClicked: window.gamepadOpen = true
             }
 
             SettingsSwitch {
@@ -225,6 +206,18 @@ Item {
 
             SettingsGroup { title: qsTr("Display") }
 
+            SettingsChoice {
+                // English is the language the .qml files are written in, so picking it
+                // uninstalls the catalogue rather than loading one. Either way the
+                // change lands here: QzLanguage retranslates the loaded tree, so the
+                // page is already in the new language when the finger comes off it.
+                label: qsTr("Language")
+                values: language.codes
+                names: language.names
+                value: language.current
+                onPicked: language.current = newValue
+            }
+
             SettingsSwitch {
                 label: qsTr("Miles instead of kilometres")
                 checked: qzSettings.miles_unit
@@ -239,11 +232,12 @@ Item {
 
             Label {
                 Layout.fillWidth: true
+                Layout.topMargin: unit * 1.5
                 Layout.bottomMargin: unit
                 wrapMode: Text.WordWrap
-                font.pixelSize: unit * 1.2
-                opacity: 0.7
-                color: Material.foreground
+                font.family: theme.fontUi
+                font.pixelSize: unit
+                color: theme.dim
                 text: qsTr("Changes to the connection settings take effect when QZ restarts.")
             }
         }
