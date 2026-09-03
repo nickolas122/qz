@@ -277,7 +277,50 @@ rider is looking at Zwift.
 
 ---
 
-## 6. What it cost on the RideState surface
+## 6. The overlay: one producer, as many sinks as the rider wants
+
+The overlay is the only QZ surface a rider sees while the training app owns the screen, which is
+why it earns a section of its own rather than a line in the settings list.
+
+It used to be one method on `RideState` that composed the lines and wrote them into RTSS in the
+same breath. That was fine while RTSS was the only sink and stopped being fine the moment there
+were two, because **"which lines" and "drawn where" are different questions and only the first has
+anything to do with the ride.** `QzOsd` is the split: it composes once, off `RideState`'s own
+public API, and hands the same string to every sink that is switched on.
+
+| Sink | Setting | Draws | Survives exclusive fullscreen |
+|---|---|---|---|
+| RivaTuner | `osd_rtss` | inside the training app's own D3D frame | **yes** — this is the whole reason RTSS is worth the dependency |
+| Floating window | `osd_window` | a frameless always-on-top `Window` | no — it is an ordinary window, and an exclusive-fullscreen app bypasses the compositor |
+
+The second sink exists for riders without RivaTuner, and the table is the honest version of what
+it buys them: everything except the one case RTSS was chosen for. Windowed and borderless training
+apps — which is most of them — are fine. Both rows are Windows-only, and the settings group is
+hidden elsewhere: RivaTuner does not exist on Android, and a Qt window cannot float over a training
+app that is a *separate Android app*, because it lives inside QZ's own activity. An Android
+`TYPE_APPLICATION_OVERLAY` would be a third row in this table and one more branch in
+`QzOsd::refresh()` — that is the shape's whole point.
+
+Three details worth keeping:
+
+- **Off releases the RTSS slot** rather than only stopping the writes. RTSS redraws the last text
+  it was handed for as long as the slot stays claimed, so "stop publishing" would freeze a stale
+  gear over the training app instead of removing it.
+- **The trainer-lost notice is not one of the switchable lines.** The per-line switches choose
+  which *numbers* are worth screen space; that notice is not a number, it is the announcement that
+  the numbers have stopped. Declining it means turning the whole overlay off.
+- **The floating window is click-through while locked**, so a stray click mid-ride reaches the
+  training app rather than QZ, and it does not accept focus. Unlocking it is how it gets dragged,
+  and the position is written on release rather than on every frame of the drag.
+
+`QzOsd` is deliberately **not** a member of `RideState`. The ceiling below is full, and this is the
+wrong kind of thing to spend one on: the overlay is a view of the ride, not a fact about it. It
+reaches QML as its own context property, the way `language` and `gamepad` already do — and taking
+the overlay out gave `RideState` a private slot and a member back.
+
+---
+
+## 7. What it cost on the RideState surface
 
 STRIP-SPEC section 9.2 capped `RideState` at ~20 members, and `TestRideState` asserted it. **The
 ceiling moved to 22.** It is the only time it has moved, and the argument is recorded next to the
@@ -307,7 +350,7 @@ branch matches.
 
 ---
 
-## 7. What is deliberately not here
+## 8. What is deliberately not here
 
 No charts, no history, no lap counter, no session summary. Section 7 deleted all of that and none
 of it comes back through a redesign. The ride screen gained four chips and lost a sentence; it did

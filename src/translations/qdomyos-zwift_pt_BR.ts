@@ -123,17 +123,17 @@
 <context>
     <name>Main</name>
     <message>
-        <location filename="../ui/Main.qml" line="76"/>
+        <location filename="../ui/Main.qml" line="87"/>
         <source>Ride</source>
         <translation>Pedal</translation>
     </message>
     <message>
-        <location filename="../ui/Main.qml" line="76"/>
+        <location filename="../ui/Main.qml" line="87"/>
         <source>Setup</source>
         <translation>Conexão</translation>
     </message>
     <message>
-        <location filename="../ui/Main.qml" line="76"/>
+        <location filename="../ui/Main.qml" line="87"/>
         <source>Settings</source>
         <translation>Ajustes</translation>
     </message>
@@ -528,37 +528,67 @@
         <translation>Log detalhado</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="250"/>
+        <location filename="../ui/SettingsScreen.qml" line="251"/>
         <source>OSD overlay</source>
         <translation>Sobreposição OSD</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="255"/>
+        <location filename="../ui/SettingsScreen.qml" line="256"/>
         <source>Show the overlay</source>
         <translation>Mostrar a sobreposição</translation>
     </message>
     <message>
         <location filename="../ui/SettingsScreen.qml" line="260"/>
-        <source>Drawn over the training app by RivaTuner. Trainer warnings always show.</source>
-        <translation>Desenhada sobre o app de treino pelo RivaTuner. Avisos do rolo aparecem sempre.</translation>
+        <source>Trainer warnings always show while it is on.</source>
+        <translation>Avisos do rolo aparecem sempre que ela está ligada.</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="267"/>
+        <location filename="../ui/SettingsScreen.qml" line="269"/>
+        <source>Draw it in RivaTuner (RTSS)</source>
+        <translation>Desenhar no RivaTuner (RTSS)</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="270"/>
+        <source>The only one that survives exclusive fullscreen. Needs RTSS running.</source>
+        <translation>O único que sobrevive à tela cheia exclusiva. Exige o RTSS em execução.</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="278"/>
+        <source>Draw it in a floating window</source>
+        <translation>Desenhar em uma janela flutuante</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="279"/>
+        <source>No RivaTuner needed, but a training app in exclusive fullscreen covers it.</source>
+        <translation>Não precisa do RivaTuner, mas um app de treino em tela cheia exclusiva a encobre.</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="287"/>
+        <source>Lock the window in place</source>
+        <translation>Travar a janela no lugar</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="288"/>
+        <source>Unlock it to drag it. Locked, clicks go through it to the training app.</source>
+        <translation>Destrave para arrastá-la. Travada, os cliques a atravessam até o app de treino.</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="296"/>
         <source>Gear line</source>
         <translation>Linha da marcha</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="275"/>
+        <location filename="../ui/SettingsScreen.qml" line="304"/>
         <source>ERG line</source>
         <translation>Linha do ERG</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="283"/>
+        <location filename="../ui/SettingsScreen.qml" line="312"/>
         <source>Resistance line</source>
         <translation>Linha da resistência</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="298"/>
+        <location filename="../ui/SettingsScreen.qml" line="327"/>
         <source>Changes to the connection settings take effect when QZ restarts.</source>
         <translation>As mudanças nos ajustes de conexão passam a valer quando o QZ reinicia.</translation>
     </message>
@@ -779,7 +809,7 @@
 <context>
     <name>main</name>
     <message>
-        <location filename="../main.cpp" line="113"/>
+        <location filename="../main.cpp" line="114"/>
         <source>QDomyos-Zwift - Fitness Equipment Bridge</source>
         <translation>QDomyos-Zwift - Ponte para equipamentos de treino</translation>
     </message>

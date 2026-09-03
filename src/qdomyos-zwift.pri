@@ -201,6 +201,7 @@ templateinfosenderbuilder.cpp \
 virtualdevices/virtualbike.cpp \
 scanrecordresult.cpp \
 ui/language.cpp \
+ui/qzosd.cpp \
 ui/ridestate.cpp
    
 macx: SOURCES += macos/lockscreen.mm
@@ -336,6 +337,7 @@ templateinfosenderbuilder.h \
 virtualdevices/virtualbike.h \
 scanrecordresult.h \
 ui/language.h \
+ui/qzosd.h \
 ui/ridestate.h
 
 

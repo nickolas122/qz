@@ -57,7 +57,18 @@ ApplicationWindow {
         property bool osd_line_erg: true
         property bool osd_line_resistance: true
         property bool volume_change_gears: false
+        property bool osd_rtss: true
+        property bool osd_window: false
+        property bool osd_window_locked: true
+        property int osd_window_x: -1
+        property int osd_window_y: -1
     }
+
+    // The overlay's floating-window sink. Always instantiated, never always shown: it puts
+    // itself on screen only when osd.windowVisible says the rider asked for it. Declared
+    // here rather than in a screen because it outlives whichever tab is in front - the
+    // whole point of it is being visible while QZ is not.
+    OsdWindow {}
 
     /** Settings pushes the gamepad mapping screen over everything. */
     property bool gamepadOpen: false

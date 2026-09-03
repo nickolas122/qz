@@ -894,6 +894,43 @@ class QZSettings {
     static constexpr bool default_osd_line_resistance = true;
 
     /**
+     *@brief osd_rtss Draw the overlay into RivaTuner's OSD. The RTSS sink is the only one that
+     *survives a training app in exclusive fullscreen, because RTSS draws inside the app's own
+     *D3D frame rather than in a window of its own.
+     */
+    static const QString osd_rtss;
+    static constexpr bool default_osd_rtss = true;
+
+    /**
+     *@brief osd_window Draw the overlay in a frameless always-on-top window. Needs no RivaTuner,
+     *but it is an ordinary window: a training app in *exclusive* fullscreen bypasses the
+     *compositor and covers it. Windowed and borderless apps are fine. Off by default because
+     *RTSS is the more capable sink where it is installed.
+     */
+    static const QString osd_window;
+    static constexpr bool default_osd_window = false;
+
+    /**
+     *@brief osd_window_locked Make the floating window click-through, so a stray click during a
+     *ride reaches the training app instead of QZ. Unlocking it is how the rider moves it.
+     */
+    static const QString osd_window_locked;
+    static constexpr bool default_osd_window_locked = true;
+
+    /**
+     *@brief osd_window_x Where the rider dragged the floating window to. -1 means "never moved",
+     *which places it near the top right of the primary screen.
+     */
+    static const QString osd_window_x;
+    static constexpr int default_osd_window_x = -1;
+
+    /**
+     *@brief osd_window_y The other half of osd_window_x.
+     */
+    static const QString osd_window_y;
+    static constexpr int default_osd_window_y = -1;
+
+    /**
      * @brief Write the QSettings values using the constants from this namespace.
      * @param showDefaults Optionally indicates if the default should be shown with the key.
      */

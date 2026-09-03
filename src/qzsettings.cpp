@@ -279,8 +279,13 @@ const QString QZSettings::osd_enabled = QStringLiteral("osd_enabled");
 const QString QZSettings::osd_line_gear = QStringLiteral("osd_line_gear");
 const QString QZSettings::osd_line_erg = QStringLiteral("osd_line_erg");
 const QString QZSettings::osd_line_resistance = QStringLiteral("osd_line_resistance");
+const QString QZSettings::osd_rtss = QStringLiteral("osd_rtss");
+const QString QZSettings::osd_window = QStringLiteral("osd_window");
+const QString QZSettings::osd_window_locked = QStringLiteral("osd_window_locked");
+const QString QZSettings::osd_window_x = QStringLiteral("osd_window_x");
+const QString QZSettings::osd_window_y = QStringLiteral("osd_window_y");
 
-const uint32_t allSettingsCount = 192;
+const uint32_t allSettingsCount = 197;
 
 QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::cryptoKeySettingsProfiles, QZSettings::default_cryptoKeySettingsProfiles},
@@ -492,6 +497,11 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::osd_line_gear, QZSettings::default_osd_line_gear},
     {QZSettings::osd_line_erg, QZSettings::default_osd_line_erg},
     {QZSettings::osd_line_resistance, QZSettings::default_osd_line_resistance},
+    {QZSettings::osd_rtss, QZSettings::default_osd_rtss},
+    {QZSettings::osd_window, QZSettings::default_osd_window},
+    {QZSettings::osd_window_locked, QZSettings::default_osd_window_locked},
+    {QZSettings::osd_window_x, QZSettings::default_osd_window_x},
+    {QZSettings::osd_window_y, QZSettings::default_osd_window_y},
 };
 
 void QZSettings::qDebugAllSettings(bool showDefaults) {

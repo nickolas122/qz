@@ -282,7 +282,8 @@ and §7 Group E for the exception),
 `elitesquarecontroller`, `elitesterzosmart`, `eliterizer`; and the body sensors
 `coresensor`, `moxy5sensor`, `strydrunpowersensor`.
 
-**Fork features:** `gamepadcontroller`, `rtssosd`, `customgears.qml`, `gears.qml`,
+**Fork features:** `gamepadcontroller` (with `gamepadhid`, `gamepadandroid` and
+`volumekeys`), `ui/qzosd` and its `rtssosd` sink, `customgears.qml`, `gears.qml`,
 `zwift_play/` and `zwift-api/` (decided 2026-08-20 — §12 q6).
 
 **The QZWS WebSocket** (added 2026-08-21, see §7 Group D): `templateinfosender.*`,
@@ -654,10 +655,13 @@ One QML tree, identical on both platforms — no per-platform layouts. Windows i
 resizable window; Android is touch. Sizing must therefore be relative, with touch targets
 dimensioned for the tablet case, which is the stricter of the two.
 
-The Windows ride screen is accepted as rarely-viewed: RTSS already overlays gear, ERG and
-resistance on the fullscreen training app — Settings → OSD overlay picks which of those
-lines are drawn, or hands the slot back entirely. It is built anyway because a second
-layout costs more to maintain than an unused screen costs to render.
+The Windows ride screen is accepted as rarely-viewed: the overlay already puts gear, ERG
+and resistance on top of the training app. Settings → OSD overlay picks which of those
+lines are drawn and where — RivaTuner, which draws inside the app's own frame and is the
+only sink that survives exclusive fullscreen, or a frameless always-on-top window for
+riders without it, which an exclusive-fullscreen app covers. The ride screen is built
+anyway because a second layout costs more to maintain than an unused screen costs to
+render.
 
 ### 9.8 Build mechanics
 

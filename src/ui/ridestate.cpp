@@ -9,84 +9,17 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QSettings>
-#include <QStringList>
 
 RideState::RideState(bluetooth *bl, QObject *parent) : QObject(parent), bluetoothManager(bl) {
     // The bridge has no single "something changed" signal - the metrics are pulled off
     // the device by whoever wants them. One second matches the rate the trainer sends
     // Indoor Bike Data at, so a faster poll would only re-read the same frame.
     connect(&poll, &QTimer::timeout, this, &RideState::changed);
-    connect(&poll, &QTimer::timeout, this, &RideState::updateRtssOsd);
     poll.start(1000);
 
     if (bluetoothManager)
         connect(bluetoothManager, &bluetooth::bluetoothDeviceConnected, this,
                 &RideState::restoreGear);
-}
-
-void RideState::updateRtssOsd() {
-    QSettings settings;
-
-    // Off is not "stop writing". RTSS redraws the last text it was handed for as long as
-    // the slot stays claimed, so switching the overlay off mid-ride would otherwise leave
-    // a frozen gear on top of the training app. release() hands the slot back, and costs
-    // nothing on the ticks after the first because there is then nothing mapped.
-    if (!settings.value(QZSettings::osd_enabled, QZSettings::default_osd_enabled).toBool()) {
-        rtssOsd.release();
-        return;
-    }
-
-    bluetoothdevice *device = bluetoothManager ? bluetoothManager->device() : nullptr;
-    if (!device) {
-        rtssOsd.publish(QStringLiteral("QZ: no device"));
-        return;
-    }
-
-    // A lost trainer displaces everything else. This overlay is the only QZ surface a
-    // rider sees while the training app runs exclusive fullscreen (STRIP-SPEC.md 9.7),
-    // which makes it the one place a silent five-minute reconnect can be announced to
-    // somebody who is actually riding. Gear and resistance are meaningless anyway once
-    // the numbers behind them have stopped arriving.
-    //
-    // Deliberately not one of the switchable lines: the per-line switches choose which
-    // numbers are worth screen space, and this is not a number - it is the notice that
-    // the numbers have stopped. Turning the whole overlay off is how a rider declines it.
-    const QString link = trainerState();
-    if (link == QStringLiteral("lost")) {
-        const int secs = retrySeconds();
-        rtssOsd.publish(QStringLiteral("QZ: TRAINER LOST\nRetrying%1")
-                            .arg(secs > 0 ? QStringLiteral(" in %1s").arg(secs) : QStringLiteral("...")));
-        return;
-    }
-    if (link == QStringLiteral("gaveup")) {
-        rtssOsd.publish(QStringLiteral("QZ: TRAINER LOST\nGave up after 5 min"));
-        return;
-    }
-
-    // Built as a list rather than concatenated, so a line that is switched off takes its
-    // newline with it and the remaining ones do not end up separated by a blank row.
-    QStringList lines;
-
-    // Only a bike carries a gear here. homeform also handled ROWING; group G takes the
-    // rower, and this fork has one bike.
-    if (device->deviceType() == BIKE &&
-        settings.value(QZSettings::osd_line_gear, QZSettings::default_osd_line_gear).toBool()) {
-        lines << QStringLiteral("Gear: %1").arg(static_cast<bike *>(device)->gears());
-    }
-
-    if (settings.value(QZSettings::osd_line_erg, QZSettings::default_osd_line_erg).toBool()) {
-        const bool erg = settings.value(QZSettings::zwift_erg, QZSettings::default_zwift_erg).toBool();
-        lines << QStringLiteral("ERG: %1").arg(erg ? QStringLiteral("ON") : QStringLiteral("OFF"));
-    }
-
-    if (settings.value(QZSettings::osd_line_resistance, QZSettings::default_osd_line_resistance).toBool()) {
-        lines << QStringLiteral("Resistance: %1").arg(device->currentResistance().value());
-    }
-
-    // Every line switched off publishes an empty string rather than releasing the slot:
-    // the rider still wants the overlay, just silent until something goes wrong, and
-    // keeping the slot is what lets the trainer-lost notice appear without re-attaching.
-    rtssOsd.publish(lines.join(QStringLiteral("\n")));
 }
 
 void RideState::restoreGear(bluetoothdevice *device) {

@@ -17,6 +17,7 @@
 // always listed it unconditionally - and reports available() == false where XInput is
 // not there, which is what the mapping screen needs an object to ask.
 #include "gamepadcontroller.h"
+#include "ui/qzosd.h"
 #include "volumekeys.h"
 #include "qznotify.h"
 #include "qzpaths.h"
@@ -747,6 +748,13 @@ int main(int argc, char *argv[]) {
         engine.rootContext()->setContextProperty("fileSearcher", &fileSearcher);
 
         engine.rootContext()->setContextProperty("rideState", &rideState);
+
+        // The overlay: one producer, and as many sinks as the rider switched on. It composes
+        // its lines off rideState and hands them to RTSS and to OsdWindow.qml, which is why
+        // it is here and not a member of RideState - see qzosd.h. Parented to rideState for
+        // the same reason `language` below is: the engine is destroyed first.
+        QzOsd *osd = new QzOsd(&rideState, &rideState);
+        engine.rootContext()->setContextProperty("osd", osd);
 
         // The language, and the only thing that can change it. Built here rather than
         // before the engine because it needs one to retranslate, and before

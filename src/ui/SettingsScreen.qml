@@ -242,10 +242,11 @@ Item {
                 onToggled: qzSettings.log_debug = checked
             }
 
-            // The RTSS overlay is drawn by RivaTuner, which exists only on Windows -
-            // RtssOsd compiles to no-ops elsewhere. Four rows describing a feature that
-            // cannot run is worse than not offering it, so the group goes rather than
-            // being greyed out on Android.
+            // Windows only, and both sinks are the reason. RivaTuner does not exist
+            // elsewhere - RtssOsd compiles to no-ops - and a Qt window cannot float over
+            // a training app that is a separate Android app, because it lives inside QZ's
+            // own activity. Rows describing a feature that cannot run are worse than no
+            // rows, so the group goes rather than being greyed out.
             SettingsGroup {
                 title: qsTr("OSD overlay")
                 visible: OS_VERSION === "Other"
@@ -253,14 +254,42 @@ Item {
 
             SettingsSwitch {
                 label: qsTr("Show the overlay")
-                // Off releases the RTSS slot rather than just stopping the writes, so
-                // nothing stays frozen over the training app. Trainer warnings are not
-                // one of the lines below: they are how a silent reconnect is announced
-                // to somebody riding in exclusive fullscreen, so they always show.
-                note: qsTr("Drawn over the training app by RivaTuner. Trainer warnings always show.")
+                // Trainer warnings are not one of the lines below: they are how a silent
+                // reconnect is announced to somebody riding in exclusive fullscreen, so
+                // they always show while the overlay is on at all.
+                note: qsTr("Trainer warnings always show while it is on.")
                 visible: OS_VERSION === "Other"
                 checked: qzSettings.osd_enabled
                 onToggled: qzSettings.osd_enabled = checked
+            }
+
+            // The two sinks, and the difference between them is the whole reason there are
+            // two. RTSS draws inside the training app's own frame; the window is a window.
+            SettingsSwitch {
+                label: qsTr("Draw it in RivaTuner (RTSS)")
+                note: qsTr("The only one that survives exclusive fullscreen. Needs RTSS running.")
+                visible: OS_VERSION === "Other"
+                enabled: qzSettings.osd_enabled
+                checked: qzSettings.osd_rtss
+                onToggled: qzSettings.osd_rtss = checked
+            }
+
+            SettingsSwitch {
+                label: qsTr("Draw it in a floating window")
+                note: qsTr("No RivaTuner needed, but a training app in exclusive fullscreen covers it.")
+                visible: OS_VERSION === "Other"
+                enabled: qzSettings.osd_enabled
+                checked: qzSettings.osd_window
+                onToggled: qzSettings.osd_window = checked
+            }
+
+            SettingsSwitch {
+                label: qsTr("Lock the window in place")
+                note: qsTr("Unlock it to drag it. Locked, clicks go through it to the training app.")
+                visible: OS_VERSION === "Other"
+                enabled: qzSettings.osd_enabled && qzSettings.osd_window
+                checked: qzSettings.osd_window_locked
+                onToggled: qzSettings.osd_window_locked = checked
             }
 
             SettingsSwitch {
