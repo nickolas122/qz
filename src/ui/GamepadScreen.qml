@@ -132,12 +132,16 @@ Rectangle {
                     }
                     detail: {
                         if (!gamepad.available)
-                            return OS_VERSION === "Android" ? qsTr("Android has no XInput")
-                                                            : qsTr("No XInput library on this machine")
+                            return qsTr("No gamepad backend on this platform")
                         if (screen.capturing.length > 0)
                             return qsTr("Listening · release to bind")
-                        return gamepad.padConnected ? qsTr("XInput slot %1").arg(gamepad.padSlot + 1)
-                                                    : qsTr("Checking all four slots")
+                        if (!gamepad.padConnected)
+                            return qsTr("Looking for a controller")
+                        // XInput knows a slot but not a name; the other two backends know a
+                        // name but have no slot. Each says the thing it actually knows.
+                        if (gamepad.backend === "XInput")
+                            return qsTr("XInput slot %1").arg(gamepad.padSlot + 1)
+                        return gamepad.padName.length > 0 ? gamepad.padName : gamepad.backend
                     }
                     progress: screen.capturing.length > 0 ? 1 : -1
                     action: screen.capturing.length > 0 ? qsTr("Cancel") : ""
@@ -331,9 +335,16 @@ Rectangle {
                     font.family: theme.fontUi
                     font.pixelSize: unit
                     color: theme.dim
-                    text: qsTr("Only XInput pads appear here: Xbox controllers, wired or Bluetooth, "
-                               + "and third-party pads in X-input mode. A DualSense or Switch Pro pad "
-                               + "speaks HID only and stays invisible.")
+                    text: OS_VERSION === "Android"
+                          ? qsTr("Any pad Android recognises works, in whatever mode it pairs in. "
+                                 + "Android gives input to the app on screen, though, so shifting "
+                                 + "from the pad works while QZ is in front - not while the training "
+                                 + "app is.")
+                          : qsTr("Xbox pads are read through XInput, wired or Bluetooth, as is any "
+                                 + "pad in X-input mode. A pad with no X-input mode - an 8BitDo in "
+                                 + "D-input, a DualSense, a Switch Pro - is read as a plain HID pad "
+                                 + "instead, and its buttons are named in the order it reports them, "
+                                 + "so press the one you want rather than trusting the label.")
                 }
             }
         }

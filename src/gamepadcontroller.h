@@ -6,30 +6,42 @@
 #include <QTimer>
 
 /**
- * @brief Turns an XInput gamepad into QZ actions, without QZ needing focus.
+ * @brief Turns a gamepad into QZ actions, without QZ needing focus where the platform allows it.
  *
  * QZ's keyboard shortcuts are declared with Qt.WindowShortcut, so they only fire while the QZ
  * window is in front. During a ride the training app owns the screen, which is exactly when the
  * shifting is wanted - so this polls the pad itself rather than synthesizing keys.
  *
- * XInput is the whole of the backend on purpose. A Bluetooth-paired Xbox Wireless Controller, and
- * any third-party pad in its X-input mode, both arrive as ordinary XInput devices on Windows, so
- * wired and wireless need no separate handling. Pads that only speak HID (DualSense, Switch Pro)
- * are invisible here and would need a Windows.Gaming.Input RawGameController backend beside this
- * one.
+ * Three backends, asked in this order:
  *
- * xinput1_4.dll is resolved at runtime rather than linked, so a machine without it costs a log
- * line instead of a missing-DLL dialog at startup, and neither toolchain gains a link dependency.
+ * - **XInput** (Windows). A Bluetooth-paired Xbox Wireless Controller, and any third-party pad in
+ *   its X-input mode, both arrive as ordinary XInput devices, so wired and wireless need no
+ *   separate handling. Asked first because it is the one that knows an Xbox pad's own labels.
+ * - **HID** (Windows, gamepadhid). Everything XInput cannot see: a pad with no X-input mode at all,
+ *   such as an 8BitDo Micro in D-input mode, or a DualSense or Switch Pro. Windows still enumerates
+ *   these as HID gamepads and gamepadhid reads their reports.
+ * - **Android** (gamepadandroid). No polling of a device at all - Android recognises the pad and
+ *   CustomQtActivity forwards its key and motion events. The catch, which the mapping screen says
+ *   out loud, is that Android delivers input to the focused app: shifting from the pad works while
+ *   QZ is on screen, not while the training app is.
+ *
+ * xinput1_4.dll and hid.dll are both resolved at runtime rather than linked, so a machine without
+ * one costs a log line instead of a missing-DLL dialog at startup, and neither toolchain gains a
+ * link dependency.
  */
 class gamepadcontroller : public QObject {
     Q_OBJECT
 
-    /** @brief False on non-Windows and on Windows without any xinput DLL. */
+    /** @brief False where no backend can read a pad: iOS, macOS, Linux, or Windows without both DLLs. */
     Q_PROPERTY(bool available READ available CONSTANT)
-    /** @brief Whether a pad is answering on one of the four XInput slots right now. */
+    /** @brief Whether a pad is answering any backend right now. */
     Q_PROPERTY(bool padConnected READ padConnected NOTIFY statusChanged)
-    /** @brief Which slot it answered on, or -1. Shown so two pads can be told apart. */
+    /** @brief Which XInput slot it answered on, or -1 for no pad and for the other two backends. */
     Q_PROPERTY(int padSlot READ padSlot NOTIFY statusChanged)
+    /** @brief Which backend is reading it: "XInput", "HID", "Android", or empty for none. */
+    Q_PROPERTY(QString backend READ backend NOTIFY statusChanged)
+    /** @brief The pad's own name where the backend knows one. Empty for XInput, which does not. */
+    Q_PROPERTY(QString padName READ padName NOTIFY statusChanged)
     /** @brief Names of the buttons held down this instant, for the live pad diagram. */
     Q_PROPERTY(QStringList pressedButtons READ pressedButtons NOTIFY statusChanged)
     /** @brief The action being bound ("gearUp"/"gearDown"/"erg"), or empty when idle. */
@@ -43,9 +55,12 @@ class gamepadcontroller : public QObject {
 
   public:
     explicit gamepadcontroller(QObject *parent = nullptr);
+    ~gamepadcontroller();
 
     bool padConnected() const { return padPresent; }
     int padSlot() const { return activeSlot; }
+    QString backend() const { return backendName; }
+    QString padName() const { return deviceName; }
     QStringList pressedButtons() const;
     QString capturing() const { return captureAction; }
 
@@ -78,13 +93,13 @@ class gamepadcontroller : public QObject {
     Q_INVOKABLE QString actionFor(const QString &button) const;
 
     /**
-     * @brief Whether an XInput entry point was found. False on non-Windows, and on Windows without
-     * any of the xinput DLLs - in which case the poll timer never starts.
+     * @brief Whether any backend can read a pad here. False on iOS, macOS and Linux, and on Windows
+     * with neither an xinput DLL nor a HID parser - in which case the poll timer never starts.
      */
-    bool available() const { return xinputAvailable; }
+    bool available() const { return padAvailable; }
 
     /**
-     * @brief Parse a mapping setting ("rt,lt") into a mask of XInput buttons.
+     * @brief Parse a mapping setting ("rt,lt") into a mask of pad buttons.
      *
      * Comma-separated so one action can sit under either hand: the shifter is complete on both
      * shoulders, whichever way the pad ends up mounted on the bars. Unknown names are ignored, and
@@ -119,7 +134,12 @@ class gamepadcontroller : public QObject {
 
     void refreshSettings();
     void releaseAll();
+    /** @brief Ask each backend in turn for the current button word. */
     bool readPad(quint32 *buttons);
+    /** @brief The XInput half of readPad(), including the slot scan. Always false off Windows. */
+    bool readXInput(quint32 *buttons);
+    /** @brief Record which backend answered, and tell the screen when that changes. */
+    void setBackend(const QString &name, const QString &device);
     bool fired(action &a, quint32 buttons, qint64 now);
 
     /** @brief Run one frame of the bind-on-release capture. @return true if it committed. */
@@ -139,6 +159,7 @@ class gamepadcontroller : public QObject {
     int repeatRateMs = 0;
     bool enabled = false;
     bool xinputAvailable = false;
+    bool padAvailable = false;
 
     qint64 lastSettingsRefresh = 0;
     qint64 lastSlotProbe = 0;
@@ -146,6 +167,15 @@ class gamepadcontroller : public QObject {
 
     bool padPresent = false;
     quint32 heldButtons = 0;
+
+    /** Which backend answered last, and what it calls the pad. Both empty when nothing answers. */
+    QString backendName;
+    QString deviceName;
+
+#ifdef Q_OS_WIN
+    /** The pads XInput cannot see. Owned here, polled only when XInput has nothing. */
+    class gamepadhid *hidPad = nullptr;
+#endif
 
     /** Empty when not capturing. Otherwise "gearUp", "gearDown" or "erg". */
     QString captureAction;

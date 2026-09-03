@@ -17,6 +17,7 @@
 // always listed it unconditionally - and reports available() == false where XInput is
 // not there, which is what the mapping screen needs an object to ask.
 #include "gamepadcontroller.h"
+#include "volumekeys.h"
 #include "qznotify.h"
 #include "qzpaths.h"
 // Reached through homeform.h until 7c-2b deleted it. The dark-palette block below has
@@ -773,6 +774,14 @@ int main(int argc, char *argv[]) {
         QObject::connect(pad, &gamepadcontroller::gearDown, &rideState, &RideState::gearDown);
         QObject::connect(pad, &gamepadcontroller::ergToggle, &rideState, &RideState::toggleErg);
         engine.rootContext()->setContextProperty("gamepad", pad);
+
+        // The volume keys, which on Android are the only input that survives losing focus - the
+        // broadcast goes to every registered receiver, not to whoever is in front. It is what a
+        // pad in its keyboard mode can reach, and what a pad read as a pad cannot. Inert unless
+        // volume_change_gears is on, and parented like the pad because the engine dies first.
+        volumekeys *volume = new volumekeys(&rideState);
+        QObject::connect(volume, &volumekeys::gearUp, &rideState, &RideState::gearUp);
+        QObject::connect(volume, &volumekeys::gearDown, &rideState, &RideState::gearDown);
 
         // Where the bridge posts "battery at 40%", "restart to apply", "another device
         // has the bike". Drivers emit into QzNotify and ToastArea.qml shows what lands.

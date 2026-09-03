@@ -1,5 +1,8 @@
 #include "gamepadcontroller.h"
 
+#include "gamepadandroid.h"
+#include "gamepadbuttons.h"
+#include "gamepadhid.h"
 #include "qzsettings.h"
 
 #include <QDateTime>
@@ -13,30 +16,6 @@
 
 namespace {
 
-// The XInput button word, as documented for XINPUT_GAMEPAD. Declared here rather than pulled from
-// xinput.h so the file needs neither the header nor the import library on either toolchain.
-constexpr quint32 PAD_DPAD_UP = 0x0001;
-constexpr quint32 PAD_DPAD_DOWN = 0x0002;
-constexpr quint32 PAD_DPAD_LEFT = 0x0004;
-constexpr quint32 PAD_DPAD_RIGHT = 0x0008;
-constexpr quint32 PAD_START = 0x0010;
-constexpr quint32 PAD_BACK = 0x0020;
-constexpr quint32 PAD_LEFT_THUMB = 0x0040;
-constexpr quint32 PAD_RIGHT_THUMB = 0x0080;
-constexpr quint32 PAD_LB = 0x0100;
-constexpr quint32 PAD_RB = 0x0200;
-constexpr quint32 PAD_A = 0x1000;
-constexpr quint32 PAD_B = 0x2000;
-constexpr quint32 PAD_X = 0x4000;
-constexpr quint32 PAD_Y = 0x8000;
-
-// The analog triggers are not in the button word at all - they are separate 0-255 axes. They are
-// folded in as two invented masks, deliberately above 16 bits so they can never collide with a real
-// button, and everything downstream then treats them as ordinary buttons. Same convention as
-// tools/xbox-mywhoosh-gears.
-constexpr quint32 PAD_LT = 0x10000;
-constexpr quint32 PAD_RT = 0x20000;
-
 // Microsoft's own value for "the trigger is pressed", from XINPUT_GAMEPAD_TRIGGER_THRESHOLD.
 constexpr int TRIGGER_THRESHOLD = 30;
 
@@ -47,29 +26,10 @@ constexpr int SETTINGS_REFRESH_MS = 2000;
 // rather than every poll.
 constexpr int SLOT_PROBE_MS = 2000;
 
-struct namedButton {
-    const char *name;
-    quint32 mask;
-};
-
-const namedButton BUTTONS[] = {
-    {"a", PAD_A},
-    {"b", PAD_B},
-    {"x", PAD_X},
-    {"y", PAD_Y},
-    {"lb", PAD_LB},
-    {"rb", PAD_RB},
-    {"lt", PAD_LT},
-    {"rt", PAD_RT},
-    {"start", PAD_START},
-    {"back", PAD_BACK},
-    {"l3", PAD_LEFT_THUMB},
-    {"r3", PAD_RIGHT_THUMB},
-    {"dpad_up", PAD_DPAD_UP},
-    {"dpad_down", PAD_DPAD_DOWN},
-    {"dpad_left", PAD_DPAD_LEFT},
-    {"dpad_right", PAD_DPAD_RIGHT},
-};
+// The button table moved to gamepadbuttons.h when the HID and Android backends arrived: all three
+// have to build the same word, and two of them are in other files.
+using namedButton = padbuttons::named;
+using padbuttons::TABLE;
 
 #ifdef Q_OS_WIN
 
@@ -124,14 +84,23 @@ XInputGetState_t resolveXInput() {
 gamepadcontroller::gamepadcontroller(QObject *parent) : QObject(parent) {
 #ifdef Q_OS_WIN
     xinputAvailable = resolveXInput() != nullptr;
+    // Built even when XInput answered: a rider can have an Xbox pad in one slot today and an
+    // 8BitDo in D-input mode tomorrow, and the HID side costs nothing until it is polled.
+    hidPad = new gamepadhid();
+    padAvailable = xinputAvailable || hidPad->available();
+#elif defined(Q_OS_ANDROID)
+    // Android needs neither library: the system recognises the pad itself and CustomQtActivity
+    // hands the events to gamepadandroid. There is nothing to resolve, so nothing to fail.
+    padAvailable = true;
 #endif
+
     // Read before the availability check, not after it. The mapping screen binds to the
     // bindings and the repeat timings on every platform - it just says the pad cannot be
     // read here - and an early return left those showing 0 ms and no buttons.
     refreshSettings();
 
-    if (!xinputAvailable) {
-        qDebug() << QStringLiteral("gamepadcontroller: no XInput available, gamepad support is off");
+    if (!padAvailable) {
+        qDebug() << QStringLiteral("gamepadcontroller: no gamepad backend on this platform, support is off");
         return;
     }
 
@@ -141,9 +110,16 @@ gamepadcontroller::gamepadcontroller(QObject *parent) : QObject(parent) {
     timer.start();
 }
 
+gamepadcontroller::~gamepadcontroller() {
+#ifdef Q_OS_WIN
+    delete hidPad;
+    hidPad = nullptr;
+#endif
+}
+
 QStringList gamepadcontroller::buttonNames() {
     QStringList names;
-    for (const namedButton &b : BUTTONS) {
+    for (const namedButton &b : TABLE) {
         names.append(QString::fromLatin1(b.name));
     }
     return names;
@@ -158,7 +134,7 @@ quint32 gamepadcontroller::buttonMask(const QString &names) {
             continue;
         }
         bool found = false;
-        for (const namedButton &b : BUTTONS) {
+        for (const namedButton &b : TABLE) {
             if (name == QLatin1String(b.name)) {
                 mask |= b.mask;
                 found = true;
@@ -212,7 +188,7 @@ QStringList gamepadcontroller::ergButtons() const { return boundButtons(QStringL
 
 QStringList gamepadcontroller::pressedButtons() const {
     QStringList out;
-    for (const namedButton &b : BUTTONS) {
+    for (const namedButton &b : TABLE) {
         if (heldButtons & b.mask)
             out.append(QString::fromLatin1(b.name));
     }
@@ -264,9 +240,9 @@ void gamepadcontroller::pollCapture(quint32 buttons) {
     const quint32 fresh = buttons & ~captureBaseline;
 
     if (capturePending == 0) {
-        // BUTTONS order is the stable order buttonNames() promises, so two buttons
+        // TABLE order is the stable order buttonNames() promises, so two buttons
         // pressed in the same 50 ms frame resolve the same way every time.
-        for (const namedButton &b : BUTTONS) {
+        for (const namedButton &b : TABLE) {
             if (fresh & b.mask) {
                 capturePending = b.mask;
                 emit statusChanged();
@@ -281,7 +257,7 @@ void gamepadcontroller::pollCapture(quint32 buttons) {
     }
 
     QString name;
-    for (const namedButton &b : BUTTONS) {
+    for (const namedButton &b : TABLE) {
         if (b.mask == capturePending) {
             name = QString::fromLatin1(b.name);
             break;
@@ -412,7 +388,19 @@ bool gamepadcontroller::fired(action &a, quint32 buttons, qint64 now) {
     return false;
 }
 
-bool gamepadcontroller::readPad(quint32 *buttons) {
+void gamepadcontroller::setBackend(const QString &name, const QString &device) {
+    if (backendName == name && deviceName == device) {
+        return;
+    }
+    backendName = name;
+    deviceName = device;
+    if (!name.isEmpty()) {
+        qDebug() << QStringLiteral("gamepadcontroller: reading the pad through") << name << device;
+    }
+    emit statusChanged();
+}
+
+bool gamepadcontroller::readXInput(quint32 *buttons) {
 #ifdef Q_OS_WIN
     XInputGetState_t getState = resolveXInput();
     if (!getState) {
@@ -452,13 +440,48 @@ bool gamepadcontroller::readPad(quint32 *buttons) {
 
     quint32 result = state.Gamepad.wButtons;
     if (state.Gamepad.bLeftTrigger > TRIGGER_THRESHOLD) {
-        result |= PAD_LT;
+        result |= padbuttons::LT;
     }
     if (state.Gamepad.bRightTrigger > TRIGGER_THRESHOLD) {
-        result |= PAD_RT;
+        result |= padbuttons::RT;
     }
     *buttons = result;
     return true;
+#else
+    Q_UNUSED(buttons)
+    return false;
+#endif
+}
+
+bool gamepadcontroller::readPad(quint32 *buttons) {
+#ifdef Q_OS_WIN
+    // XInput first, and not only because it came first: it is the backend that knows an Xbox pad
+    // is an Xbox pad, so its labels are the pad's own. HID is what is left over, and an XInput pad
+    // is also a HID device, so asking in the other order would read the same pad through the
+    // blinder.
+    if (readXInput(buttons)) {
+        if (hidPad) {
+            // Hand the handle back rather than holding a file open on a pad nothing is reading.
+            // A no-op unless a HID pad was answering before an XInput one turned up.
+            hidPad->close();
+        }
+        setBackend(QStringLiteral("XInput"), QString());
+        return true;
+    }
+    if (hidPad && hidPad->poll(buttons, QDateTime::currentMSecsSinceEpoch())) {
+        setBackend(QStringLiteral("HID"), hidPad->name());
+        return true;
+    }
+    setBackend(QString(), QString());
+    return false;
+#elif defined(Q_OS_ANDROID)
+    if (gamepadandroid::connected()) {
+        *buttons = gamepadandroid::buttons();
+        setBackend(QStringLiteral("Android"), gamepadandroid::name());
+        return true;
+    }
+    setBackend(QString(), QString());
+    return false;
 #else
     Q_UNUSED(buttons)
     return false;

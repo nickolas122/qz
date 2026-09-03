@@ -186,6 +186,18 @@ Item {
                 onDetailClicked: window.gamepadOpen = true
             }
 
+            // Android only, because it is Android's problem: a pad read as a pad shifts only
+            // while QZ is in front, and during a ride it is not. The volume broadcast reaches
+            // QZ whoever has focus, so this is the one route that shifts under the training
+            // app - including from a pad in its keyboard mode, sending volume up and down.
+            SettingsSwitch {
+                visible: OS_VERSION === "Android"
+                label: qsTr("Volume keys shift")
+                note: qsTr("Works while the training app is in front")
+                checked: qzSettings.volume_change_gears
+                onToggled: qzSettings.volume_change_gears = checked
+            }
+
             SettingsSwitch {
                 label: qsTr("Zwift Play")
                 checked: qzSettings.zwift_play

@@ -56,6 +56,7 @@ ApplicationWindow {
         property bool osd_line_gear: true
         property bool osd_line_erg: true
         property bool osd_line_resistance: true
+        property bool volume_change_gears: false
     }
 
     /** Settings pushes the gamepad mapping screen over everything. */

@@ -1,11 +1,16 @@
 package org.cagnulen.qdomyoszwift;
 
+import android.content.Context;
 import android.content.Intent;
+import android.hardware.input.InputManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.SparseArray;
 import android.util.Log;
+import android.view.InputDevice;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowManager;
@@ -27,12 +32,23 @@ public class CustomQtActivity extends QtActivity {
                                                int waterfallLeft, int waterfallRight);
     private static native void nativeOnDocumentPicked(int requestCode, int resultCode, String localPath);
 
+    // The gamepad, handed to gamepadcontroller through gamepadandroid. On Windows QZ polls the pad
+    // itself, so shifting works while the training app owns the screen; Android has no such route -
+    // input goes to the focused app - so the events are taken here instead, and shifting from the
+    // pad works while QZ is the app on screen.
+    private static native void nativeGamepadButton(int keyCode, boolean down);
+    private static native void nativeGamepadAxes(float hatX, float hatY, float leftTrigger, float rightTrigger);
+    private static native void nativeGamepadPresence(boolean present, String name);
+
+    private InputManager.InputDeviceListener gamepadListener;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "onCreate: CustomQtActivity initialized");
         AgeSignalsHelper.requestAgeSignals(this);
         HealthConnectHelper.initialize(this);
+        startWatchingGamepads();
 
         // This tells the OS that we want to handle the display cutout area ourselves
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -130,6 +146,138 @@ public class CustomQtActivity extends QtActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // onCreate runs before Qt has finished loading the native library, so the presence
+        // reported there can be lost. By the time the activity resumes the library is up.
+        reportGamepadPresence();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (gamepadListener != null) {
+            InputManager inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
+            if (inputManager != null) {
+                inputManager.unregisterInputDeviceListener(gamepadListener);
+            }
+            gamepadListener = null;
+        }
+        super.onDestroy();
+    }
+
+    // -- gamepad ------------------------------------------------------------
+
+    private void startWatchingGamepads() {
+        InputManager inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
+        if (inputManager != null) {
+            gamepadListener = new InputManager.InputDeviceListener() {
+                @Override
+                public void onInputDeviceAdded(int deviceId) { reportGamepadPresence(); }
+                @Override
+                public void onInputDeviceRemoved(int deviceId) { reportGamepadPresence(); }
+                @Override
+                public void onInputDeviceChanged(int deviceId) { reportGamepadPresence(); }
+            };
+            inputManager.registerInputDeviceListener(gamepadListener, null);
+        }
+        reportGamepadPresence();
+    }
+
+    /** Tell the C++ side whether Android currently lists a pad, and what it is called. */
+    private void reportGamepadPresence() {
+        String name = null;
+        for (int deviceId : InputDevice.getDeviceIds()) {
+            InputDevice device = InputDevice.getDevice(deviceId);
+            if (isGamepadDevice(device)) {
+                name = device.getName();
+                break;
+            }
+        }
+        Log.d(TAG, "gamepad presence: " + (name == null ? "none" : name));
+        try {
+            nativeGamepadPresence(name != null, name == null ? "" : name);
+        } catch (UnsatisfiedLinkError ignored) {
+            // Qt not ready yet; onResume reports again once it is.
+        }
+    }
+
+    private static boolean isGamepadDevice(InputDevice device) {
+        if (device == null || device.isVirtual()) {
+            return false;
+        }
+        return isGamepadSource(device.getSources());
+    }
+
+    // A pad in a generic mode often calls itself a joystick rather than a gamepad, so both count.
+    private static boolean isGamepadSource(int sources) {
+        return (sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
+            || (sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
+    }
+
+    /** The keys gamepadandroid has a slot for. Anything else is left to whoever wanted it. */
+    private static boolean isMappedGamepadKey(int keyCode) {
+        switch (keyCode) {
+        case KeyEvent.KEYCODE_BUTTON_A:
+        case KeyEvent.KEYCODE_BUTTON_B:
+        case KeyEvent.KEYCODE_BUTTON_X:
+        case KeyEvent.KEYCODE_BUTTON_Y:
+        case KeyEvent.KEYCODE_BUTTON_L1:
+        case KeyEvent.KEYCODE_BUTTON_R1:
+        case KeyEvent.KEYCODE_BUTTON_L2:
+        case KeyEvent.KEYCODE_BUTTON_R2:
+        case KeyEvent.KEYCODE_BUTTON_THUMBL:
+        case KeyEvent.KEYCODE_BUTTON_THUMBR:
+        case KeyEvent.KEYCODE_BUTTON_START:
+        case KeyEvent.KEYCODE_BUTTON_SELECT:
+        case KeyEvent.KEYCODE_DPAD_UP:
+        case KeyEvent.KEYCODE_DPAD_DOWN:
+        case KeyEvent.KEYCODE_DPAD_LEFT:
+        case KeyEvent.KEYCODE_DPAD_RIGHT:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (isGamepadSource(event.getSource()) && isMappedGamepadKey(event.getKeyCode())) {
+            // Android's own auto-repeat is dropped: gamepadcontroller has its own hold-to-repeat,
+            // with the delay and rate the rider set, and two repeaters would fight.
+            if (event.getRepeatCount() == 0) {
+                try {
+                    nativeGamepadButton(event.getKeyCode(), event.getAction() == KeyEvent.ACTION_DOWN);
+                } catch (UnsatisfiedLinkError ignored) {
+                }
+            }
+            return true;
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
+    @Override
+    public boolean dispatchGenericMotionEvent(MotionEvent event) {
+        if (isGamepadSource(event.getSource()) && event.getAction() == MotionEvent.ACTION_MOVE) {
+            // Pads disagree about which axis a trigger is: the gamepad profile says LTRIGGER and
+            // RTRIGGER, plenty of pads report BRAKE and GAS instead. Whichever is moving wins.
+            float leftTrigger = event.getAxisValue(MotionEvent.AXIS_LTRIGGER);
+            if (leftTrigger == 0.0f) {
+                leftTrigger = event.getAxisValue(MotionEvent.AXIS_BRAKE);
+            }
+            float rightTrigger = event.getAxisValue(MotionEvent.AXIS_RTRIGGER);
+            if (rightTrigger == 0.0f) {
+                rightTrigger = event.getAxisValue(MotionEvent.AXIS_GAS);
+            }
+            try {
+                nativeGamepadAxes(event.getAxisValue(MotionEvent.AXIS_HAT_X),
+                                  event.getAxisValue(MotionEvent.AXIS_HAT_Y), leftTrigger, rightTrigger);
+            } catch (UnsatisfiedLinkError ignored) {
+            }
+        }
+        return super.dispatchGenericMotionEvent(event);
     }
 
     @Override

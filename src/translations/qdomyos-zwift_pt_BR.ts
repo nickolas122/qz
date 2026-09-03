@@ -50,90 +50,90 @@
     </message>
     <message>
         <location filename="../ui/GamepadScreen.qml" line="135"/>
-        <source>Android has no XInput</source>
-        <translation>O Android não tem XInput</translation>
+        <source>No gamepad backend on this platform</source>
+        <translation>Sem suporte a controle nesta plataforma</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="136"/>
-        <source>No XInput library on this machine</source>
-        <translation>Sem biblioteca XInput nesta máquina</translation>
+        <location filename="../ui/GamepadScreen.qml" line="339"/>
+        <source>Any pad Android recognises works, in whatever mode it pairs in. Android gives input to the app on screen, though, so shifting from the pad works while QZ is in front - not while the training app is.</source>
+        <translation>Qualquer controle que o Android reconheça funciona, no modo em que ele parear. Só que o Android entrega a entrada ao app que está na tela, então trocar marcha pelo controle funciona enquanto o QZ estiver na frente - não enquanto o app de treino estiver.</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="138"/>
+        <location filename="../ui/GamepadScreen.qml" line="343"/>
+        <source>Xbox pads are read through XInput, wired or Bluetooth, as is any pad in X-input mode. A pad with no X-input mode - an 8BitDo in D-input, a DualSense, a Switch Pro - is read as a plain HID pad instead, and its buttons are named in the order it reports them, so press the one you want rather than trusting the label.</source>
+        <translation>Controles de Xbox são lidos via XInput, com fio ou Bluetooth, assim como qualquer controle em modo X-input. Um controle sem modo X-input - um 8BitDo em D-input, um DualSense, um Switch Pro - é lido como controle HID comum, e seus botões recebem nome na ordem em que ele os reporta, então pressione o que você quer em vez de confiar no rótulo.</translation>
+    </message>
+    <message>
+        <location filename="../ui/GamepadScreen.qml" line="137"/>
         <source>Listening · release to bind</source>
         <translation>Ouvindo · solte para vincular</translation>
     </message>
     <message>
         <location filename="../ui/GamepadScreen.qml" line="139"/>
+        <source>Looking for a controller</source>
+        <translation>Procurando um controle</translation>
+    </message>
+    <message>
+        <location filename="../ui/GamepadScreen.qml" line="143"/>
         <source>XInput slot %1</source>
         <translation>Slot XInput %1</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="140"/>
-        <source>Checking all four slots</source>
-        <translation>Verificando os quatro slots</translation>
-    </message>
-    <message>
-        <location filename="../ui/GamepadScreen.qml" line="143"/>
+        <location filename="../ui/GamepadScreen.qml" line="147"/>
         <source>Cancel</source>
         <translation>Cancelar</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="183"/>
+        <location filename="../ui/GamepadScreen.qml" line="187"/>
         <source>Turn a controller on, or plug one in. The bindings below are kept either way.</source>
         <translation>Ligue um controle, ou conecte um por cabo. Os vínculos abaixo são mantidos de qualquer forma.</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="191"/>
+        <location filename="../ui/GamepadScreen.qml" line="195"/>
         <source>Actions</source>
         <translation>Ações</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="195"/>
-        <location filename="../ui/GamepadScreen.qml" line="196"/>
+        <location filename="../ui/GamepadScreen.qml" line="199"/>
+        <location filename="../ui/GamepadScreen.qml" line="200"/>
         <source>repeats</source>
         <translation>repete</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="197"/>
+        <location filename="../ui/GamepadScreen.qml" line="201"/>
         <source>single press</source>
         <translation>toque único</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="313"/>
+        <location filename="../ui/GamepadScreen.qml" line="317"/>
         <source>Hold to keep shifting</source>
         <translation>Segurar para trocar em sequência</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="316"/>
+        <location filename="../ui/GamepadScreen.qml" line="320"/>
         <source>Wait before repeating (ms)</source>
         <translation>Esperar antes de repetir (ms)</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="322"/>
+        <location filename="../ui/GamepadScreen.qml" line="326"/>
         <source>Then one shift every (ms)</source>
         <translation>Depois, uma troca a cada (ms)</translation>
-    </message>
-    <message>
-        <location filename="../ui/GamepadScreen.qml" line="334"/>
-        <source>Only XInput pads appear here: Xbox controllers, wired or Bluetooth, and third-party pads in X-input mode. A DualSense or Switch Pro pad speaks HID only and stays invisible.</source>
-        <translation>Só aparecem aqui controles XInput: controles de Xbox, com fio ou Bluetooth, e controles de terceiros em modo X-input. Um DualSense ou um Switch Pro fala apenas HID e permanece invisível.</translation>
     </message>
 </context>
 <context>
     <name>Main</name>
     <message>
-        <location filename="../ui/Main.qml" line="75"/>
+        <location filename="../ui/Main.qml" line="76"/>
         <source>Ride</source>
         <translation>Pedal</translation>
     </message>
     <message>
-        <location filename="../ui/Main.qml" line="75"/>
+        <location filename="../ui/Main.qml" line="76"/>
         <source>Setup</source>
         <translation>Conexão</translation>
     </message>
     <message>
-        <location filename="../ui/Main.qml" line="75"/>
+        <location filename="../ui/Main.qml" line="76"/>
         <source>Settings</source>
         <translation>Ajustes</translation>
     </message>
@@ -483,72 +483,82 @@
         <translation>Sem suporte a controle nesta plataforma</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="190"/>
+        <location filename="../ui/SettingsScreen.qml" line="195"/>
+        <source>Volume keys shift</source>
+        <translation>Marchas pelas teclas de volume</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="196"/>
+        <source>Works while the training app is in front</source>
+        <translation>Funciona com o app de treino na frente</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="202"/>
         <source>Zwift Play</source>
         <translation>Zwift Play</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="196"/>
+        <location filename="../ui/SettingsScreen.qml" line="208"/>
         <source>Zwift Click</source>
         <translation>Zwift Click</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="202"/>
+        <location filename="../ui/SettingsScreen.qml" line="214"/>
         <source>Fitmetria fan</source>
         <translation>Ventilador Fitmetria</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="207"/>
+        <location filename="../ui/SettingsScreen.qml" line="219"/>
         <source>Display</source>
         <translation>Exibição</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="214"/>
+        <location filename="../ui/SettingsScreen.qml" line="226"/>
         <source>Language</source>
         <translation>Idioma</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="222"/>
+        <location filename="../ui/SettingsScreen.qml" line="234"/>
         <source>Miles instead of kilometres</source>
         <translation>Milhas em vez de quilômetros</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="228"/>
+        <location filename="../ui/SettingsScreen.qml" line="240"/>
         <source>Verbose log</source>
         <translation>Log detalhado</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="238"/>
+        <location filename="../ui/SettingsScreen.qml" line="250"/>
         <source>OSD overlay</source>
         <translation>Sobreposição OSD</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="243"/>
+        <location filename="../ui/SettingsScreen.qml" line="255"/>
         <source>Show the overlay</source>
         <translation>Mostrar a sobreposição</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="248"/>
+        <location filename="../ui/SettingsScreen.qml" line="260"/>
         <source>Drawn over the training app by RivaTuner. Trainer warnings always show.</source>
         <translation>Desenhada sobre o app de treino pelo RivaTuner. Avisos do rolo aparecem sempre.</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="255"/>
+        <location filename="../ui/SettingsScreen.qml" line="267"/>
         <source>Gear line</source>
         <translation>Linha da marcha</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="263"/>
+        <location filename="../ui/SettingsScreen.qml" line="275"/>
         <source>ERG line</source>
         <translation>Linha do ERG</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="271"/>
+        <location filename="../ui/SettingsScreen.qml" line="283"/>
         <source>Resistance line</source>
         <translation>Linha da resistência</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="286"/>
+        <location filename="../ui/SettingsScreen.qml" line="298"/>
         <source>Changes to the connection settings take effect when QZ restarts.</source>
         <translation>As mudanças nos ajustes de conexão passam a valer quando o QZ reinicia.</translation>
     </message>
@@ -769,7 +779,7 @@
 <context>
     <name>main</name>
     <message>
-        <location filename="../main.cpp" line="112"/>
+        <location filename="../main.cpp" line="113"/>
         <source>QDomyos-Zwift - Fitness Equipment Bridge</source>
         <translation>QDomyos-Zwift - Ponte para equipamentos de treino</translation>
     </message>

@@ -225,6 +225,56 @@ Capture semantics, each chosen against a specific way it could annoy:
 that cannot say "not supported here" would have to pretend instead, which is the failure section
 3.2.1 exists to prevent.
 
+### 5.1 Three backends, because XInput is not the whole of gamepads
+
+XInput answers for Xbox pads and for third-party pads **in their X-input mode**. A pad that has no
+X-input mode at all is invisible to it however it is connected — an 8BitDo Micro offers Switch,
+D-input and keyboard modes and nothing else, so "not detected" was the correct behaviour of the
+wrong assumption. `gamepadcontroller` now asks three backends in order:
+
+| Backend | Where | Reads |
+|---|---|---|
+| XInput | Windows | Xbox pads, and any pad in X-input mode. Asked first: it is the one that knows an Xbox pad's own labels. |
+| `gamepadhid` | Windows | Everything else Windows enumerates as a HID gamepad — an 8BitDo in D-input, a DualSense, a Switch Pro. |
+| `gamepadandroid` | Android | Pad key and motion events, forwarded by `CustomQtActivity`. |
+
+`gamepadhid` finds the pad through the raw input device list (usage page 1, usage 4 or 5), opens it
+with `CreateFile` and reads its input reports with **overlapped I/O**, so a poll never blocks on a
+pad sitting still. Reports are decoded with the HID parser rather than by hand, so a pad that lays
+its buttons out differently still comes out right. `hid.dll` is resolved at runtime for the same
+reason `xinput1_4.dll` is: a missing DLL should cost a log line, not a startup dialog.
+
+Two honest limits, both stated in the screen rather than papered over:
+
+- **HID button names are positional.** HID reports carry numbers, not labels, and no two pads
+  number them the same way, so button 1 becomes `a`, button 2 `b`, and so on. It does not matter in
+  practice because the screen binds by pressing — but the footer says to press the button you want
+  rather than trust the label, instead of implying the diagram is the rider's pad.
+- **Android gives input to the app on screen.** On Windows the pad is read from the device, which is
+  the whole point: shifting works while the training app owns the screen. Android has no such route,
+  so shifting from the pad works while QZ is in front and not while the training app is. The footer
+  says so on Android and nowhere else.
+
+### 5.2 The volume keys, which is how Android shifts under the training app
+
+One Android input does survive losing focus. The system handles the volume keys itself and
+broadcasts `VOLUME_CHANGED_ACTION` to every registered receiver, whoever is in front — so a volume
+change reaches QZ mid-ride and a button press does not. `MediaButtonReceiver.java` even parks the
+media volume back at 7 after each change, which is what makes the shifting endless rather than
+running out after a few gears.
+
+**The Java side survived the strip and the native side did not.** `MediaButtonReceiver.java` and the
+`volume_change_gears` setting were both still in the tree, but nothing implemented
+`nativeOnMediaButtonEvent`, nothing ever called `registerReceiver`, and the setting only set
+`QT_ANDROID_VOLUME_KEYS` — which routes the keys to a *focused* QZ and so misses the entire point of
+the feature. It went with `homeform`. `volumekeys` is the missing half: it implements the callback,
+registers and unregisters the receiver as the setting changes, honours `gears_volume_debouncing`, and
+hops to the Qt thread before touching `RideState`, because the broadcast arrives on Android's.
+
+It is also how a pad shifts under the training app: a pad with a keyboard mode — an 8BitDo Micro in
+K mode — can be programmed to send volume up and down, and then the same two buttons work while the
+rider is looking at Zwift.
+
 ---
 
 ## 6. What it cost on the RideState surface

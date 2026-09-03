@@ -137,6 +137,9 @@ handleurl.cpp \
 localipaddress.cpp \
 windowsblebond.cpp \
 gamepadcontroller.cpp \
+gamepadhid.cpp \
+gamepadandroid.cpp \
+volumekeys.cpp \
 rtssosd.cpp \
 devices/wahookickrheadwind/wahookickrheadwind.cpp \
 zwift_play/zwiftclickremote.cpp \
@@ -245,6 +248,10 @@ handleurl.h \
 localipaddress.h \
 windowsblebond.h \
 gamepadcontroller.h \
+gamepadbuttons.h \
+gamepadhid.h \
+gamepadandroid.h \
+volumekeys.h \
 rtssosd.h \
 devices/wahookickrheadwind/wahookickrheadwind.h \
 characteristics/characteristicnotifier2a53.h \
