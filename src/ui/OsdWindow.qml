@@ -1,5 +1,12 @@
-import QtQuick 2.12
-import QtQuick.Window 2.12
+// 2.13 where the rest of the tree is on 2.12, and on *both* lines deliberately.
+// transientParent only became assignable at QtQuick.Window 2.13 (Qt 5.13), and assigning
+// it below is what stops this window being minimised along with QZ. Qt 5 takes Window
+// from QtQuick.Window; Qt 6 also registers it in QtQuick itself and resolves it there, so
+// a version bump on only one of the two leaves the property gated out on that build - as
+// it did, with "transientParent is not available in QtQuick 2.12" on Qt 6.8.
+// Every shipping build is Qt 5.15 or Qt 6, so 2.13 costs nothing.
+import QtQuick 2.13
+import QtQuick.Window 2.13
 
 // The overlay's second sink: a frameless always-on-top window, for riders without RTSS.
 //
