@@ -68,7 +68,14 @@ ApplicationWindow {
     // itself on screen only when osd.windowVisible says the rider asked for it. Declared
     // here rather than in a screen because it outlives whichever tab is in front - the
     // whole point of it is being visible while QZ is not.
-    OsdWindow {}
+    OsdWindow { id: osdOverlay }
+
+    // The overlay has no transientParent, so it does not follow this window down when QZ
+    // is minimised - which is the entire point of it. The same detachment means it does
+    // not follow this window being *closed* either, and Qt then keeps the process alive
+    // for the one window still open, with no way left to bring the UI back. Closing is
+    // the one parent event the overlay has to follow, so it is followed explicitly.
+    onClosing: osdOverlay.close()
 
     /** Settings pushes the gamepad mapping screen over everything. */
     property bool gamepadOpen: false
