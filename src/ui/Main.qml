@@ -11,7 +11,7 @@ ApplicationWindow {
     visible: true
     width: 480
     height: 800
-    title: "QZ"
+    title: "QZ-lite"
     color: theme.ground
 
     // Everything is sized off this so the same tree works on a phone, a tablet and a
@@ -138,17 +138,35 @@ ApplicationWindow {
             }
         }
 
-        Label {
+        // The wordmark, in the corner and in ghost: it names the build for whoever is
+        // looking at a screenshot, and is never the brightest thing on the screen.
+        // Two labels rather than one string because the two halves are not equal -
+        // "QZ" is the project this came from, "lite" is all this fork adds to it.
+        // See docs/fork/IDENTITY.md; the spelling is QZ-lite, never QZ Lite.
+        Row {
             anchors.right: parent.right
             anchors.rightMargin: unit * 1.5
             anchors.bottom: parent.bottom
             anchors.bottomMargin: unit * 0.7
-            text: "QZ"
-            font.family: theme.fontDisplay
-            font.pixelSize: unit * 1.17
-            font.weight: Font.Bold
-            font.letterSpacing: unit * 0.2
-            color: theme.ghost
+            spacing: 0
+
+            Label {
+                text: "QZ"
+                font.family: theme.fontDisplay
+                font.pixelSize: unit * 1.17
+                font.weight: Font.Bold
+                font.letterSpacing: unit * 0.2
+                color: theme.ghost
+            }
+
+            Label {
+                text: "-lite"
+                font.family: theme.fontDisplay
+                font.pixelSize: unit * 1.17
+                font.weight: Font.Normal
+                font.letterSpacing: unit * 0.2
+                color: theme.ghost
+            }
         }
 
         Rectangle {

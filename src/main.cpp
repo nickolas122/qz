@@ -24,6 +24,7 @@
 // Reached through homeform.h until 7c-2b deleted it. The dark-palette block below has
 // always needed these.
 #include <QColor>
+#include <QIcon>
 #include <QPalette>
 #include <QThread>
 #include "templateinfosenderbuilder.h"
@@ -114,7 +115,7 @@ void displayHelp() {
     QString testTranslation = QCoreApplication::translate("main", "QDomyos-Zwift - Fitness Equipment Bridge");
     Q_UNUSED(testTranslation); // Suppress unused variable warning
 
-    printf("qDomyos-Zwift Usage:\n");
+    printf("QZ-lite usage:\n");
     printf("General options:\n");
     printf("  -h, --help                    Display this help message and exit\n");
     printf("  -no-gui                       Run in non-GUI mode\n");
@@ -474,9 +475,24 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    // These three are not the app's name to a rider - they are the key QSettings
+    // stores under, and every setting on every machine that has ever run this build
+    // is filed beneath them. Renaming them for the fork would silently hand the
+    // rider a factory-fresh app. The name a person reads is in the window title, the
+    // header, the Android label and the .exe's resource strings; this is plumbing,
+    // and it stays pointing at the author of the thing it came from.
     app->setOrganizationName(QStringLiteral("Roberto Viola"));
     app->setOrganizationDomain(QStringLiteral("robertoviola.cloud"));
     app->setApplicationName(QStringLiteral("qDomyos-Zwift"));
+
+    // Windows takes the taskbar and Alt-Tab icon from the executable's own resource
+    // (RC_ICONS, see qdomyos-zwift.pro), but a QML window with no icon of its own
+    // gets the stock Qt one everywhere else - and on Windows, the OSD's second
+    // window would too.
+    // The cast because -no-gui builds `app` as a plain QCoreApplication, which has no
+    // windows to give an icon to.
+    if (qobject_cast<QGuiApplication *>(app.data()))
+        QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/icons/icons/icon.png")));
 
     QSettings settings;
 

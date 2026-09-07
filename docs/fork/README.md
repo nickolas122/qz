@@ -20,6 +20,7 @@ says "this was tested and it is not the cause" is worth more later than the fix 
 | [STRIP-SPEC.md](STRIP-SPEC.md) | Reducing QZ to a trainer bridge for Rouvy, Zwift, Kinomap and MyWhoosh: what was deleted, in what order, and the platform constraints that decided the shape. **All phases landed 2026-08-24**; the per-phase records at the end are the account of what each one actually cost. |
 | [UI-INSTRUMENT-CLUSTER.md](UI-INSTRUMENT-CLUSTER.md) | The visual direction the stripped bridge is built in, and the two things the ride screen could not previously say: whether the trainer is there right now, and how much battery it has left. |
 | [VIRTUAL-BIKE.md](VIRTUAL-BIKE.md) | Testing without the trainer in the room: a simulated bike the app runs against, a harness that feeds the real `ftmsbike` byte-exact FTMS frames, and the one scenario format both play. All six phases implemented. |
+| [IDENTITY.md](IDENTITY.md) | The name and the mark: why the build calls itself QZ-lite, where the icon comes from and how it is regenerated, and the list of names that deliberately still say QZ because a training app, an installer or a settings file is what reads them. |
 
 ## Windows Bluetooth: the move to WinRT
 

@@ -22,6 +22,12 @@ import QtQuick.Window 2.13
 Window {
     id: osdWindow
 
+    // Qt.Tool keeps this out of the taskbar and alt-tab, but not out of every list: a
+    // window with no title of its own falls back to the application name, so anything
+    // enumerating windows - OBS's capture picker, most obviously - offered the rider
+    // "qDomyos-Zwift" to pick from. Naming it is the whole fix.
+    title: "QZ-lite OSD"
+
     // Declared inside ApplicationWindow so it can see qzSettings, osd and window.theme -
     // but a nested Window is transient for its parent by default, and a transient child
     // is hidden when its parent is minimised. Minimising QZ is exactly what a rider does
