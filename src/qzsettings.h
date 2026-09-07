@@ -866,6 +866,93 @@ class QZSettings {
     static const QString default_simulated_bike_ride;
 
     /**
+     *@brief osd_enabled Draw QZ's overlay into RivaTuner's OSD at all. Off is not merely
+     *"stop writing": the slot is handed back, because RTSS keeps drawing the last text it
+     *was given and would otherwise freeze a stale gear over the training app. Windows
+     *only - RtssOsd compiles to no-ops elsewhere, so the switch is hidden there.
+     */
+    static const QString osd_enabled;
+    static constexpr bool default_osd_enabled = true;
+
+    /**
+     *@brief osd_line_gear Show the "Gear: n" line. Only a bike has one, so this is
+     *ignored when the connected device is not a bike.
+     */
+    static const QString osd_line_gear;
+    static constexpr bool default_osd_line_gear = true;
+
+    /**
+     *@brief osd_line_erg Show the "ERG: ON/OFF" line.
+     */
+    static const QString osd_line_erg;
+    static constexpr bool default_osd_line_erg = true;
+
+    /**
+     *@brief osd_line_resistance Show the "Resistance: n" line.
+     */
+    static const QString osd_line_resistance;
+    static constexpr bool default_osd_line_resistance = true;
+
+    /**
+     *@brief osd_rtss Draw the overlay into RivaTuner's OSD. The RTSS sink is the only one that
+     *survives a training app in exclusive fullscreen, because RTSS draws inside the app's own
+     *D3D frame rather than in a window of its own.
+     */
+    static const QString osd_rtss;
+    static constexpr bool default_osd_rtss = true;
+
+    /**
+     *@brief osd_window Draw the overlay in a frameless always-on-top window. Needs no RivaTuner,
+     *but it is an ordinary window: a training app in *exclusive* fullscreen bypasses the
+     *compositor and covers it. Windowed and borderless apps are fine. Off by default because
+     *RTSS is the more capable sink where it is installed.
+     */
+    static const QString osd_window;
+    static constexpr bool default_osd_window = false;
+
+    /**
+     *@brief osd_window_locked Make the floating window click-through, so a stray click during a
+     *ride reaches the training app instead of QZ. Unlocking it is how the rider moves it.
+     */
+    static const QString osd_window_locked;
+    static constexpr bool default_osd_window_locked = true;
+
+    /**
+     *@brief osd_window_x Where the rider dragged the floating window to. -1 means "never moved",
+     *which places it near the top right of the primary screen.
+     */
+    static const QString osd_window_x;
+    static constexpr int default_osd_window_x = -1;
+
+    /**
+     *@brief osd_window_y The other half of osd_window_x.
+     */
+    static const QString osd_window_y;
+    static constexpr int default_osd_window_y = -1;
+
+    /**
+     *@brief gamepad_hid_map Which physical input on a HID pad is which button, as
+     *"b1=a,b2=b,hat_up=dpad_up". Only the HID backend needs one: XInput and Android both name a
+     *pad's buttons themselves, while a HID report carries numbers, so QZ has to guess - button 1
+     *is "a", button 2 is "b", and so on down the list. The guess is right for a lot of pads and
+     *wrong for others: an 8BitDo Micro puts its d-pad on numbered buttons past the twelve the
+     *guess had names for, which is how three of its four directions used to vanish and the
+     *fourth arrive as L3. Empty means "use the guess"; anything else is the whole map, so a
+     *button not listed here has no name on this pad. Written by the pad screen, never by hand.
+     */
+    static const QString gamepad_hid_map;
+    static const QString default_gamepad_hid_map;
+
+    /**
+     *@brief gamepad_hid_map_pad The product name of the pad gamepad_hid_map was captured on.
+     *Button numbers mean different things on different pads, so a map from another one is worse
+     *than no map at all: it would name the buttons confidently and wrongly. A pad whose name
+     *does not match this falls back to the guess, and remapping it replaces both settings.
+     */
+    static const QString gamepad_hid_map_pad;
+    static const QString default_gamepad_hid_map_pad;
+
+    /**
      * @brief Write the QSettings values using the constants from this namespace.
      * @param showDefaults Optionally indicates if the default should be shown with the key.
      */

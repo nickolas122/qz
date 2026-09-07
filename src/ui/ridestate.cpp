@@ -15,51 +15,11 @@ RideState::RideState(bluetooth *bl, QObject *parent) : QObject(parent), bluetoot
     // the device by whoever wants them. One second matches the rate the trainer sends
     // Indoor Bike Data at, so a faster poll would only re-read the same frame.
     connect(&poll, &QTimer::timeout, this, &RideState::changed);
-    connect(&poll, &QTimer::timeout, this, &RideState::updateRtssOsd);
     poll.start(1000);
 
     if (bluetoothManager)
         connect(bluetoothManager, &bluetooth::bluetoothDeviceConnected, this,
                 &RideState::restoreGear);
-}
-
-void RideState::updateRtssOsd() {
-    bluetoothdevice *device = bluetoothManager ? bluetoothManager->device() : nullptr;
-    if (!device) {
-        rtssOsd.publish(QStringLiteral("QZ: no device"));
-        return;
-    }
-
-    // A lost trainer displaces everything else. This overlay is the only QZ surface a
-    // rider sees while the training app runs exclusive fullscreen (STRIP-SPEC.md 9.7),
-    // which makes it the one place a silent five-minute reconnect can be announced to
-    // somebody who is actually riding. Gear and resistance are meaningless anyway once
-    // the numbers behind them have stopped arriving.
-    const QString link = trainerState();
-    if (link == QStringLiteral("lost")) {
-        const int secs = retrySeconds();
-        rtssOsd.publish(QStringLiteral("QZ: TRAINER LOST\nRetrying%1")
-                            .arg(secs > 0 ? QStringLiteral(" in %1s").arg(secs) : QStringLiteral("...")));
-        return;
-    }
-    if (link == QStringLiteral("gaveup")) {
-        rtssOsd.publish(QStringLiteral("QZ: TRAINER LOST\nGave up after 5 min"));
-        return;
-    }
-
-    QSettings settings;
-    const bool erg = settings.value(QZSettings::zwift_erg, QZSettings::default_zwift_erg).toBool();
-
-    // Only a bike carries a gear here. homeform also handled ROWING; group G takes the
-    // rower, and this fork has one bike.
-    QString gearLine;
-    if (device->deviceType() == BIKE) {
-        gearLine = QStringLiteral("Gear: %1\n").arg(static_cast<bike *>(device)->gears());
-    }
-
-    rtssOsd.publish(gearLine + QStringLiteral("ERG: %1\nResistance: %2")
-                                   .arg(erg ? QStringLiteral("ON") : QStringLiteral("OFF"))
-                                   .arg(device->currentResistance().value()));
 }
 
 void RideState::restoreGear(bluetoothdevice *device) {

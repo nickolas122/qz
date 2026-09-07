@@ -17,6 +17,17 @@ Item {
     property var boundButtons: []
     /** Names held down this instant. */
     property var pressedButtons: []
+    /**
+     * Whether the drawn buttons can be tapped.
+     *
+     * Off by default: the diagram is normally a readout, and a readout that swallows clicks is
+     * a readout that lies about being a control.
+     */
+    property bool selectable: false
+    /** The one button waiting to be pointed at a physical input, drawn as the live one. */
+    property string highlight: ""
+
+    signal buttonClicked(string name)
 
     readonly property var theme: window.theme
     readonly property real gx: width / 340
@@ -26,7 +37,9 @@ Item {
     implicitHeight: width * (190 / 340)
 
     function isBound(name) { return boundButtons.indexOf(name) >= 0 }
-    function isPressed(name) { return pressedButtons.indexOf(name) >= 0 }
+    // The highlighted button reads as pressed on purpose: during a remap it is the button the
+    // next press will land on, which is the same thing the live colour means the rest of the time.
+    function isPressed(name) { return name === highlight || pressedButtons.indexOf(name) >= 0 }
     function strokeFor(name) {
         if (isPressed(name)) return theme.work
         return isBound(name) ? theme.accent : theme.line
@@ -72,6 +85,16 @@ Item {
             border.width: pad.isPressed(modelData.n) ? 2 : 1.3
 
             Behavior on border.color { ColorAnimation { duration: 90 } }
+
+            // Only while the screen has asked for it, so the diagram stays a readout otherwise.
+            MouseArea {
+                anchors.fill: parent
+                // Exactly the drawn button, no grown target: the d-pad arms sit one design unit
+                // apart, so anything larger would overlap its neighbour and the rider would tap
+                // "up" and get "left" - which is the confusion this whole screen exists to end.
+                enabled: pad.selectable
+                onClicked: pad.buttonClicked(modelData.n)
+            }
 
             Label {
                 anchors.centerIn: parent

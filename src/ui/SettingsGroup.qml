@@ -2,7 +2,7 @@ import QtQuick 2.12
 import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.3
 
-// A group heading. Section 9.6 allows five of these and no nesting below them.
+// A group heading. Section 9.6 allows six of these and no nesting below them.
 //
 // Tracked caps on a rule rather than a large bold line: at 24px bold the headings
 // competed with the settings themselves for weight, which is backwards on a page whose

@@ -17,11 +17,14 @@
 // always listed it unconditionally - and reports available() == false where XInput is
 // not there, which is what the mapping screen needs an object to ask.
 #include "gamepadcontroller.h"
+#include "ui/qzosd.h"
+#include "volumekeys.h"
 #include "qznotify.h"
 #include "qzpaths.h"
 // Reached through homeform.h until 7c-2b deleted it. The dark-palette block below has
 // always needed these.
 #include <QColor>
+#include <QIcon>
 #include <QPalette>
 #include <QThread>
 #include "templateinfosenderbuilder.h"
@@ -112,7 +115,7 @@ void displayHelp() {
     QString testTranslation = QCoreApplication::translate("main", "QDomyos-Zwift - Fitness Equipment Bridge");
     Q_UNUSED(testTranslation); // Suppress unused variable warning
 
-    printf("qDomyos-Zwift Usage:\n");
+    printf("QZ-lite usage:\n");
     printf("General options:\n");
     printf("  -h, --help                    Display this help message and exit\n");
     printf("  -no-gui                       Run in non-GUI mode\n");
@@ -472,9 +475,24 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    // These three are not the app's name to a rider - they are the key QSettings
+    // stores under, and every setting on every machine that has ever run this build
+    // is filed beneath them. Renaming them for the fork would silently hand the
+    // rider a factory-fresh app. The name a person reads is in the window title, the
+    // header, the Android label and the .exe's resource strings; this is plumbing,
+    // and it stays pointing at the author of the thing it came from.
     app->setOrganizationName(QStringLiteral("Roberto Viola"));
     app->setOrganizationDomain(QStringLiteral("robertoviola.cloud"));
     app->setApplicationName(QStringLiteral("qDomyos-Zwift"));
+
+    // Windows takes the taskbar and Alt-Tab icon from the executable's own resource
+    // (RC_ICONS, see qdomyos-zwift.pro), but a QML window with no icon of its own
+    // gets the stock Qt one everywhere else - and on Windows, the OSD's second
+    // window would too.
+    // The cast because -no-gui builds `app` as a plain QCoreApplication, which has no
+    // windows to give an icon to.
+    if (qobject_cast<QGuiApplication *>(app.data()))
+        QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/icons/icons/icon.png")));
 
     QSettings settings;
 
@@ -747,6 +765,13 @@ int main(int argc, char *argv[]) {
 
         engine.rootContext()->setContextProperty("rideState", &rideState);
 
+        // The overlay: one producer, and as many sinks as the rider switched on. It composes
+        // its lines off rideState and hands them to RTSS and to OsdWindow.qml, which is why
+        // it is here and not a member of RideState - see qzosd.h. Parented to rideState for
+        // the same reason `language` below is: the engine is destroyed first.
+        QzOsd *osd = new QzOsd(&rideState, &rideState);
+        engine.rootContext()->setContextProperty("osd", osd);
+
         // The language, and the only thing that can change it. Built here rather than
         // before the engine because it needs one to retranslate, and before
         // engine.load() below so the first tree is built in the rider's language.
@@ -773,6 +798,14 @@ int main(int argc, char *argv[]) {
         QObject::connect(pad, &gamepadcontroller::gearDown, &rideState, &RideState::gearDown);
         QObject::connect(pad, &gamepadcontroller::ergToggle, &rideState, &RideState::toggleErg);
         engine.rootContext()->setContextProperty("gamepad", pad);
+
+        // The volume keys, which on Android are the only input that survives losing focus - the
+        // broadcast goes to every registered receiver, not to whoever is in front. It is what a
+        // pad in its keyboard mode can reach, and what a pad read as a pad cannot. Inert unless
+        // volume_change_gears is on, and parented like the pad because the engine dies first.
+        volumekeys *volume = new volumekeys(&rideState);
+        QObject::connect(volume, &volumekeys::gearUp, &rideState, &RideState::gearUp);
+        QObject::connect(volume, &volumekeys::gearDown, &rideState, &RideState::gearDown);
 
         // Where the bridge posts "battery at 40%", "restart to apply", "another device
         // has the bike". Drivers emit into QzNotify and ToastArea.qml shows what lands.

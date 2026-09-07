@@ -275,8 +275,21 @@ const QString QZSettings::gears_neutral_gear = QStringLiteral("gears_neutral_gea
 const QString QZSettings::simulated_bike = QStringLiteral("simulated_bike");
 const QString QZSettings::simulated_bike_ride = QStringLiteral("simulated_bike_ride");
 const QString QZSettings::default_simulated_bike_ride = QLatin1String("");
+const QString QZSettings::osd_enabled = QStringLiteral("osd_enabled");
+const QString QZSettings::osd_line_gear = QStringLiteral("osd_line_gear");
+const QString QZSettings::osd_line_erg = QStringLiteral("osd_line_erg");
+const QString QZSettings::osd_line_resistance = QStringLiteral("osd_line_resistance");
+const QString QZSettings::osd_rtss = QStringLiteral("osd_rtss");
+const QString QZSettings::osd_window = QStringLiteral("osd_window");
+const QString QZSettings::osd_window_locked = QStringLiteral("osd_window_locked");
+const QString QZSettings::osd_window_x = QStringLiteral("osd_window_x");
+const QString QZSettings::osd_window_y = QStringLiteral("osd_window_y");
+const QString QZSettings::gamepad_hid_map = QStringLiteral("gamepad_hid_map");
+const QString QZSettings::default_gamepad_hid_map = QStringLiteral("");
+const QString QZSettings::gamepad_hid_map_pad = QStringLiteral("gamepad_hid_map_pad");
+const QString QZSettings::default_gamepad_hid_map_pad = QStringLiteral("");
 
-const uint32_t allSettingsCount = 188;
+const uint32_t allSettingsCount = 199;
 
 QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::cryptoKeySettingsProfiles, QZSettings::default_cryptoKeySettingsProfiles},
@@ -484,6 +497,17 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::gears_neutral_gear, QZSettings::default_gears_neutral_gear},
     {QZSettings::simulated_bike, QZSettings::default_simulated_bike},
     {QZSettings::simulated_bike_ride, QZSettings::default_simulated_bike_ride},
+    {QZSettings::osd_enabled, QZSettings::default_osd_enabled},
+    {QZSettings::osd_line_gear, QZSettings::default_osd_line_gear},
+    {QZSettings::osd_line_erg, QZSettings::default_osd_line_erg},
+    {QZSettings::osd_line_resistance, QZSettings::default_osd_line_resistance},
+    {QZSettings::osd_rtss, QZSettings::default_osd_rtss},
+    {QZSettings::osd_window, QZSettings::default_osd_window},
+    {QZSettings::osd_window_locked, QZSettings::default_osd_window_locked},
+    {QZSettings::osd_window_x, QZSettings::default_osd_window_x},
+    {QZSettings::osd_window_y, QZSettings::default_osd_window_y},
+    {QZSettings::gamepad_hid_map, QZSettings::default_gamepad_hid_map},
+    {QZSettings::gamepad_hid_map_pad, QZSettings::default_gamepad_hid_map_pad},
 };
 
 void QZSettings::qDebugAllSettings(bool showDefaults) {

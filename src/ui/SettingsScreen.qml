@@ -6,7 +6,7 @@ import QtQuick.Layouts 1.3
 // rider changes rather than around vendors. No nesting and no accordions.
 //
 // The Settings block itself moved up to Main.qml so the ride screen can read miles_unit;
-// nothing was added to it. Five groups, as before. The only row here that leads anywhere
+// nothing was added to it. Six groups. The only row here that leads anywhere
 // is Gamepad, and its subtitle is its own current binding - so the summary and the route
 // to change it are the same control, and the groups stay flat.
 Item {
@@ -186,6 +186,18 @@ Item {
                 onDetailClicked: window.gamepadOpen = true
             }
 
+            // Android only, because it is Android's problem: a pad read as a pad shifts only
+            // while QZ is in front, and during a ride it is not. The volume broadcast reaches
+            // QZ whoever has focus, so this is the one route that shifts under the training
+            // app - including from a pad in its keyboard mode, sending volume up and down.
+            SettingsSwitch {
+                visible: OS_VERSION === "Android"
+                label: qsTr("Volume keys shift")
+                note: qsTr("Works while the training app is in front")
+                checked: qzSettings.volume_change_gears
+                onToggled: qzSettings.volume_change_gears = checked
+            }
+
             SettingsSwitch {
                 label: qsTr("Zwift Play")
                 checked: qzSettings.zwift_play
@@ -228,6 +240,80 @@ Item {
                 label: qsTr("Verbose log")
                 checked: qzSettings.log_debug
                 onToggled: qzSettings.log_debug = checked
+            }
+
+            // Windows only, and both sinks are the reason. RivaTuner does not exist
+            // elsewhere - RtssOsd compiles to no-ops - and a Qt window cannot float over
+            // a training app that is a separate Android app, because it lives inside QZ's
+            // own activity. Rows describing a feature that cannot run are worse than no
+            // rows, so the group goes rather than being greyed out.
+            SettingsGroup {
+                title: qsTr("OSD overlay")
+                visible: OS_VERSION === "Other"
+            }
+
+            SettingsSwitch {
+                label: qsTr("Show the overlay")
+                // Trainer warnings are not one of the lines below: they are how a silent
+                // reconnect is announced to somebody riding in exclusive fullscreen, so
+                // they always show while the overlay is on at all.
+                note: qsTr("Trainer warnings always show while it is on.")
+                visible: OS_VERSION === "Other"
+                checked: qzSettings.osd_enabled
+                onToggled: qzSettings.osd_enabled = checked
+            }
+
+            // The two sinks, and the difference between them is the whole reason there are
+            // two. RTSS draws inside the training app's own frame; the window is a window.
+            SettingsSwitch {
+                label: qsTr("Draw it in RivaTuner (RTSS)")
+                note: qsTr("The only one that survives exclusive fullscreen. Needs RTSS running.")
+                visible: OS_VERSION === "Other"
+                enabled: qzSettings.osd_enabled
+                checked: qzSettings.osd_rtss
+                onToggled: qzSettings.osd_rtss = checked
+            }
+
+            SettingsSwitch {
+                label: qsTr("Draw it in a floating window")
+                note: qsTr("No RivaTuner needed, but a training app in exclusive fullscreen covers it.")
+                visible: OS_VERSION === "Other"
+                enabled: qzSettings.osd_enabled
+                checked: qzSettings.osd_window
+                onToggled: qzSettings.osd_window = checked
+            }
+
+            SettingsSwitch {
+                label: qsTr("Lock the window in place")
+                note: qsTr("Unlock it to drag it. Locked, clicks go through it to the training app.")
+                visible: OS_VERSION === "Other"
+                enabled: qzSettings.osd_enabled && qzSettings.osd_window
+                checked: qzSettings.osd_window_locked
+                onToggled: qzSettings.osd_window_locked = checked
+            }
+
+            SettingsSwitch {
+                label: qsTr("Gear line")
+                visible: OS_VERSION === "Other"
+                enabled: qzSettings.osd_enabled
+                checked: qzSettings.osd_line_gear
+                onToggled: qzSettings.osd_line_gear = checked
+            }
+
+            SettingsSwitch {
+                label: qsTr("ERG line")
+                visible: OS_VERSION === "Other"
+                enabled: qzSettings.osd_enabled
+                checked: qzSettings.osd_line_erg
+                onToggled: qzSettings.osd_line_erg = checked
+            }
+
+            SettingsSwitch {
+                label: qsTr("Resistance line")
+                visible: OS_VERSION === "Other"
+                enabled: qzSettings.osd_enabled
+                checked: qzSettings.osd_line_resistance
+                onToggled: qzSettings.osd_line_resistance = checked
             }
 
             Label {

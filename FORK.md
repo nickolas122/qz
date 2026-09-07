@@ -58,6 +58,11 @@ deleted rather than disabled, which is also why there is no way back to upstream
   [docs/fork/UI-INSTRUMENT-CLUSTER.md](docs/fork/UI-INSTRUMENT-CLUSTER.md).
 - **Settings went from 1,010 keys to 188.** 621 of the ones removed were named by nothing at
   all — defaults the app wrote at startup and never read again.
+- **It calls itself QZ-lite**, and carries its own icon: a single amber Q in the instrument
+  palette, replacing the stock artwork the .exe never even loaded. The parent name stays
+  everywhere a machine reads it — the settings key, the Android package, the advertised BLE
+  name, the DIRCON service strings — because renaming those costs a rider settings and saved
+  pairings and buys nothing. See [docs/fork/IDENTITY.md](docs/fork/IDENTITY.md).
 - **It speaks Portuguese.** The UI is translated to Brazilian Portuguese, picked in
   Settings → Display → Language and applied without a restart. Upstream's other 29
   catalogues are deleted: every one of them translated `homeform`, so they shipped and

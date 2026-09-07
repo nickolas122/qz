@@ -137,6 +137,9 @@ handleurl.cpp \
 localipaddress.cpp \
 windowsblebond.cpp \
 gamepadcontroller.cpp \
+gamepadhid.cpp \
+gamepadandroid.cpp \
+volumekeys.cpp \
 rtssosd.cpp \
 devices/wahookickrheadwind/wahookickrheadwind.cpp \
 zwift_play/zwiftclickremote.cpp \
@@ -198,6 +201,7 @@ templateinfosenderbuilder.cpp \
 virtualdevices/virtualbike.cpp \
 scanrecordresult.cpp \
 ui/language.cpp \
+ui/qzosd.cpp \
 ui/ridestate.cpp
    
 macx: SOURCES += macos/lockscreen.mm
@@ -245,6 +249,10 @@ handleurl.h \
 localipaddress.h \
 windowsblebond.h \
 gamepadcontroller.h \
+gamepadbuttons.h \
+gamepadhid.h \
+gamepadandroid.h \
+volumekeys.h \
 rtssosd.h \
 devices/wahookickrheadwind/wahookickrheadwind.h \
 characteristics/characteristicnotifier2a53.h \
@@ -329,6 +337,7 @@ templateinfosenderbuilder.h \
 virtualdevices/virtualbike.h \
 scanrecordresult.h \
 ui/language.h \
+ui/qzosd.h \
 ui/ridestate.h
 
 

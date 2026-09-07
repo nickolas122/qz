@@ -1,4 +1,8 @@
-# qdomyos-zwift
+<img src="icons/qz-lite/qz-lite-512.png" alt="" width="104" align="right">
+
+# QZ-lite
+
+*A build of QZ, narrowed to one rider, one trainer and one PC. The name and the mark are [documented here](docs/fork/IDENTITY.md); the project they belong to is below.*
 
 > ### This is a fork. The real project is [cagnulein/qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift).
 >

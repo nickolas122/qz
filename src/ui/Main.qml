@@ -11,7 +11,7 @@ ApplicationWindow {
     visible: true
     width: 480
     height: 800
-    title: "QZ"
+    title: "QZ-lite"
     color: theme.ground
 
     // Everything is sized off this so the same tree works on a phone, a tablet and a
@@ -52,7 +52,30 @@ ApplicationWindow {
         property bool fitmetria_fanfit_enable: false
         property bool miles_unit: false
         property bool log_debug: false
+        property bool osd_enabled: true
+        property bool osd_line_gear: true
+        property bool osd_line_erg: true
+        property bool osd_line_resistance: true
+        property bool volume_change_gears: false
+        property bool osd_rtss: true
+        property bool osd_window: false
+        property bool osd_window_locked: true
+        property int osd_window_x: -1
+        property int osd_window_y: -1
     }
+
+    // The overlay's floating-window sink. Always instantiated, never always shown: it puts
+    // itself on screen only when osd.windowVisible says the rider asked for it. Declared
+    // here rather than in a screen because it outlives whichever tab is in front - the
+    // whole point of it is being visible while QZ is not.
+    OsdWindow { id: osdOverlay }
+
+    // The overlay has no transientParent, so it does not follow this window down when QZ
+    // is minimised - which is the entire point of it. The same detachment means it does
+    // not follow this window being *closed* either, and Qt then keeps the process alive
+    // for the one window still open, with no way left to bring the UI back. Closing is
+    // the one parent event the overlay has to follow, so it is followed explicitly.
+    onClosing: osdOverlay.close()
 
     /** Settings pushes the gamepad mapping screen over everything. */
     property bool gamepadOpen: false
@@ -115,17 +138,35 @@ ApplicationWindow {
             }
         }
 
-        Label {
+        // The wordmark, in the corner and in ghost: it names the build for whoever is
+        // looking at a screenshot, and is never the brightest thing on the screen.
+        // Two labels rather than one string because the two halves are not equal -
+        // "QZ" is the project this came from, "lite" is all this fork adds to it.
+        // See docs/fork/IDENTITY.md; the spelling is QZ-lite, never QZ Lite.
+        Row {
             anchors.right: parent.right
             anchors.rightMargin: unit * 1.5
             anchors.bottom: parent.bottom
             anchors.bottomMargin: unit * 0.7
-            text: "QZ"
-            font.family: theme.fontDisplay
-            font.pixelSize: unit * 1.17
-            font.weight: Font.Bold
-            font.letterSpacing: unit * 0.2
-            color: theme.ghost
+            spacing: 0
+
+            Label {
+                text: "QZ"
+                font.family: theme.fontDisplay
+                font.pixelSize: unit * 1.17
+                font.weight: Font.Bold
+                font.letterSpacing: unit * 0.2
+                color: theme.ghost
+            }
+
+            Label {
+                text: "-lite"
+                font.family: theme.fontDisplay
+                font.pixelSize: unit * 1.17
+                font.weight: Font.Normal
+                font.letterSpacing: unit * 0.2
+                color: theme.ghost
+            }
         }
 
         Rectangle {

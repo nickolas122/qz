@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The background layer of the adaptive launcher icon: the same warm near-black the
+     app's own window is painted in (Theme.qml `ground`). -->
+<resources>
+    <color name="ic_launcher_background">#0C0B0A</color>
+</resources>
