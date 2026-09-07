@@ -2033,6 +2033,18 @@ jobs:
               fi
             "
 
+      # bullseye main only, and a loud apt, for the reason the 64-bit build job spells out:
+      # Debian 11 LTS ended 2026-08-31 and its security pool is gone from deb.debian.org
+      # while the index is still served, so the default sources resolve to packages that 404.
+      #
+      # This job hid that. `|| true` swallowed the failed install, the binary then could not
+      # find libQt5Widgets.so.5, and the job reported "SMOKE_OK not found" - which reads as
+      # "the binary is broken" when nothing was wrong with the binary at all. It stayed hidden
+      # because the job is gated on the 64-bit build, so it was skipped for as long as that
+      # was failing, and surfaced the moment the build was repaired.
+      #
+      # So: no `|| true`, and `set -e`. A smoke test that cannot install what it needs has to
+      # say so, rather than blaming the thing it was meant to be testing.
       - name: Runtime smoke test aarch64 binary (ARM64 Bullseye - Pi 3/4/5)
         timeout-minutes: 10
         run: |
@@ -2040,11 +2052,13 @@ jobs:
           docker run --rm -v ${{ github.workspace }}/bin64:/app \
             arm64v8/debian:bullseye-20241016 \
             bash -c "
+              set -e
+              printf 'deb http://deb.debian.org/debian bullseye main\n' > /etc/apt/sources.list
               apt-get update && apt-get install -y --no-install-recommends \
                 libqt5core5a libqt5bluetooth5 libqt5charts5 libqt5widgets5 \
                 libqt5network5 libqt5websockets5 libqt5xml5 libqt5sql5 \
                 libqt5multimedia5 libqt5positioning5 libqt5qml5 libqt5quick5 \
-                libqt5texttospeech5 libqt5networkauth5 libqt5gui5 || true
+                libqt5texttospeech5 libqt5networkauth5 libqt5gui5
               OUTPUT=\$(/app/qdomyos-zwift-aarch64 -no-gui -smoke-test 2>&1) || true
               echo \"\$OUTPUT\"
               if echo \"\$OUTPUT\" | grep -q 'SMOKE_OK'; then
