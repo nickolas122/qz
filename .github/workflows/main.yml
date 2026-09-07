@@ -1880,14 +1880,38 @@ jobs:
           echo "#define LICENSE" >> secret.h
           cd ..
 
+      # Bullseye main only, deliberately, since 2026-09-07.
+      #
+      # Debian 11 LTS ended on 2026-08-31. Its security pool was pruned from deb.debian.org
+      # within the week - `pool/updates/main/s/systemd/` now holds only bookworm's systemd -
+      # while the `bullseye-security` *index* is still served. apt therefore updates cleanly,
+      # resolves to `247.3-7+deb11u8`, and 404s fetching it. Retrying cannot help: the file is
+      # gone, not slow. And there is nowhere else to point yet - archive.debian.org's
+      # debian-security stops at buster, so bullseye has left one and not yet reached the other.
+      #
+      # `bullseye` main is intact and carries everything this build needs, at one or two
+      # security patch levels behind: libc6 2.31-13+deb11u11, qtbase5-dev 5.15.2+dfsg-9+deb11u1.
+      # That is the trade - a throwaway build container misses the last few security patches on
+      # libraries it only links against, in exchange for a job that runs at all. The binary it
+      # produces is unaffected, and the glibc floor the next step asserts is 2.31 either way.
+      #
+      # The base image cannot simply move to bookworm: that is glibc 2.36, and "Verify 64-bit
+      # binary glibc compatibility" below fails anything above 2.31, because Raspberry Pi OS
+      # Bullseye is what these binaries are for. Moving off bullseye is a decision about which
+      # Pi OS the fork supports, not a CI repair.
+      #
+      # When bullseye appears on archive.debian.org, point both suites there with
+      # `Acquire::Check-Valid-Until "false"` and take the security patches back.
       - name: Build for Raspberry Pi 64-bit
         uses: docker://arm64v8/debian:bullseye-20241016
         with:
           args: >
             bash -c "
             set -ex &&
-            for i in 1 2 3; do apt-get update && break || sleep 5; done &&
-            for i in 1 2 3; do apt-get install -y --fix-missing build-essential git cmake qtbase5-dev qtbase5-private-dev qtchooser qt5-qmake qtbase5-dev-tools qttools5-dev-tools libqt5svg5-dev qtmultimedia5-dev libqt5charts5-dev qtpositioning5-dev qtconnectivity5-dev libqt5websockets5-dev libqt5texttospeech5-dev libqt5bluetooth5 libqt5networkauth5-dev qml-module-qtlocation qml-module-qtpositioning qtlocation5-dev libqt5quickcontrols2-5 qtquickcontrols2-5-dev qml-module-qtquick-controls2 qtbase5-dev libqt5sql5-sqlite libqt5sql5 libqt5sql5-mysql libqt5sql5-psql && break || sleep 5; done &&
+            printf 'deb http://deb.debian.org/debian bullseye main\n' > /etc/apt/sources.list &&
+            PKGS='build-essential git cmake qtbase5-dev qtbase5-private-dev qtchooser qt5-qmake qtbase5-dev-tools qttools5-dev-tools libqt5svg5-dev qtmultimedia5-dev libqt5charts5-dev qtpositioning5-dev qtconnectivity5-dev libqt5websockets5-dev libqt5texttospeech5-dev libqt5bluetooth5 libqt5networkauth5-dev qml-module-qtlocation qml-module-qtpositioning qtlocation5-dev libqt5quickcontrols2-5 qtquickcontrols2-5-dev qml-module-qtquick-controls2 qtbase5-dev libqt5sql5-sqlite libqt5sql5 libqt5sql5-mysql libqt5sql5-psql' &&
+            for i in 1 2 3; do apt-get update && apt-get install -y --fix-missing $PKGS && break; sleep 20; done &&
+            dpkg -s qtbase5-dev qtbase5-dev-tools > /dev/null &&
             export QT_SELECT=qt5 &&
             export PATH=/usr/lib/qt5/bin:$PATH &&
             cd /github/workspace &&
