@@ -1900,6 +1900,14 @@ jobs:
       # Bullseye is what these binaries are for. Moving off bullseye is a decision about which
       # Pi OS the fork supports, not a CI repair.
       #
+      # The image itself was built when bullseye-security still existed, so a few of its
+      # preinstalled packages sit at versions main never had - libudev1 is at 247.3-7+deb11u6
+      # where main offers u5. apt will not downgrade on its own, and libudev-dev depends on
+      # libudev1 by exact equality, so the whole install dies on one unmet dependency. Hence
+      # the explicit downgrade to whatever main's candidate is, computed rather than pinned so
+      # a bullseye point release does not turn into a second repair. If some other preinstalled
+      # package turns out to have the same problem, the dpkg assertion below names it.
+      #
       # When bullseye appears on archive.debian.org, point both suites there with
       # `Acquire::Check-Valid-Until "false"` and take the security patches back.
       - name: Build for Raspberry Pi 64-bit
@@ -1910,7 +1918,7 @@ jobs:
             set -ex &&
             printf 'deb http://deb.debian.org/debian bullseye main\n' > /etc/apt/sources.list &&
             PKGS='build-essential git cmake qtbase5-dev qtbase5-private-dev qtchooser qt5-qmake qtbase5-dev-tools qttools5-dev-tools libqt5svg5-dev qtmultimedia5-dev libqt5charts5-dev qtpositioning5-dev qtconnectivity5-dev libqt5websockets5-dev libqt5texttospeech5-dev libqt5bluetooth5 libqt5networkauth5-dev qml-module-qtlocation qml-module-qtpositioning qtlocation5-dev libqt5quickcontrols2-5 qtquickcontrols2-5-dev qml-module-qtquick-controls2 qtbase5-dev libqt5sql5-sqlite libqt5sql5 libqt5sql5-mysql libqt5sql5-psql' &&
-            for i in 1 2 3; do apt-get update && apt-get install -y --fix-missing $PKGS && break; sleep 20; done &&
+            for i in 1 2 3; do apt-get update && apt-get install -y --allow-downgrades libudev1=$(apt-cache policy libudev1 | awk '/Candidate:/{print $2}') libsystemd0=$(apt-cache policy libsystemd0 | awk '/Candidate:/{print $2}') && apt-get install -y --fix-missing $PKGS && break; sleep 20; done &&
             dpkg -s qtbase5-dev qtbase5-dev-tools > /dev/null &&
             export QT_SELECT=qt5 &&
             export PATH=/usr/lib/qt5/bin:$PATH &&
