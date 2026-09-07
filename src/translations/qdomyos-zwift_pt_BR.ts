@@ -151,12 +151,12 @@
     <message>
         <location filename="../ui/RideScreen.qml" line="38"/>
         <source>Searching for trainer</source>
-        <translation>Procurando o rolo</translation>
+        <translation>Procurando a bike</translation>
     </message>
     <message>
         <location filename="../ui/RideScreen.qml" line="39"/>
         <source>Trainer</source>
-        <translation>Rolo</translation>
+        <translation>Bike</translation>
     </message>
     <message>
         <location filename="../ui/RideScreen.qml" line="44"/>
@@ -336,7 +336,7 @@
     <message>
         <location filename="../ui/RideScreen.qml" line="305"/>
         <source>Needs the trainer</source>
-        <translation>Precisa do rolo</translation>
+        <translation>Precisa da bike</translation>
     </message>
 </context>
 <context>
@@ -540,7 +540,7 @@
     <message>
         <location filename="../ui/SettingsScreen.qml" line="260"/>
         <source>Trainer warnings always show while it is on.</source>
-        <translation>Avisos do rolo aparecem sempre que ela está ligada.</translation>
+        <translation>Avisos da bike aparecem sempre que ela está ligada.</translation>
     </message>
     <message>
         <location filename="../ui/SettingsScreen.qml" line="269"/>
@@ -634,7 +634,7 @@
     <message>
         <location filename="../ui/SetupScreen.qml" line="42"/>
         <source>Trainer</source>
-        <translation>Rolo</translation>
+        <translation>Bike</translation>
     </message>
     <message>
         <location filename="../ui/SetupScreen.qml" line="45"/>
