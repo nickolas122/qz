@@ -284,8 +284,12 @@ const QString QZSettings::osd_window = QStringLiteral("osd_window");
 const QString QZSettings::osd_window_locked = QStringLiteral("osd_window_locked");
 const QString QZSettings::osd_window_x = QStringLiteral("osd_window_x");
 const QString QZSettings::osd_window_y = QStringLiteral("osd_window_y");
+const QString QZSettings::gamepad_hid_map = QStringLiteral("gamepad_hid_map");
+const QString QZSettings::default_gamepad_hid_map = QStringLiteral("");
+const QString QZSettings::gamepad_hid_map_pad = QStringLiteral("gamepad_hid_map_pad");
+const QString QZSettings::default_gamepad_hid_map_pad = QStringLiteral("");
 
-const uint32_t allSettingsCount = 197;
+const uint32_t allSettingsCount = 199;
 
 QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::cryptoKeySettingsProfiles, QZSettings::default_cryptoKeySettingsProfiles},
@@ -502,6 +506,8 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::osd_window_locked, QZSettings::default_osd_window_locked},
     {QZSettings::osd_window_x, QZSettings::default_osd_window_x},
     {QZSettings::osd_window_y, QZSettings::default_osd_window_y},
+    {QZSettings::gamepad_hid_map, QZSettings::default_gamepad_hid_map},
+    {QZSettings::gamepad_hid_map_pad, QZSettings::default_gamepad_hid_map_pad},
 };
 
 void QZSettings::qDebugAllSettings(bool showDefaults) {

@@ -195,6 +195,34 @@ QStringList gamepadcontroller::pressedButtons() const {
     return out;
 }
 
+QStringList gamepadcontroller::pressedInputs() const {
+    QStringList out;
+    for (int b = 0; b < padraw::COUNT; b++) {
+        if (heldRaw & padraw::mask(b))
+            out.append(padraw::name(b));
+    }
+    return out;
+}
+
+bool gamepadcontroller::remappable() const {
+#ifdef Q_OS_WIN
+    // Only while HID is the backend answering. An Xbox pad in the other hand does not stop the
+    // 8BitDo needing a map, but renaming buttons QZ is not currently reading would be a screen
+    // that appears to do nothing.
+    return hidPad != nullptr && backendName == QStringLiteral("HID");
+#else
+    return false;
+#endif
+}
+
+quint64 gamepadcontroller::readRaw() const {
+#ifdef Q_OS_WIN
+    if (hidPad && backendName == QStringLiteral("HID"))
+        return hidPad->physical();
+#endif
+    return 0;
+}
+
 QString gamepadcontroller::actionFor(const QString &button) const {
     const QString name = button.trimmed().toLower();
     if (gearUpButtons().contains(name))
@@ -212,6 +240,10 @@ void gamepadcontroller::beginCapture(const QString &action) {
         return;
     }
     captureAction = action;
+    // One listener at a time - see beginRemap().
+    remapButton.clear();
+    remapBaseline = 0;
+    remapPending = 0;
     // Whatever is held right now does not count. A rider reaching for the screen with a
     // thumb resting on a trigger would otherwise bind that trigger the instant capture
     // opened, which is the one thing a capture UI must not do.
@@ -224,12 +256,113 @@ void gamepadcontroller::beginCapture(const QString &action) {
     emit statusChanged();
 }
 
+void gamepadcontroller::beginRemap(const QString &button) {
+    const QString name = button.trimmed().toLower();
+    if (buttonMask(name) == 0) {
+        qDebug() << QStringLiteral("gamepadcontroller: refusing to remap unknown button") << button;
+        return;
+    }
+    if (!remappable()) {
+        qDebug() << QStringLiteral("gamepadcontroller: nothing to remap, the backend names its own buttons");
+        return;
+    }
+    // One listener at a time, or a single press would both bind an action and rename a button.
+    cancelCapture();
+    remapButton = name;
+    remapBaseline = heldRaw;
+    remapPending = 0;
+    timer.setInterval(POLL_INTERVAL_MS);
+#ifdef Q_OS_WIN
+    // The report bytes are what identify a control QZ has no name for. Worth the log lines for
+    // the few seconds a rider is asking the question, and not for a second longer.
+    if (hidPad)
+        hidPad->setVerbose(true);
+#endif
+    qDebug() << QStringLiteral("gamepadcontroller: listening for the input that means") << name;
+    emit statusChanged();
+}
+
+void gamepadcontroller::resetMap() {
+#ifdef Q_OS_WIN
+    if (hidPad)
+        hidPad->resetMap();
+#endif
+    QSettings settings;
+    settings.setValue(QZSettings::gamepad_hid_map, QZSettings::default_gamepad_hid_map);
+    settings.setValue(QZSettings::gamepad_hid_map_pad, QZSettings::default_gamepad_hid_map_pad);
+    qDebug() << QStringLiteral("gamepadcontroller: button map cleared, back to the positional guess");
+    emit statusChanged();
+}
+
 void gamepadcontroller::cancelCapture() {
-    if (captureAction.isEmpty())
+    if (captureAction.isEmpty() && remapButton.isEmpty())
         return;
     captureAction.clear();
     captureBaseline = 0;
     capturePending = 0;
+    remapButton.clear();
+    remapBaseline = 0;
+    remapPending = 0;
+#ifdef Q_OS_WIN
+    if (hidPad)
+        hidPad->setVerbose(false);
+#endif
+    emit statusChanged();
+}
+
+void gamepadcontroller::pollRemap(quint64 raw) {
+    // Same three rules as pollCapture, on the un-named layer: what was already held does not
+    // count, the first fresh input is the candidate, and nothing commits until it comes back up.
+    remapBaseline &= raw;
+
+    const quint64 fresh = raw & ~remapBaseline;
+
+    if (remapPending == 0) {
+        for (int b = 0; b < padraw::COUNT; b++) {
+            if (fresh & padraw::mask(b)) {
+                remapPending = padraw::mask(b);
+                emit statusChanged();
+                break;
+            }
+        }
+        return;
+    }
+
+    if (raw & remapPending) {
+        return;
+    }
+
+    int bit = -1;
+    for (int b = 0; b < padraw::COUNT; b++) {
+        if (remapPending == padraw::mask(b)) {
+            bit = b;
+            break;
+        }
+    }
+
+    const QString name = remapButton;
+    remapButton.clear();
+    remapBaseline = 0;
+    remapPending = 0;
+
+#ifdef Q_OS_WIN
+    if (hidPad) {
+        hidPad->setVerbose(false);
+    }
+    if (bit >= 0 && hidPad) {
+        hidPad->remap(bit, buttonMask(name));
+        QSettings settings;
+        // The pad's own name goes with the map, because button 11 means something else on the
+        // next pad and a map that names the wrong buttons is worse than no map.
+        settings.setValue(QZSettings::gamepad_hid_map, hidPad->mapSpec());
+        settings.setValue(QZSettings::gamepad_hid_map_pad, hidPad->name());
+        qDebug() << QStringLiteral("gamepadcontroller:") << padraw::name(bit) << QStringLiteral("on")
+                 << hidPad->name() << QStringLiteral("is now") << name;
+    }
+#else
+    Q_UNUSED(bit)
+#endif
+
     emit statusChanged();
 }
 
@@ -345,6 +478,16 @@ void gamepadcontroller::refreshSettings() {
     gearUpAction.repeats = true;
     gearDownAction.repeats = true;
     ergAction.repeats = false;
+
+#ifdef Q_OS_WIN
+    // Cheap and idempotent: gamepadhid ignores a map it already has, so this can ride the ordinary
+    // settings refresh rather than needing a signal of its own.
+    if (hidPad) {
+        hidPad->setMap(
+            settings.value(QZSettings::gamepad_hid_map, QZSettings::default_gamepad_hid_map).toString(),
+            settings.value(QZSettings::gamepad_hid_map_pad, QZSettings::default_gamepad_hid_map_pad).toString());
+    }
+#endif
 
     repeatDelayMs =
         settings.value(QZSettings::gamepad_repeat_delay, QZSettings::default_gamepad_repeat_delay).toInt();
@@ -497,16 +640,18 @@ void gamepadcontroller::poll() {
 
     // The mapping screen has to work with shifting switched off - that is the state a
     // rider is in while setting the pad up for the first time - so capture keeps the
-    // poll running and at full rate.
+    // poll running and at full rate. Naming a button counts as capture for the same reason.
     const bool capturing = !captureAction.isEmpty();
+    const bool remapping = !remapButton.isEmpty();
 
-    if (!enabled && !capturing) {
+    if (!enabled && !capturing && !remapping) {
         if (timer.interval() != IDLE_INTERVAL_MS) {
             timer.setInterval(IDLE_INTERVAL_MS);
         }
-        if (padPresent || heldButtons) {
+        if (padPresent || heldButtons || heldRaw) {
             padPresent = false;
             heldButtons = 0;
+            heldRaw = 0;
             emit statusChanged();
         }
         return;
@@ -518,18 +663,30 @@ void gamepadcontroller::poll() {
     quint32 buttons = 0;
     if (!readPad(&buttons)) {
         releaseAll();
-        if (padPresent || heldButtons) {
+        if (padPresent || heldButtons || heldRaw) {
             padPresent = false;
             heldButtons = 0;
+            heldRaw = 0;
             emit statusChanged();
         }
         return;
     }
 
-    if (!padPresent || heldButtons != buttons) {
+    // readPad() has just settled which backend answered, so the un-named layer is readable now.
+    const quint64 raw = readRaw();
+
+    if (!padPresent || heldButtons != buttons || heldRaw != raw) {
         padPresent = true;
         heldButtons = buttons;
+        heldRaw = raw;
         emit statusChanged();
+    }
+
+    if (remapping) {
+        // Naming a button is checked before binding one, and both before any action fires: the
+        // press that renames RT must not also shift.
+        pollRemap(raw);
+        return;
     }
 
     if (capturing) {

@@ -15,6 +15,16 @@ Rectangle {
     readonly property real unit: window.unit
     readonly property var theme: window.theme
     readonly property string capturing: gamepad.capturing
+    readonly property string remapping: gamepad.remapping
+    /**
+     * Whether the drawn pad is a control rather than a readout.
+     *
+     * Two different questions get asked with the same gesture on this screen, and they must not
+     * be asked at once: "which button drives shifting" (the + chips, below) and "which thing on
+     * your pad is this button" (this mode). A rider who has to think about which one a press
+     * will answer has been given a worse screen than the hand-edited setting.
+     */
+    property bool layoutMode: false
 
     color: theme.ground
 
@@ -76,6 +86,7 @@ Rectangle {
                     anchors.margins: -unit
                     onClicked: {
                         gamepad.cancelCapture()
+                        screen.layoutMode = false
                         window.gamepadOpen = false
                     }
                 }
@@ -119,12 +130,17 @@ Rectangle {
                 // -- pad status ----------------------------------------------
                 StatusChip {
                     Layout.fillWidth: true
+
+                    readonly property bool listening: screen.capturing.length > 0 || screen.remapping.length > 0
+
                     state: !gamepad.available ? "idle"
-                                              : (screen.capturing.length > 0 ? "connecting"
-                                                                             : (gamepad.padConnected ? "live" : "idle"))
+                                              : (listening ? "connecting"
+                                                           : (gamepad.padConnected ? "live" : "idle"))
                     headline: {
                         if (!gamepad.available)
                             return qsTr("Gamepad not supported here")
+                        if (screen.remapping.length > 0)
+                            return qsTr("Press the button your pad calls %1").arg(screen.remapping.toUpperCase())
                         if (screen.capturing.length > 0)
                             return qsTr("Press a button for %1").arg(screen.actionLabel(screen.capturing))
                         return gamepad.padConnected ? qsTr("Controller connected")
@@ -133,6 +149,13 @@ Rectangle {
                     detail: {
                         if (!gamepad.available)
                             return qsTr("No gamepad backend on this platform")
+                        if (screen.remapping.length > 0) {
+                            // What the pad actually sent, whether or not it has a name yet. On a
+                            // press QZ has no name for, this line is the only proof it arrived.
+                            return gamepad.pressedInputs.length > 0
+                                   ? qsTr("Got %1 · release to name it").arg(gamepad.pressedInputs.join(", "))
+                                   : qsTr("Listening · press it on the pad")
+                        }
                         if (screen.capturing.length > 0)
                             return qsTr("Listening · release to bind")
                         if (!gamepad.padConnected)
@@ -143,8 +166,8 @@ Rectangle {
                             return qsTr("XInput slot %1").arg(gamepad.padSlot + 1)
                         return gamepad.padName.length > 0 ? gamepad.padName : gamepad.backend
                     }
-                    progress: screen.capturing.length > 0 ? 1 : -1
-                    action: screen.capturing.length > 0 ? qsTr("Cancel") : ""
+                    progress: listening ? 1 : -1
+                    action: listening ? qsTr("Cancel") : ""
                     onActionClicked: gamepad.cancelCapture()
                 }
 
@@ -153,8 +176,11 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: padDiagram.height + unit * 2
                     visible: gamepad.available
-                    color: screen.capturing.length > 0 ? theme.workLo : theme.surface
-                    border.color: screen.capturing.length > 0 ? theme.work : theme.line
+
+                    readonly property bool listening: screen.capturing.length > 0 || screen.remapping.length > 0
+
+                    color: listening ? theme.workLo : theme.surface
+                    border.color: listening ? theme.work : theme.line
                     border.width: 1
                     radius: theme.radius
 
@@ -166,6 +192,9 @@ Rectangle {
                                       .concat(gamepad.gearDownButtons)
                                       .concat(gamepad.ergButtons)
                         pressedButtons: gamepad.pressedButtons
+                        selectable: screen.layoutMode && gamepad.remappable
+                        highlight: screen.remapping
+                        onButtonClicked: function(name) { gamepad.beginRemap(name) }
                     }
                 }
 
@@ -188,6 +217,68 @@ Rectangle {
                         font.family: theme.fontUi
                         font.pixelSize: unit * 1.08
                         color: theme.muted
+                    }
+                }
+
+                // -- pad layout ------------------------------------------------
+                // Only for HID pads: XInput and Android are told what a pad calls its buttons,
+                // so there is nothing there for a rider to correct. See gamepadcontroller's
+                // remappable().
+                SettingsGroup {
+                    title: qsTr("Pad layout")
+                    visible: gamepad.remappable
+                }
+
+                SettingsSwitch {
+                    visible: gamepad.remappable
+                    label: qsTr("Rename the buttons")
+                    note: qsTr("Tap one on the drawing, then press it on your pad")
+                    checked: screen.layoutMode
+                    onToggled: {
+                        screen.layoutMode = checked
+                        // Leaving the mode has to take the half-finished question with it, or
+                        // the next press would answer a question the rider can no longer see.
+                        if (!checked)
+                            gamepad.cancelCapture()
+                    }
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    visible: gamepad.remappable && screen.layoutMode
+                    wrapMode: Text.WordWrap
+                    font.family: theme.fontUi
+                    font.pixelSize: unit
+                    color: theme.dim
+                    text: qsTr("This pad reports numbered buttons rather than names, so QZ starts "
+                               + "from a guess. Where the guess is wrong, tap the button on the "
+                               + "drawing and press the one you meant. Naming a button takes it "
+                               + "away from wherever it was.")
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: theme.minTouch
+                    visible: gamepad.remappable && screen.layoutMode
+                    color: "transparent"
+                    border.color: theme.line
+                    border.width: 1
+                    radius: theme.radius
+
+                    Label {
+                        anchors.centerIn: parent
+                        text: qsTr("Back to the guess")
+                        font.family: theme.fontUi
+                        font.pixelSize: unit
+                        color: theme.muted
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            gamepad.cancelCapture()
+                            gamepad.resetMap()
+                        }
                     }
                 }
 
@@ -341,10 +432,11 @@ Rectangle {
                                  + "from the pad works while QZ is in front - not while the training "
                                  + "app is.")
                           : qsTr("Xbox pads are read through XInput, wired or Bluetooth, as is any "
-                                 + "pad in X-input mode. A pad with no X-input mode - an 8BitDo in "
-                                 + "D-input, a DualSense, a Switch Pro - is read as a plain HID pad "
-                                 + "instead, and its buttons are named in the order it reports them, "
-                                 + "so press the one you want rather than trusting the label.")
+                                 + "pad in X-input mode, and their buttons carry their own names. A "
+                                 + "pad with no X-input mode - an 8BitDo in D-input, a DualSense, a "
+                                 + "Switch Pro - is read as a plain HID pad instead, which reports "
+                                 + "numbers rather than names. QZ guesses; Pad layout above is where "
+                                 + "you correct it.")
                 }
             }
         }

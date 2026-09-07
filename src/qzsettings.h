@@ -931,6 +931,28 @@ class QZSettings {
     static constexpr int default_osd_window_y = -1;
 
     /**
+     *@brief gamepad_hid_map Which physical input on a HID pad is which button, as
+     *"b1=a,b2=b,hat_up=dpad_up". Only the HID backend needs one: XInput and Android both name a
+     *pad's buttons themselves, while a HID report carries numbers, so QZ has to guess - button 1
+     *is "a", button 2 is "b", and so on down the list. The guess is right for a lot of pads and
+     *wrong for others: an 8BitDo Micro puts its d-pad on numbered buttons past the twelve the
+     *guess had names for, which is how three of its four directions used to vanish and the
+     *fourth arrive as L3. Empty means "use the guess"; anything else is the whole map, so a
+     *button not listed here has no name on this pad. Written by the pad screen, never by hand.
+     */
+    static const QString gamepad_hid_map;
+    static const QString default_gamepad_hid_map;
+
+    /**
+     *@brief gamepad_hid_map_pad The product name of the pad gamepad_hid_map was captured on.
+     *Button numbers mean different things on different pads, so a map from another one is worse
+     *than no map at all: it would name the buttons confidently and wrongly. A pad whose name
+     *does not match this falls back to the guess, and remapping it replaces both settings.
+     */
+    static const QString gamepad_hid_map_pad;
+    static const QString default_gamepad_hid_map_pad;
+
+    /**
      * @brief Write the QSettings values using the constants from this namespace.
      * @param showDefaults Optionally indicates if the default should be shown with the key.
      */

@@ -244,16 +244,65 @@ pad sitting still. Reports are decoded with the HID parser rather than by hand, 
 its buttons out differently still comes out right. `hid.dll` is resolved at runtime for the same
 reason `xinput1_4.dll` is: a missing DLL should cost a log line, not a startup dialog.
 
-Two honest limits, both stated in the screen rather than papered over:
+One honest limit, stated in the screen rather than papered over: **Android gives input to the
+app on screen.** On Windows the pad is read from the device, which is the whole point: shifting
+works while the training app owns the screen. Android has no such route, so shifting from the pad
+works while QZ is in front and not while the training app is. The footer says so on Android and
+nowhere else.
 
-- **HID button names are positional.** HID reports carry numbers, not labels, and no two pads
-  number them the same way, so button 1 becomes `a`, button 2 `b`, and so on. It does not matter in
-  practice because the screen binds by pressing — but the footer says to press the button you want
-  rather than trust the label, instead of implying the diagram is the rider's pad.
-- **Android gives input to the app on screen.** On Windows the pad is read from the device, which is
-  the whole point: shifting works while the training app owns the screen. Android has no such route,
-  so shifting from the pad works while QZ is in front and not while the training app is. The footer
-  says so on Android and nowhere else.
+### 5.1.1 Naming what a HID pad sends (added 2026-09-07)
+
+A HID report carries numbers, not labels, and no two pads number them the same way. The first
+version answered that by mapping positionally — button 1 is `a`, button 2 is `b` — and calling it
+good enough because the screen binds by pressing. An 8BitDo Micro showed that it is not good
+enough, in two ways at once:
+
+- Its d-pad presses **never arrived at all**, and an input that does not arrive cannot be
+  rebound by pressing it. `decode()` kept twelve numbered buttons, because twelve is how many
+  names the table had before the d-pad, and dropped everything above.
+- The Micro **declares a hat switch and never moves it** — it sits at its null value 8 forever.
+  The d-pad is on the X and Y **axes**: 0, 127 and 255. A backend that reads buttons and hats
+  reads neither of the two things this pad actually uses for its d-pad.
+
+The fix separates two vocabularies that were being conflated. `padbuttons` is the vocabulary of
+**labels** — what a setting holds, what `PadDiagram` draws. `padraw` is the vocabulary of
+**sources** — one bit per thing a pad can physically send, named nothing: 32 numbered buttons,
+four hat directions, and each of six analog axes twice, once per end of travel. Sixty-four bits,
+because the axes did not fit in thirty-two, and a source that does not fit is a control the rider
+cannot reach.
+
+A map joins them. Its default is a guess — positional for the buttons, and the d-pad guessed
+*twice over*, from the hat **and** from X/Y, since only one of the two ever moves on any given pad
+and there is no way to tell which from the descriptor. That duplicate is what makes the Micro work
+with nothing configured. Where the guess is wrong the rider replaces it: **tap the button on the
+drawing, then press the one you meant.** The two directions are worth keeping straight — the `+`
+chips ask "which button drives this action", the pad layout asks "which thing on your pad is this
+button" — and the screen refuses to ask both at once for exactly that reason.
+
+Three things learned the hard way, all of them now comments in `gamepadhid.cpp`:
+
+- **Do not `break` out of the value-caps loop at the hat.** On the Micro the hat is the *first*
+  capability listed, so stopping there is what hid the X and Y axes underneath it. The bug that
+  hid the bug.
+- **Do not learn an axis's resting value from its first report.** A Bluetooth pad's first input
+  report after connecting is often all zeroes, so an 0..255 axis learned `0` as its centre — and
+  a d-pad pushed fully left then read as no movement at all. The trip points come from the
+  declared logical range, which is not guessing. The price is an analog trigger, which rests at
+  its minimum and so reads as held; nothing acts on it, because the default map names only X and
+  Y and an unnamed source drives nothing.
+- **The saved map is the whole truth, not a patch.** Moving a name onto another source also says
+  the old source no longer carries it, and a patch could not say that without a way to spell "this
+  one has no name". The price is that a saved map does not learn: widening the guess later reaches
+  new pads only. That price was paid once already, the day the axes were added. "Back to the
+  guess" is the fix, and the rider has a button for it.
+
+The map is saved with the pad's product name beside it (`gamepad_hid_map`, `gamepad_hid_map_pad`).
+Button 11 means something else on the next pad, so a map from another one is worse than no map: it
+would name the buttons confidently and wrongly.
+
+While the rider is naming a button — and not one second longer — `gamepadhid` logs every input
+report and every axis value. That log is what identified the Micro's d-pad, and it is worth having
+at exactly the moment someone is asking QZ what it can see.
 
 ### 5.2 The volume keys, which is how Android shifts under the training app
 

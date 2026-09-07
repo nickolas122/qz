@@ -1,6 +1,7 @@
 #ifndef GAMEPADBUTTONS_H
 #define GAMEPADBUTTONS_H
 
+#include <QString>
 #include <QtGlobal>
 
 /**
@@ -78,5 +79,106 @@ constexpr int COUNT = int(sizeof(TABLE) / sizeof(TABLE[0]));
 constexpr int FACE_COUNT = COUNT - 4;
 
 } // namespace padbuttons
+
+/**
+ * @brief What a pad physically sent, before anything claims to know what it is called.
+ *
+ * A HID report carries numbers, not labels: button 11 is button 11, and only the rider knows
+ * whether it is under their left thumb or on the back of the pad. padbuttons is the vocabulary
+ * of *labels*; this is the vocabulary of *sources*, and the map between them is what the pad
+ * screen captures.
+ *
+ * Three kinds of source, because a pad will use any of them for the same physical control and
+ * an 8BitDo Micro proves it: it declares a hat switch, parks that hat at its null value forever,
+ * and reports its d-pad on the X and Y *axes* instead - 0, 127 and 255. A backend that reads
+ * only buttons and hats does not merely mislabel those presses, it never sees them, which is
+ * why an axis is a source here rather than a stick position.
+ *
+ * One bit per source in a quint64: 32 numbered buttons, the four hat directions, then each
+ * analog axis twice, once for each end of its travel. Sixty-four rather than the old
+ * thirty-two because the axes did not fit, and a source that does not fit is a control the
+ * rider cannot reach.
+ */
+namespace padraw {
+
+constexpr int BUTTON_COUNT = 32;
+
+constexpr int HAT_UP = 32;
+constexpr int HAT_DOWN = 33;
+constexpr int HAT_LEFT = 34;
+constexpr int HAT_RIGHT = 35;
+
+/** X, Y, Z, Rx, Ry, Rz - the HID generic-desktop axes a gamepad actually uses. */
+constexpr int AXIS_COUNT = 6;
+/** The first axis bit. Each axis owns two: the low end of its travel, then the high end. */
+constexpr int AXIS_BASE = 36;
+
+constexpr int COUNT = AXIS_BASE + AXIS_COUNT * 2;
+
+/** @brief HID usages for the axes above, in the same order. Generic-desktop page throughout. */
+inline quint16 axisUsage(int axis) {
+    return quint16(0x30 + axis); // 0x30 X, 0x31 Y, 0x32 Z, 0x33 Rx, 0x34 Ry, 0x35 Rz
+}
+
+inline QString axisName(int axis) {
+    switch (axis) {
+    case 0:
+        return QStringLiteral("x");
+    case 1:
+        return QStringLiteral("y");
+    case 2:
+        return QStringLiteral("z");
+    case 3:
+        return QStringLiteral("rx");
+    case 4:
+        return QStringLiteral("ry");
+    default:
+        return QStringLiteral("rz");
+    }
+}
+
+/** @brief The token one source is written as in the saved map: "b13", "hat_left", "x_lo". */
+inline QString name(int bit) {
+    if (bit >= 0 && bit < BUTTON_COUNT) {
+        return QStringLiteral("b%1").arg(bit + 1); // HID numbers its buttons from 1
+    }
+    switch (bit) {
+    case HAT_UP:
+        return QStringLiteral("hat_up");
+    case HAT_DOWN:
+        return QStringLiteral("hat_down");
+    case HAT_LEFT:
+        return QStringLiteral("hat_left");
+    case HAT_RIGHT:
+        return QStringLiteral("hat_right");
+    default:
+        break;
+    }
+    if (bit >= AXIS_BASE && bit < COUNT) {
+        const int axis = (bit - AXIS_BASE) / 2;
+        const bool high = ((bit - AXIS_BASE) % 2) != 0;
+        return axisName(axis) + (high ? QStringLiteral("_hi") : QStringLiteral("_lo"));
+    }
+    return QString();
+}
+
+/** @brief The bit for one end of one axis. Low is left and up; high is right and down. */
+inline int axisBit(int axis, bool high) { return AXIS_BASE + axis * 2 + (high ? 1 : 0); }
+
+/** @brief The reverse of name(), or -1 for a token this build does not know. */
+inline int bit(const QString &token) {
+    // Forty-eight comparisons, run when a map is loaded or a button is bound - never in a poll.
+    for (int i = 0; i < COUNT; i++) {
+        if (name(i) == token) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+/** @brief One source as a mask, spelled once so nothing has to remember the width. */
+inline quint64 mask(int bit) { return Q_UINT64_C(1) << bit; }
+
+} // namespace padraw
 
 #endif // GAMEPADBUTTONS_H

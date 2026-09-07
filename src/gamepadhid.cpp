@@ -6,6 +6,7 @@
 
 #include <QByteArray>
 #include <QDebug>
+#include <QStringList>
 #include <QVector>
 
 #include <windows.h>
@@ -42,16 +43,40 @@ constexpr USAGE USAGE_JOYSTICK = 0x04;
 constexpr USAGE USAGE_GAMEPAD = 0x05;
 constexpr USAGE USAGE_HAT = 0x39;
 
+// The hat's four directions as padraw sources, not as d-pad names: what a hat is called is the
+// map's business, and on a pad whose d-pad is on numbered buttons the hat may be something else
+// entirely.
+const quint64 RAW_HAT_UP = padraw::mask(padraw::HAT_UP);
+const quint64 RAW_HAT_DOWN = padraw::mask(padraw::HAT_DOWN);
+const quint64 RAW_HAT_LEFT = padraw::mask(padraw::HAT_LEFT);
+const quint64 RAW_HAT_RIGHT = padraw::mask(padraw::HAT_RIGHT);
+
+// How far an axis has to leave the middle of its declared range before it counts as pressed, as a
+// fraction of that range. A d-pad on an axis goes all the way to an end stop, so this only decides
+// how hard a *stick* has to be pushed - and a shift paddle that fires on a nudge would be worse
+// than one that needs a shove.
+//
+// Measured from the declared midpoint rather than from an observed resting value, which is what
+// this did first and got wrong: a Bluetooth pad's first input report after connecting is often all
+// zeroes, so "wherever it sat on the first report" learned 0 as the centre of an 0..255 axis, and
+// a d-pad pushed fully left then read as no movement at all. The descriptor is not guessing.
+//
+// The cost is an analog trigger, which rests at its minimum rather than its middle, and so reads
+// as held towards the low end whenever it is not pulled. Nothing acts on that - the default map
+// names only X and Y, and an unnamed source drives nothing - so it is a stray line in the pad
+// screen's readout rather than a stuck shift.
+constexpr double AXIS_THRESHOLD = 0.3;
+
 // An eight-position hat, in the order HID numbers them: north, then clockwise.
-const quint32 HAT8[8] = {
-    padbuttons::DPAD_UP,
-    padbuttons::DPAD_UP | padbuttons::DPAD_RIGHT,
-    padbuttons::DPAD_RIGHT,
-    padbuttons::DPAD_DOWN | padbuttons::DPAD_RIGHT,
-    padbuttons::DPAD_DOWN,
-    padbuttons::DPAD_DOWN | padbuttons::DPAD_LEFT,
-    padbuttons::DPAD_LEFT,
-    padbuttons::DPAD_UP | padbuttons::DPAD_LEFT,
+const quint64 HAT8[8] = {
+    RAW_HAT_UP,
+    RAW_HAT_UP | RAW_HAT_RIGHT,
+    RAW_HAT_RIGHT,
+    RAW_HAT_DOWN | RAW_HAT_RIGHT,
+    RAW_HAT_DOWN,
+    RAW_HAT_DOWN | RAW_HAT_LEFT,
+    RAW_HAT_LEFT,
+    RAW_HAT_UP | RAW_HAT_LEFT,
 };
 
 /**
@@ -144,6 +169,20 @@ struct gamepadhid::device {
     bool hasHat = false;
     LONG hatMin = 0;
     LONG hatMax = 7;
+
+    /** One generic-desktop axis the pad declares, in padraw's axis order. */
+    struct axis {
+        bool present = false;
+        LONG min = 0;
+        LONG max = 255;
+        /** The two trip points, worked out once from the declared range. See AXIS_THRESHOLD. */
+        LONG low = 0;
+        LONG high = 0;
+    };
+    axis axes[padraw::AXIS_COUNT];
+
+    /** The last report seen, so the verbose log fires on change rather than at 20 Hz. */
+    QByteArray lastReport;
 #endif
 };
 
@@ -151,12 +190,167 @@ gamepadhid::gamepadhid() {
 #ifdef QZ_HAS_HID
     hidAvailable = resolveHid() != nullptr;
 #endif
+    // The guess, until the controller hands over a saved map. Without this every input would be
+    // nameless on the first poll, which is a worse first run than the wrong label it replaced.
+    rebuildMap();
     if (!hidAvailable) {
         qDebug() << QStringLiteral("gamepadhid: no HID parser available, HID pads are off");
     }
 }
 
 gamepadhid::~gamepadhid() { close(); }
+
+// Bits are quint64 from here down: see padraw. The named side stays quint32 - padbuttons has not
+// grown, and it is not the layer that has to describe whatever a pad happens to be built from.
+
+namespace {
+
+/**
+ * @brief The guess, for one physical source.
+ *
+ * Positional for the buttons, because there is nothing else to go on: a HID report says
+ * "button 11", never "the left shoulder". It is right on the many pads that number their buttons
+ * the way an Xbox pad lays them out, and wrong on the rest - which is what the map is for.
+ *
+ * The d-pad is guessed twice over, from the hat *and* from the X and Y axes, because a pad uses
+ * one or the other and there is no way to tell which from the descriptor alone - the Micro
+ * declares a hat it never moves. Two sources for one name is harmless: only one of them ever
+ * moves, they cannot disagree, and the first rename resolves the duplicate anyway. The cost of
+ * guessing only one would be a d-pad that does nothing until the rider finds this screen.
+ */
+quint32 guessedMask(int bit) {
+    if (bit >= 0 && bit < padbuttons::FACE_COUNT) {
+        return padbuttons::TABLE[bit].mask;
+    }
+    switch (bit) {
+    case padraw::HAT_UP:
+        return padbuttons::DPAD_UP;
+    case padraw::HAT_DOWN:
+        return padbuttons::DPAD_DOWN;
+    case padraw::HAT_LEFT:
+        return padbuttons::DPAD_LEFT;
+    case padraw::HAT_RIGHT:
+        return padbuttons::DPAD_RIGHT;
+    default:
+        break;
+    }
+    // X is left and right, Y is up and down; low is left and up, the way HID orients a screen.
+    if (bit == padraw::axisBit(0, false))
+        return padbuttons::DPAD_LEFT;
+    if (bit == padraw::axisBit(0, true))
+        return padbuttons::DPAD_RIGHT;
+    if (bit == padraw::axisBit(1, false))
+        return padbuttons::DPAD_UP;
+    if (bit == padraw::axisBit(1, true))
+        return padbuttons::DPAD_DOWN;
+    return 0;
+}
+
+/** @brief One padbuttons name to its mask, or 0. */
+quint32 maskForName(const QString &name) {
+    for (const padbuttons::named &b : padbuttons::TABLE) {
+        if (name == QLatin1String(b.name)) {
+            return b.mask;
+        }
+    }
+    return 0;
+}
+
+} // namespace
+
+void gamepadhid::rebuildMap() {
+    for (int i = 0; i < padraw::COUNT; i++) {
+        map[i] = guessedMask(i);
+    }
+
+    if (savedSpec.isEmpty()) {
+        return;
+    }
+    // A map made on another pad is worse than no map: button 11 means something else there, so it
+    // would name this pad's buttons confidently and wrongly. padName is empty until a pad opens,
+    // and this runs again from open() once it is known.
+    if (!savedPad.isEmpty() && !padName.isEmpty() && savedPad.compare(padName, Qt::CaseInsensitive) != 0) {
+        qDebug() << QStringLiteral("gamepadhid: ignoring the button map, it was captured on") << savedPad;
+        return;
+    }
+
+    // The saved map is the whole truth rather than a patch over the guess. A rider who moves a
+    // name onto another source has also said the old source no longer carries it, and a patch
+    // that only listed differences could not say that without a way to spell "this one has no
+    // name" - which is more format than the problem is worth.
+    //
+    // The price is that a saved map does not learn: widening the guess later reaches new pads
+    // only. That price was paid once already, when the axes were added and an existing map kept
+    // a d-pad that could not move. If the guess changes again, "Back to the guess" is the fix,
+    // and this is the comment that says so.
+    for (int i = 0; i < padraw::COUNT; i++) {
+        map[i] = 0;
+    }
+    const QStringList entries = savedSpec.split(QStringLiteral(","), Qt::SkipEmptyParts);
+    for (const QString &entry : entries) {
+        const int split = entry.indexOf(QLatin1Char('='));
+        if (split <= 0) {
+            continue;
+        }
+        const int bit = padraw::bit(entry.left(split).trimmed().toLower());
+        const quint32 mask = maskForName(entry.mid(split + 1).trimmed().toLower());
+        if (bit >= 0 && mask != 0) {
+            map[bit] = mask;
+        }
+    }
+}
+
+void gamepadhid::setMap(const QString &spec, const QString &forPad) {
+    if (savedSpec == spec && savedPad == forPad) {
+        return; // called off the settings refresh every couple of seconds
+    }
+    savedSpec = spec;
+    savedPad = forPad;
+    rebuildMap();
+}
+
+QString gamepadhid::mapSpec() const {
+    QStringList parts;
+    for (int i = 0; i < padraw::COUNT; i++) {
+        if (map[i] == 0) {
+            continue;
+        }
+        for (const padbuttons::named &b : padbuttons::TABLE) {
+            if (b.mask == map[i]) {
+                parts.append(padraw::name(i) + QStringLiteral("=") + QLatin1String(b.name));
+                break;
+            }
+        }
+    }
+    return parts.join(QStringLiteral(","));
+}
+
+void gamepadhid::remap(int rawBit, quint32 buttonMask) {
+    if (rawBit < 0 || rawBit >= padraw::COUNT) {
+        return;
+    }
+    if (buttonMask != 0) {
+        // One name, one source. Leaving the old source in place would fire the action twice, once
+        // from the button the rider meant and once from whatever the guess had put there - and on
+        // a pad where the guess named both the hat and an axis, twice over.
+        for (int i = 0; i < padraw::COUNT; i++) {
+            if (map[i] == buttonMask) {
+                map[i] = 0;
+            }
+        }
+    }
+    map[rawBit] = buttonMask;
+    // savedSpec is what rebuildMap() would restore, so it has to follow the edit or the next
+    // settings refresh would undo it.
+    savedSpec = mapSpec();
+    savedPad = padName;
+}
+
+void gamepadhid::resetMap() {
+    savedSpec.clear();
+    savedPad.clear();
+    rebuildMap();
+}
 
 #ifdef QZ_HAS_HID
 
@@ -179,6 +373,7 @@ void gamepadhid::close() {
     }
     padName.clear();
     state = 0;
+    physicalState = 0;
 }
 
 bool gamepadhid::open() {
@@ -280,15 +475,31 @@ bool gamepadhid::open() {
                     if (v.UsagePage != PAGE_GENERIC) {
                         continue;
                     }
-                    const bool isHat = v.IsRange ? (v.Range.UsageMin <= USAGE_HAT && USAGE_HAT <= v.Range.UsageMax)
-                                                 : (v.NotRange.Usage == USAGE_HAT);
-                    if (!isHat) {
-                        continue;
+                    const USAGE first = v.IsRange ? v.Range.UsageMin : v.NotRange.Usage;
+                    const USAGE last = v.IsRange ? v.Range.UsageMax : v.NotRange.Usage;
+
+                    if (first <= USAGE_HAT && USAGE_HAT <= last) {
+                        opened->hasHat = true;
+                        opened->hatMin = v.LogicalMin;
+                        opened->hatMax = v.LogicalMax;
                     }
-                    opened->hasHat = true;
-                    opened->hatMin = v.LogicalMin;
-                    opened->hatMax = v.LogicalMax;
-                    break;
+                    // A ranged cap covers several usages at once, so every axis in the range is
+                    // claimed rather than only the first - which is also why this no longer stops
+                    // at the hat: on the Micro the hat is the first cap listed, and breaking there
+                    // is what hid the X and Y axes the d-pad actually lives on.
+                    for (int a = 0; a < padraw::AXIS_COUNT; a++) {
+                        const USAGE usage = padraw::axisUsage(a);
+                        if (usage < first || usage > last) {
+                            continue;
+                        }
+                        opened->axes[a].present = true;
+                        opened->axes[a].min = v.LogicalMin;
+                        opened->axes[a].max = v.LogicalMax;
+                        const double middle = (double(v.LogicalMin) + double(v.LogicalMax)) / 2.0;
+                        const double reach = (double(v.LogicalMax) - double(v.LogicalMin)) * AXIS_THRESHOLD;
+                        opened->axes[a].low = LONG(middle - reach);
+                        opened->axes[a].high = LONG(middle + reach);
+                    }
                 }
             }
         }
@@ -306,8 +517,25 @@ bool gamepadhid::open() {
         dev = opened;
         padName = name;
         state = 0;
+        physicalState = 0;
+        // The pad's name is only known now, and it decides whether the saved map is this pad's.
+        rebuildMap();
+        QStringList found;
+        for (int a = 0; a < padraw::AXIS_COUNT; a++) {
+            if (opened->axes[a].present) {
+                // The trip points are logged rather than only the range: a d-pad that reads as
+                // motionless is almost always one whose travel does not cross them.
+                found.append(QStringLiteral("%1 %2..%3 trips %4/%5")
+                                 .arg(padraw::axisName(a))
+                                 .arg(opened->axes[a].min)
+                                 .arg(opened->axes[a].max)
+                                 .arg(opened->axes[a].low)
+                                 .arg(opened->axes[a].high));
+            }
+        }
         qDebug() << QStringLiteral("gamepadhid: opened") << padName << QStringLiteral("buttons up to")
-                 << opened->usages.size() << QStringLiteral("hat") << opened->hasHat;
+                 << opened->usages.size() << QStringLiteral("hat") << opened->hasHat << QStringLiteral("axes")
+                 << (found.isEmpty() ? QStringLiteral("none") : found.join(QStringLiteral(", ")));
 
         if (!armRead()) {
             close();
@@ -344,7 +572,10 @@ bool gamepadhid::decode(const char *report, int length, quint32 *buttons) {
         return false;
     }
 
-    quint32 result = 0;
+    // Physical first, named second. Every source the pad reports gets a bit, including the ones
+    // no name is pointed at yet: an input dropped here cannot be mapped later, which is what made
+    // the 8BitDo Micro's d-pad unreachable rather than merely mislabelled.
+    quint64 raw = 0;
 
     ULONG usageLength = ULONG(dev->usages.size());
     if (usageLength > 0 && hid->GetUsages(HidP_Input, PAGE_BUTTON, 0, dev->usages.data(), &usageLength,
@@ -352,8 +583,8 @@ bool gamepadhid::decode(const char *report, int length, quint32 *buttons) {
                                           ULONG(length)) == HIDP_STATUS_SUCCESS) {
         for (ULONG i = 0; i < usageLength; i++) {
             const int index = int(dev->usages[int(i)]) - 1; // HID numbers buttons from 1
-            if (index >= 0 && index < padbuttons::FACE_COUNT) {
-                result |= padbuttons::TABLE[index].mask;
+            if (index >= 0 && index < padraw::BUTTON_COUNT) {
+                raw |= padraw::mask(index);
             }
         }
     }
@@ -367,14 +598,51 @@ bool gamepadhid::decode(const char *report, int length, quint32 *buttons) {
             // Anything outside the declared range is the null state: the hat is centred.
             if (position >= 0 && position < positions) {
                 if (positions == 4) {
-                    result |= HAT8[(position * 2) % 8]; // a four-way hat: N, E, S, W
+                    raw |= HAT8[(position * 2) % 8]; // a four-way hat: N, E, S, W
                 } else if (positions >= 8) {
-                    result |= HAT8[position % 8];
+                    raw |= HAT8[position % 8];
                 }
             }
         }
     }
 
+    QStringList seen; // only filled while verbose, for the log below
+    for (int a = 0; a < padraw::AXIS_COUNT; a++) {
+        device::axis &ax = dev->axes[a];
+        if (!ax.present) {
+            continue;
+        }
+        ULONG value = 0;
+        if (hid->GetUsageValue(HidP_Input, PAGE_GENERIC, 0, padraw::axisUsage(a), &value, dev->preparsed,
+                               const_cast<PCHAR>(report), ULONG(length)) != HIDP_STATUS_SUCCESS) {
+            continue;
+        }
+        const LONG now = LONG(value);
+        if (verbose) {
+            seen.append(QStringLiteral("%1=%2").arg(padraw::axisName(a)).arg(now));
+        }
+        if (now <= ax.low) {
+            raw |= padraw::mask(padraw::axisBit(a, false));
+        } else if (now >= ax.high) {
+            raw |= padraw::mask(padraw::axisBit(a, true));
+        }
+    }
+
+    if (verbose && dev->lastReport != QByteArray(report, length)) {
+        dev->lastReport = QByteArray(report, length);
+        qDebug() << QStringLiteral("gamepadhid: report") << dev->lastReport.toHex(' ')
+                 << QStringLiteral("sources") << QString::number(raw, 16) << QStringLiteral("axes")
+                 << seen.join(QStringLiteral(" "));
+    }
+
+    quint32 result = 0;
+    for (int b = 0; b < padraw::COUNT; b++) {
+        if (raw & padraw::mask(b)) {
+            result |= map[b]; // 0 for an input this pad's map has no name for
+        }
+    }
+
+    physicalState = raw;
     *buttons = result;
     return true;
 }
@@ -433,6 +701,7 @@ bool gamepadhid::poll(quint32 *buttons, qint64 now) {
 void gamepadhid::close() {
     padName.clear();
     state = 0;
+    physicalState = 0;
 }
 bool gamepadhid::open() { return false; }
 bool gamepadhid::armRead() { return false; }
