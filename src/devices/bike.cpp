@@ -80,28 +80,45 @@ int bike::powerZoneValueToWatts(double zoneValue, double ftp) {
 
 virtualbike *bike::VirtualBike() { return dynamic_cast<virtualbike*>(this->VirtualDevice()); }
 
-void bike::changeResistance(resistance_t resistance) {
+/**
+ * @brief Turn a raw resistance level into the level the bike is actually commanded.
+ *
+ * The difficulty gain, the gear offset and the ERG clamps all live here so that the several
+ * writers that drive a resistance-level bike in ERG cannot disagree about them. They did
+ * disagree: changeResistance() applied the gear and ftmsbike's continuous-ERG loop wrote the
+ * bare table lookup instead. With a custom gear table whose neutral gear sits seven rows above
+ * the selected one the two writers were seven levels apart, and since they alternate on every
+ * device poll the bike was commanded 4, then 11, then 4 again several times a second. Each
+ * flip also retargeted the slew limiter, so a ramp that should have taken two seconds was
+ * dragged backwards and took the best part of a minute.
+ */
+double bike::resistanceWithGearsAndDifficulty(double rawResistance) {
     QSettings settings;
     double zwift_erg_resistance_up =
         settings.value(QZSettings::zwift_erg_resistance_up, QZSettings::default_zwift_erg_resistance_up).toDouble();
     double zwift_erg_resistance_down =
         settings.value(QZSettings::zwift_erg_resistance_down, QZSettings::default_zwift_erg_resistance_down).toDouble();
 
+    double v = (rawResistance * m_difficult) + gearsModifier();
+    if (v > zwift_erg_resistance_up) {
+        qDebug() << "zwift_erg_resistance_up filter enabled!";
+        v = zwift_erg_resistance_up;
+    } else if (v < zwift_erg_resistance_down) {
+        qDebug() << "zwift_erg_resistance_down filter enabled!";
+        v = zwift_erg_resistance_down;
+    }
+    return v;
+}
+
+void bike::changeResistance(resistance_t resistance) {
     qDebug() << QStringLiteral("bike::changeResistance") << autoResistanceEnable << resistance;
 
     lastRawRequestedResistanceValue = resistance;
     if (autoResistanceEnable) {
-        double v = (resistance * m_difficult) + gearsModifier();
-        if ((double)v > zwift_erg_resistance_up) {
-            qDebug() << "zwift_erg_resistance_up filter enabled!";
-            v = (resistance_t)zwift_erg_resistance_up;
-        } else if ((double)v < zwift_erg_resistance_down) {
-            qDebug() << "zwift_erg_resistance_down filter enabled!";
-            v = (resistance_t)zwift_erg_resistance_down;
-        }
-        requestResistance = v;
+        requestResistance = resistanceWithGearsAndDifficulty(resistance);
         emit resistanceChanged(requestResistance);
     }
+    // Deliberately the unclamped value: this is what was asked for, not what was sent.
     RequestedResistance = resistance * m_difficult + gearsModifier();
 }
 

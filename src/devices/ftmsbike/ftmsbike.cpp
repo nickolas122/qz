@@ -384,7 +384,11 @@ void ftmsbike::zwiftPlayInit() {
 
 void ftmsbike::forcePower(int16_t requestPower) {
     if((resistance_lvl_mode || TITAN_7000) && !MAGNUS) {
-        const resistance_t targetResistance = resistanceFromPowerRequest(requestPower);
+        // Gear offset and difficulty here too: this is a third writer of the same ERG target
+        // and it has to agree with the other two, or it reintroduces the fight they used to
+        // have. See bike::resistanceWithGearsAndDifficulty().
+        const resistance_t targetResistance =
+            (resistance_t)resistanceWithGearsAndDifficulty(resistanceFromPowerRequest(requestPower));
         commandResistance(targetResistance);
     } else {
         uint8_t write[] = {FTMS_SET_TARGET_POWER, 0x00, 0x00};
@@ -433,6 +437,28 @@ void ftmsbike::changePower(int32_t power) {
     bike::changePower(power);
 }
 
+/**
+ * @brief The cadence the ERG selector should invert the power table against.
+ *
+ * Cadence arrives once a second and the table's estimates are whole watts, so a single rpm of
+ * ordinary variation is enough to move the argmin by a level: at a fixed 102 W target, 92 rpm
+ * chose level 2 (101 W estimated) and 91 rpm chose level 3 (102 W), and the magnets moved back
+ * and forth for minutes while the delivered power never left 98-105 W. A five sample mean is
+ * five seconds here, which is about as long as a rider holds a cadence and much longer than
+ * the wobble. It lags a deliberate change, which during a power ramp is the right way to lag:
+ * it stops a rider spinning up from pulling the resistance out from under the ramp.
+ *
+ * The instantaneous value still decides whether the rider is pedalling at all - that question
+ * wants no lag - and metric only accumulates non-zero samples, so the mean would answer a
+ * stale cadence for a stopped rider.
+ */
+uint16_t ftmsbike::ergCadence() {
+    const double average = Cadence.average5s();
+    if (average <= 0)
+        return (uint16_t)Cadence.value();
+    return (uint16_t)qRound(average);
+}
+
 resistance_t ftmsbike::resistanceFromPowerRequest(uint16_t power) {
     // Without a cadence there is nothing to map the power onto, and the table answers 1. Acting
     // on that dumps the resistance to the bottom of the range every time the rider freewheels
@@ -440,11 +466,28 @@ resistance_t ftmsbike::resistanceFromPowerRequest(uint16_t power) {
     // seconds from 1 to 26 at the measured actuator rate. Hold where we are instead.
     // Matches the condition the table itself trips on, since the cadence is narrowed on the way in.
     if ((uint16_t)Cadence.value() == 0) {
-        const resistance_t held = resistanceSlew.primed() ? resistanceSlew.target() : currentResistance().value();
+        // The last table level, not the last commanded one: this function answers in raw
+        // levels and its callers add the gear offset afterwards. Handing back a level that
+        // already had the gear folded into it meant a low gear subtracted its offset a second
+        // time, so freewheeling in gear 1 of a table with a high neutral gear drove the
+        // request negative and the bike to the bottom - precisely what this hold prevents.
+        // The slew target is still the fallback until the table has chosen something.
+        const resistance_t held = m_lastErgRawResistance > 0
+                                      ? m_lastErgRawResistance
+                                      : (resistanceSlew.primed() ? resistanceSlew.target()
+                                                                 : currentResistance().value());
         qDebug() << QStringLiteral("resistanceFromPowerRequest: no cadence, holding") << held;
         return held;
     }
-    return _ergTable.resistanceFromPowerRequest(power, Cadence.value(), max_resistance);
+
+    // The hysteresis lives in the table because that is where the monotonic curve is built:
+    // holding a level has to be judged by the same numbers that would choose its replacement.
+    // A real ramp clears it on the first poll - tens of watts of error, not five.
+    const resistance_t chosen = (resistance_t)_ergTable.resistanceFromPowerRequest(
+        power, ergCadence(), max_resistance, (uint16_t)m_lastErgRawResistance, ergPowerHysteresisWatts);
+
+    m_lastErgRawResistance = chosen;
+    return chosen;
 }
 
 void ftmsbike::configureResistanceSlew(QSettings &settings) {
@@ -506,6 +549,18 @@ bool ftmsbike::ergResistanceAccepted(resistance_t newResistance) {
 void ftmsbike::commandResistance(resistance_t requestResistance) {
     QSettings settings;
     configureResistanceSlew(settings);
+
+    // Clamp before the limiter, not only at the wire. forceResistance() has always pulled an
+    // out of range level back into it, but the slew limiter is upstream of that and would
+    // otherwise ramp towards a level the bike cannot hold: a low gear subtracts its offset
+    // from every ERG target, so asking for level 3 in gear 1 of a table with a high neutral
+    // gear asks this for -4. The wire would still read 1, but the limiter would believe it had
+    // travelled five levels below the bottom and would charge the rider the time to climb back
+    // up. Keeping its idea of position inside the real range is what makes the ramp honest.
+    if (requestResistance < 1)
+        requestResistance = 1;
+    if (max_resistance > 0 && requestResistance > max_resistance)
+        requestResistance = max_resistance;
 
     // The ERG damping gate compares against this. It has to track what the *bike* was last
     // told, not what the ERG loop last told it: the simulation loop writes through here too,
@@ -957,18 +1012,24 @@ void ftmsbike::update() {
         if (resistance_lvl_mode && !ergModeSupported && !SMARTBIKE_3DIGIT &&
             lastControlMode() == control_mode::erg &&
             lastRequestedPower().value() > 0 && autoResistance()) {
-            resistance_t newR = resistanceFromPowerRequest(
-                (uint16_t)lastRequestedPower().value());
-            if (newR > 0 && ergResistanceAccepted(newR)) {
+            const uint16_t ergTargetPower = (uint16_t)lastRequestedPower().value();
+            const resistance_t rawR = resistanceFromPowerRequest(ergTargetPower);
+            // The gear offset and the difficulty gain belong here too. changePower() applies
+            // them on its way through bike::changeResistance(), and this loop used to write
+            // the bare table level, so the two writers disagreed by a whole gear and fought
+            // each other on alternate polls - see bike::resistanceWithGearsAndDifficulty().
+            const resistance_t newR = (resistance_t)resistanceWithGearsAndDifficulty(rawR);
+            if (rawR > 0 && ergResistanceAccepted(newR)) {
                 // ERG death spiral protection: below 50 RPM, only allow resistance decreases
                 if (Cadence.value() > 0 && Cadence.value() < 50 && newR > m_lastErgResistance) {
                     qDebug() << "ERG death spiral protection: cadence" << Cadence.value()
                              << "< 50, blocking resistance increase"
                              << m_lastErgResistance << "->" << newR;
                 } else {
-                    qDebug() << "continuous ERG: cadence" << Cadence.value()
-                             << "target" << lastRequestedPower().value()
-                             << "resistance" << m_lastErgResistance << "->" << newR;
+                    qDebug() << "continuous ERG: cadence" << ergCadence()
+                             << "target" << ergTargetPower
+                             << "resistance" << m_lastErgResistance << "->" << newR
+                             << "(table level" << rawR << ")";
                     commandResistance(newR);
                 }
             }

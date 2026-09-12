@@ -150,6 +150,30 @@ TEST(ResistanceSlewLimiterTest, RetargetingMidRampDoesNotStallTheRamp) {
     EXPECT_LE(limiter.lastCommanded(), 10);
 }
 
+TEST(ResistanceSlewLimiterTest, ARetargetFromASecondWriterDoesNotStallTheRamp) {
+    resistanceSlewLimiter limiter;
+    limiter.configure(4, 4);
+    limiter.sync(4);
+
+    // The ELITE AVANTI failure: two writers, one poll apart in effect, where the first hands
+    // in the level already commanded and the second the real ERG target. Resetting the clock
+    // on the second call because the first made pending() false left the ramp earning nothing
+    // - the poll is 200 ms and a level costs 250 ms - and 15 -> 22 took 55 s on the bike.
+    // 4 -> 22 is 18 levels; at 4 levels/s that is 4,5 s.
+    resistance_t next;
+    int writes = 0;
+    for (qint64 now = 0; now <= 5000; now += 200) {
+        limiter.setTarget(limiter.lastCommanded(), now); // the writer that had it wrong
+        limiter.step(now, &next);
+        limiter.setTarget(22, now); // the writer that had it right
+        if (limiter.step(now, &next))
+            writes++;
+    }
+
+    EXPECT_GT(writes, 5);
+    EXPECT_EQ(limiter.lastCommanded(), 22);
+}
+
 TEST(ResistanceSlewLimiterTest, IdleTimeDoesNotBuyAJump) {
     resistanceSlewLimiter limiter;
     limiter.configure(2, 4);

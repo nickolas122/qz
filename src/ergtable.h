@@ -205,8 +205,19 @@ class ergTable : public QObject {
      * Taking the nearest level rather than the lower end of a bracket also removes a
      * systematic undershoot of roughly one level, worth 3-15 W depending on where in the
      * range the bike is.
+     *
+     * @param currentResistance The level already selected, or 0 when there isn't one yet.
+     * @param hysteresisWatts How far off target @p currentResistance has to read before it is
+     *        given up. 0 disables the hysteresis, which is what callers that have no notion of
+     *        a current level want. The argmin has no memory of where it is, so a level boundary
+     *        can be one watt wide: at a fixed 102 W target, 92 rpm picked level 2 (101 W) and
+     *        91 rpm level 3 (102 W), and a rider whose cadence breathed across that boundary
+     *        moved the magnets back and forth for minutes while the power delivered never left
+     *        98-105 W. The comparison is made against this same monotonic curve, so what holds
+     *        the level is measured exactly the way what would replace it was.
      */
-    uint16_t resistanceFromPowerRequest(uint16_t power, uint16_t cadence, uint16_t maxResistance) {
+    uint16_t resistanceFromPowerRequest(uint16_t power, uint16_t cadence, uint16_t maxResistance,
+                                        uint16_t currentResistance = 0, double hysteresisWatts = 0.0) {
         qDebug() << QStringLiteral("resistanceFromPowerRequest") << cadence;
 
         if (cadence == 0)
@@ -221,6 +232,16 @@ class ergTable : public QObject {
             estimates.append(estimateWattage(cadence, i));
 
         const QVector<double> curve = nonDecreasing(estimates);
+
+        if (hysteresisWatts > 0.0 && currentResistance >= 1 && currentResistance <= (uint16_t)curve.size()) {
+            const double held = curve.at(currentResistance - 1);
+            if (held > 0 && std::fabs(held - double(power)) <= hysteresisWatts) {
+                qDebug() << QStringLiteral("resistanceFromPowerRequest: holding") << currentResistance
+                         << QStringLiteral("estimated") << held << QStringLiteral("W, within")
+                         << hysteresisWatts << QStringLiteral("W of target") << power;
+                return currentResistance;
+            }
+        }
 
         uint16_t best_resistance_match = 1;
         double best_difference = -1;

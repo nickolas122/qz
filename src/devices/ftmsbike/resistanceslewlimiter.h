@@ -55,6 +55,9 @@ class resistanceSlewLimiter {
         m_lastCommanded = level;
         m_target = level;
         m_known = true;
+        // The caller has just put the magnets somewhere itself, so whatever demand was in
+        // flight is void and the next ramp starts from rest.
+        m_demandSeen = false;
     }
 
     /**
@@ -65,6 +68,8 @@ class resistanceSlewLimiter {
         m_target = 0;
         m_known = false;
         m_lastStepMs = 0;
+        m_demandSeen = false;
+        m_lastDemandMs = 0;
     }
 
     /**
@@ -73,10 +78,23 @@ class resistanceSlewLimiter {
      * Re-targeting mid-ramp does not restart the clock, so a stream of ERG updates
      * cannot stall the ramp; starting a ramp from rest does, so the first level of
      * movement is not granted for free out of the idle time.
+     *
+     * "From rest" is a claim about demand, not about the state pending() happens to be in at
+     * the instant of the call. Two writers that disagreed by a gear offset alternated between
+     * the level already commanded and the real ERG target, so pending() read false on every
+     * other call and the clock restarted before the rate had earned a single level: the poll
+     * is 200 ms and a level costs 250 ms, and on an ELITE AVANTI a ramp from 15 to 22 took
+     * 55 seconds instead of two. Something has been asking for movement continuously
+     * throughout that, so the clock is left alone unless demand has actually been absent for
+     * kInMotionMs. A minute spent sitting at a target still buys nothing.
      */
     void setTarget(resistance_t target, qint64 nowMs) {
-        if (!pending())
+        if (!pending() && (!m_demandSeen || nowMs - m_lastDemandMs >= kInMotionMs))
             m_lastStepMs = nowMs;
+        if (target != m_lastCommanded) {
+            m_demandSeen = true;
+            m_lastDemandMs = nowMs;
+        }
         m_target = target;
     }
 
@@ -159,12 +177,24 @@ class resistanceSlewLimiter {
      */
     static constexpr qint64 kMaxCatchUpMs = 2000;
 
+    /**
+     * How long demand has to have been absent before setTarget() treats the next target as
+     * a ramp starting from rest. Two device polls: ftmsbike drives this from update(), which
+     * runs every 200 ms, so a gap this long means nothing is asking any more.
+     */
+    static constexpr qint64 kInMotionMs = 400;
+
     double m_up = 0.0;
     double m_down = 0.0;
     resistance_t m_lastCommanded = 0;
     resistance_t m_target = 0;
     bool m_known = false;
     qint64 m_lastStepMs = 0;
+
+    // When something last asked for a level other than the one already commanded. Guards the
+    // clock restart in setTarget() against a writer that hands in the current level.
+    bool m_demandSeen = false;
+    qint64 m_lastDemandMs = 0;
 };
 
 #endif // RESISTANCESLEWLIMITER_H

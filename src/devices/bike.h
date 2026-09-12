@@ -102,6 +102,10 @@ class bike : public bluetoothdevice {
     bool ergModeSupportedAvailableByHardware() { return ergModeSupported; }
     virtual bool ergModeSupportedAvailableBySoftware() { return ergModeSupported; }
 
+    // Turns a raw resistance level - a power table lookup, a workout row - into the level the
+    // bike is actually commanded. Every ERG writer must go through this, see the definition.
+    double resistanceWithGearsAndDifficulty(double rawResistance);
+
   public Q_SLOTS:
     void changeResistance(resistance_t res) override;
     virtual void changeCadence(int16_t cad);

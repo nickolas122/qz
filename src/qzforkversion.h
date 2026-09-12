@@ -16,6 +16,6 @@
  * The release workflow refuses to publish if the tag and this string disagree, so bump
  * this in the same commit that gets tagged.
  */
-#define QZ_FORK_VERSION "2.21.6-qz.3"
+#define QZ_FORK_VERSION "2.21.6-qz.4"
 
 #endif // QZFORKVERSION_H

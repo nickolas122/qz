@@ -373,6 +373,18 @@ class ftmsbike : public bike {
     static constexpr qint64 ergSingleLevelHoldMs = 3000;
     resistance_t m_ergPendingResistance = 0;
     qint64 m_ergPendingSince = 0;
+
+    // How far off target the level we are already on has to read before ERG is allowed to
+    // move off it. See the hysteresis in resistanceFromPowerRequest().
+    static constexpr double ergPowerHysteresisWatts = 5.0;
+
+    // The last level the power table picked, before the gear offset and the difficulty gain
+    // are applied. The hysteresis compares against this, and it is what a freewheeling rider
+    // holds: both are questions about the table, which speaks in raw levels.
+    resistance_t m_lastErgRawResistance = 0;
+
+    // The cadence the power table is inverted against - smoothed, unlike Cadence.value().
+    uint16_t ergCadence();
     bool manualResistancePowerAdjustmentActive = false;
     bool manualResistancePowerAdjustmentToastShown = false;
     resistance_t manualResistanceTarget = 1;
