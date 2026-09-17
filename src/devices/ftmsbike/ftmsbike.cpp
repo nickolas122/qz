@@ -443,20 +443,24 @@ void ftmsbike::changePower(int32_t power) {
  * Cadence arrives once a second and the table's estimates are whole watts, so a single rpm of
  * ordinary variation is enough to move the argmin by a level: at a fixed 102 W target, 92 rpm
  * chose level 2 (101 W estimated) and 91 rpm chose level 3 (102 W), and the magnets moved back
- * and forth for minutes while the delivered power never left 98-105 W. A five sample mean is
- * five seconds here, which is about as long as a rider holds a cadence and much longer than
- * the wobble. It lags a deliberate change, which during a power ramp is the right way to lag:
- * it stops a rider spinning up from pulling the resistance out from under the ramp.
+ * and forth for minutes while the delivered power never left 98-105 W.
+ *
+ * A deadband, not an average. A five sample mean was tried first and was the wrong shape: it
+ * damps the wobble only by delaying everything equally, so a rider who genuinely changed
+ * cadence waited out the window before the bike answered. This ignores movement smaller than
+ * ergCadenceDeadbandRpm and follows anything larger on the very next sample, so a real change
+ * costs nothing and a wobble moves nothing.
  *
  * The instantaneous value still decides whether the rider is pedalling at all - that question
- * wants no lag - and metric only accumulates non-zero samples, so the mean would answer a
- * stale cadence for a stopped rider.
+ * wants no lag at all.
  */
 uint16_t ftmsbike::ergCadence() {
-    const double average = Cadence.average5s();
-    if (average <= 0)
-        return (uint16_t)Cadence.value();
-    return (uint16_t)qRound(average);
+    const uint16_t now = (uint16_t)Cadence.value();
+    if (now == 0)
+        return 0;
+    if (m_ergCadence == 0 || qAbs((int32_t)now - (int32_t)m_ergCadence) >= ergCadenceDeadbandRpm)
+        m_ergCadence = now;
+    return m_ergCadence;
 }
 
 resistance_t ftmsbike::resistanceFromPowerRequest(uint16_t power) {

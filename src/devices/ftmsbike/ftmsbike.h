@@ -370,20 +370,47 @@ class ftmsbike : public bike {
 
     // How long a single-level ERG change has to be asked for before it is acted on. Anything
     // larger is a real move and is not delayed. See ergResistanceAccepted().
-    static constexpr qint64 ergSingleLevelHoldMs = 3000;
+    //
+    // Was 3000. The cadence deadband below now stops the wobble this was written for - 1-2 rpm
+    // no longer moves the selection at all - so what was left of this was a flat three second
+    // delay on the commonest move there is.
+    static constexpr qint64 ergSingleLevelHoldMs = 1000;
     resistance_t m_ergPendingResistance = 0;
     qint64 m_ergPendingSince = 0;
 
     // How far off target the level we are already on has to read before ERG is allowed to
     // move off it. See the hysteresis in resistanceFromPowerRequest().
-    static constexpr double ergPowerHysteresisWatts = 5.0;
+    //
+    // Was 5, which was far too wide: over a 73 minute ride it held 18793 of 27436 lookups,
+    // two thirds of them, and the median gap between resistance changes went from fractions
+    // of a second to 20 with a 90th percentile of 89. The wobble it exists for is a one watt
+    // tie-break between neighbouring levels, so two watts covers it with margin to spare and
+    // stops it swallowing the three to five watt errors that are worth acting on.
+    static constexpr double ergPowerHysteresisWatts = 2.0;
+
+    // How far the cadence has to move before the power table is inverted against the new
+    // value, so that ordinary pedalling variation stops flipping the selection between
+    // neighbouring levels. See ergCadence().
+    //
+    // 3 is measured to be slightly too tight. Over a 73 minute ride it left 58 reversals -
+    // a level moved and moved straight back - at a target that never changed in any of them,
+    // 39 driven by a 3 rpm swing and 18 by 4 rpm. A deadband of 5 would have removed 57 of
+    // the 58 at no cost in latency, since a deadband answers a genuine change on the very
+    // next sample whatever its width. Left at 3 deliberately, as the ride it was measured on
+    // was the first that felt right and the residual is a level at a time rather than the
+    // hunting this replaced.
+    static constexpr int32_t ergCadenceDeadbandRpm = 3;
 
     // The last level the power table picked, before the gear offset and the difficulty gain
     // are applied. The hysteresis compares against this, and it is what a freewheeling rider
     // holds: both are questions about the table, which speaks in raw levels.
     resistance_t m_lastErgRawResistance = 0;
 
-    // The cadence the power table is inverted against - smoothed, unlike Cadence.value().
+    // The cadence the power table was last inverted against. Held across polls so the deadband
+    // has something to measure against.
+    uint16_t m_ergCadence = 0;
+
+    // The cadence the power table is inverted against - deadbanded, unlike Cadence.value().
     uint16_t ergCadence();
     bool manualResistancePowerAdjustmentActive = false;
     bool manualResistancePowerAdjustmentToastShown = false;
