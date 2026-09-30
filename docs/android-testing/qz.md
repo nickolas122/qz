@@ -2,8 +2,8 @@
 
 ## App Installed on the Emulator
 
-- **Package:** `org.cagnulen.qdomyoszwift`
-- **Main activity:** `.CustomQtActivity`
+- **Package:** `io.github.nickolas122.trainerbridge`
+- **Main activity:** `org.cagnulen.qdomyoszwift.CustomQtActivity` (the Java package kept upstream's name; only the application id changed, so the `.CustomQtActivity` shorthand does not resolve)
 - **Tested version:** 2.21.5
 - **AVD:** `Pixel_8_API_36` (Android 15 / API 36, arm64 architecture)
 
@@ -25,10 +25,10 @@ $ADB shell cmd gpu vkjson | grep -E '"deviceName"|"driverName"|SwiftShader'
 # If this prints SwiftShader, Zwift is likely to fail because rendering is software-only.
 
 # Launch QZ.
-$ADB shell am start -n org.cagnulen.qdomyoszwift/.CustomQtActivity
+$ADB shell am start -n io.github.nickolas122.trainerbridge/org.cagnulen.qdomyoszwift.CustomQtActivity
 
 # Stop QZ.
-$ADB shell am force-stop org.cagnulen.qdomyoszwift
+$ADB shell am force-stop io.github.nickolas122.trainerbridge
 ```
 
 ## UI Navigation
@@ -75,22 +75,22 @@ $ADB shell input swipe 540 1800 540 800 400   # scroll down to show toggles; rep
 
 QZ uses Qt QSettings, stored as an INI file on Android:
 ```text
-/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola/qDomyos-Zwift.conf
+/data/data/io.github.nickolas122.trainerbridge/files/.config/Roberto Viola/qDomyos-Zwift.conf
 ```
 
 Read the current configuration:
 ```bash
-$ADB shell "run-as org.cagnulen.qdomyoszwift sh -c 'cat /data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto\ Viola/qDomyos-Zwift.conf'"
+$ADB shell "run-as io.github.nickolas122.trainerbridge sh -c 'cat /data/data/io.github.nickolas122.trainerbridge/files/.config/Roberto\ Viola/qDomyos-Zwift.conf'"
 ```
 
 Write settings directly while QZ is stopped:
 ```bash
-$ADB shell am force-stop org.cagnulen.qdomyoszwift
+$ADB shell am force-stop io.github.nickolas122.trainerbridge
 
-$ADB shell "run-as org.cagnulen.qdomyoszwift sh -c '
-  mkdir -p \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola\"
+$ADB shell "run-as io.github.nickolas122.trainerbridge sh -c '
+  mkdir -p \"/data/data/io.github.nickolas122.trainerbridge/files/.config/Roberto Viola\"
   printf \"[General]\nandroid_notification=true\nsimulated_bike=true\n\" \
-    > \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola/qDomyos-Zwift.conf\"
+    > \"/data/data/io.github.nickolas122.trainerbridge/files/.config/Roberto Viola/qDomyos-Zwift.conf\"
 '"
 ```
 
@@ -118,7 +118,7 @@ simulated_bike=true
 
 After writing the configuration, start QZ and verify that the foreground notification is present:
 ```bash
-$ADB shell am start -n org.cagnulen.qdomyoszwift/.CustomQtActivity
+$ADB shell am start -n io.github.nickolas122.trainerbridge/org.cagnulen.qdomyoszwift.CustomQtActivity
 sleep 5
 $ADB shell dumpsys notification | grep -A3 "qdomyos"
 # It should show ForegroundServiceChannel with at least one posted notification.

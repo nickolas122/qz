@@ -16,13 +16,13 @@ This also works when both apps run on the **same device**, either an emulator or
 Quick setup while QZ is stopped:
 ```bash
 ADB=~/Library/Android/sdk/platform-tools/adb
-$ADB shell am force-stop org.cagnulen.qdomyoszwift
-$ADB shell "run-as org.cagnulen.qdomyoszwift sh -c '
-  mkdir -p \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola\"
+$ADB shell am force-stop io.github.nickolas122.trainerbridge
+$ADB shell "run-as io.github.nickolas122.trainerbridge sh -c '
+  mkdir -p \"/data/data/io.github.nickolas122.trainerbridge/files/.config/Roberto Viola\"
   printf \"[General]\nandroid_notification=true\nsimulated_bike=true\n\" \
-    > \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola/qDomyos-Zwift.conf\"
+    > \"/data/data/io.github.nickolas122.trainerbridge/files/.config/Roberto Viola/qDomyos-Zwift.conf\"
 '"
-$ADB shell am start -n org.cagnulen.qdomyoszwift/.CustomQtActivity
+$ADB shell am start -n io.github.nickolas122.trainerbridge/org.cagnulen.qdomyoszwift.CustomQtActivity
 sleep 5
 ```
 
@@ -77,7 +77,7 @@ The tested macOS host reported `driverName=MoltenVK` and `deviceName=Apple M2 Pr
 QZ must be in the foreground and have the notification active before Zwift starts.
 
 ```bash
-$ADB shell am start -n org.cagnulen.qdomyoszwift/.CustomQtActivity
+$ADB shell am start -n io.github.nickolas122.trainerbridge/org.cagnulen.qdomyoszwift.CustomQtActivity
 sleep 5
 # Verify the active notification.
 $ADB shell dumpsys notification | grep "ForegroundServiceChannel"
@@ -146,13 +146,13 @@ ADB=~/Library/Android/sdk/platform-tools/adb
 
 # Full setup.
 setup_qz_for_zwift() {
-  $ADB shell am force-stop org.cagnulen.qdomyoszwift
-  $ADB shell "run-as org.cagnulen.qdomyoszwift sh -c '
-    mkdir -p \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola\"
+  $ADB shell am force-stop io.github.nickolas122.trainerbridge
+  $ADB shell "run-as io.github.nickolas122.trainerbridge sh -c '
+    mkdir -p \"/data/data/io.github.nickolas122.trainerbridge/files/.config/Roberto Viola\"
     printf \"[General]\nandroid_notification=true\nsimulated_bike=true\n\" \
-      > \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola/qDomyos-Zwift.conf\"
+      > \"/data/data/io.github.nickolas122.trainerbridge/files/.config/Roberto Viola/qDomyos-Zwift.conf\"
   '"
-  $ADB shell am start -n org.cagnulen.qdomyoszwift/.CustomQtActivity
+  $ADB shell am start -n io.github.nickolas122.trainerbridge/org.cagnulen.qdomyoszwift.CustomQtActivity
   sleep 5
   # Verify the notification.
   POSTED=$($ADB shell dumpsys notification | grep "numPostedByApp" | head -1 | grep -o '[0-9]*')

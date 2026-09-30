@@ -32,6 +32,20 @@ outranks this page wherever they disagree.
 | `qdomyos-zwift.exe` → Properties → Details | Product `QZ-lite`, and the description |
 | `-h` on the command line | `QZ-lite usage:` |
 
+### The Android application id
+
+`io.github.nickolas122.trainerbridge`, chosen 2026-09-12, set as `applicationId` in
+`src/android/build.gradle`. It replaced upstream's `org.cagnulen.qdomyoszwift` so the fork
+can ship a signed APK of its own (GitHub Releases, and possibly Play) without two problems:
+Android refuses to install an app over the official QZ when the id matches and the
+signature does not, and a store reads a matching id as impersonation. It carries neither
+`qz` nor `cagnulen` for the same reason. `io.github.<user>` is the domain GitHub Pages
+already gives the account, which is also what F-Droid and IzzyOnDroid check ownership
+against.
+
+It is permanent from the first build anyone installs. Changing it again is an uninstall, a
+reinstall and a settings file left behind in the old app's data directory.
+
 ### Where it deliberately does not
 
 Everything below still says QZ, qdomyos-zwift, or something that is not a name at all.
@@ -40,8 +54,10 @@ Each one is read by a machine, or by a person who would be worse off if it chang
 - **`QSettings` organisation and application** (`Roberto Viola` / `qDomyos-Zwift`,
   `main.cpp`). This is the registry key and the ini path every saved setting on every
   machine lives under. Renaming it hands the rider a factory-fresh app and loses the lot.
-- **The Android package**, `org.cagnulen.qdomyoszwift`. It is the app's identity to the
-  system; changing it is an uninstall and a reinstall, not a rename.
+- **The Java package and the Gradle `namespace`**, `org.cagnulen.qdomyoszwift`. The C++
+  side reaches Java by class path — `org/cagnulen/qdomyoszwift/BleAdvertiser` and twenty
+  more — so moving it is a JNI rename across two languages that no rider sees. The
+  application id above is a separate setting, and only it names the app to the system.
 - **The executable and the Qt lib**, `qdomyos-zwift.exe` and `qdomyos-zwift`. CI, the
   build script and the docs name the file, and `android.app.lib_name` in the manifest
   must match the built library exactly. The identity does not live in a filename.
@@ -114,8 +130,9 @@ PNG by hand.
 | Android, status bar | `drawable-*/ic_stat_qzlite.png` | **white silhouette on transparent** — the system tints small icons, so a colour one shows up as a white blob. This is why the notification icon is its own file. |
 
 `icons/Android`, `icons/iOS` and `src/ios/Images.xcassets` still hold upstream's artwork.
-They are untouched because this fork ships neither an App Store build nor a Play Store
-listing, and there is no branding decision hiding in a file nothing packages.
+They are untouched because this fork ships no App Store build and nothing packages them,
+so there is no branding decision hiding in them. A store listing, if one comes, takes its
+artwork from `icons/qz-lite`.
 
 ---
 

@@ -49,9 +49,9 @@ line endings — verify with `md5sum` on both sides:
 
 ```bash
 ADB="/c/Android/sdk/platform-tools/adb.exe"
-DIR=/data/data/org.cagnulen.qdomyoszwift/files
+DIR=/data/data/io.github.nickolas122.trainerbridge/files
 B64=$(base64 -w0 tst/fixtures/rides/ramp.ride)
-"$ADB" shell "run-as org.cagnulen.qdomyoszwift sh -c 'echo $B64 | base64 -d > $DIR/ramp.ride && md5sum $DIR/ramp.ride'"
+"$ADB" shell "run-as io.github.nickolas122.trainerbridge sh -c 'echo $B64 | base64 -d > $DIR/ramp.ride && md5sum $DIR/ramp.ride'"
 ```
 
 **2. Point the settings at it, with the app stopped.** Editing the INI while QZ runs is
@@ -59,8 +59,8 @@ pointless — it rewrites the whole file on exit:
 
 ```bash
 CONF="$DIR/.config/Roberto Viola/qDomyos-Zwift.conf"
-"$ADB" shell am force-stop org.cagnulen.qdomyoszwift
-"$ADB" shell "run-as org.cagnulen.qdomyoszwift sh -c 'cp \"$CONF\" \"$CONF.bak\" && sed -i \"/^simulated_bike/d\" \"$CONF\" && sed -i \"s|^\[General\]|[General]\nsimulated_bike=true\nsimulated_bike_ride=$DIR/ramp.ride|\" \"$CONF\" && sed -i \"s/^log_debug=false/log_debug=true/\" \"$CONF\" && head -4 \"$CONF\"'"
+"$ADB" shell am force-stop io.github.nickolas122.trainerbridge
+"$ADB" shell "run-as io.github.nickolas122.trainerbridge sh -c 'cp \"$CONF\" \"$CONF.bak\" && sed -i \"/^simulated_bike/d\" \"$CONF\" && sed -i \"s|^\[General\]|[General]\nsimulated_bike=true\nsimulated_bike_ride=$DIR/ramp.ride|\" \"$CONF\" && sed -i \"s/^log_debug=false/log_debug=true/\" \"$CONF\" && head -4 \"$CONF\"'"
 ```
 
 `log_debug=true` matters: without it QZ writes no log on Android at all and there is
@@ -69,7 +69,7 @@ nothing to read afterwards.
 **3. Launch and look.**
 
 ```bash
-"$ADB" shell am start -n org.cagnulen.qdomyoszwift/.CustomQtActivity
+"$ADB" shell am start -n io.github.nickolas122.trainerbridge/org.cagnulen.qdomyoszwift.CustomQtActivity
 "$ADB" exec-out screencap -p > screen.png
 "$ADB" shell "ls -lat /sdcard/Documents/QZ/*.log | head -3"
 ```

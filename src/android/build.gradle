@@ -187,7 +187,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "org.cagnulen.qdomyoszwift"
+        applicationId = "io.github.nickolas122.trainerbridge"
         resConfig "en"
         minSdk 21
         targetSdk 36

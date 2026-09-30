@@ -1251,27 +1251,27 @@ jobs:
 
             # Grant runtime (dangerous) permissions
             echo "Granting runtime permissions..."
-            adb shell pm grant org.cagnulen.qdomyoszwift android.permission.ACCESS_FINE_LOCATION || true
-            adb shell pm grant org.cagnulen.qdomyoszwift android.permission.ACCESS_COARSE_LOCATION || true
-            adb shell pm grant org.cagnulen.qdomyoszwift android.permission.BLUETOOTH_ADVERTISE || true
-            adb shell pm grant org.cagnulen.qdomyoszwift android.permission.BLUETOOTH_CONNECT || true
-            adb shell pm grant org.cagnulen.qdomyoszwift android.permission.BLUETOOTH_SCAN || true
-            adb shell pm grant org.cagnulen.qdomyoszwift android.permission.READ_EXTERNAL_STORAGE || true
-            adb shell pm grant org.cagnulen.qdomyoszwift android.permission.WRITE_EXTERNAL_STORAGE || true
-            adb shell pm grant org.cagnulen.qdomyoszwift android.permission.CAMERA || true
-            adb shell pm grant org.cagnulen.qdomyoszwift android.permission.RECORD_AUDIO || true
-            adb shell pm grant org.cagnulen.qdomyoszwift android.permission.READ_PHONE_STATE || true
-            adb shell pm grant org.cagnulen.qdomyoszwift android.permission.POST_NOTIFICATIONS || true
+            adb shell pm grant io.github.nickolas122.trainerbridge android.permission.ACCESS_FINE_LOCATION || true
+            adb shell pm grant io.github.nickolas122.trainerbridge android.permission.ACCESS_COARSE_LOCATION || true
+            adb shell pm grant io.github.nickolas122.trainerbridge android.permission.BLUETOOTH_ADVERTISE || true
+            adb shell pm grant io.github.nickolas122.trainerbridge android.permission.BLUETOOTH_CONNECT || true
+            adb shell pm grant io.github.nickolas122.trainerbridge android.permission.BLUETOOTH_SCAN || true
+            adb shell pm grant io.github.nickolas122.trainerbridge android.permission.READ_EXTERNAL_STORAGE || true
+            adb shell pm grant io.github.nickolas122.trainerbridge android.permission.WRITE_EXTERNAL_STORAGE || true
+            adb shell pm grant io.github.nickolas122.trainerbridge android.permission.CAMERA || true
+            adb shell pm grant io.github.nickolas122.trainerbridge android.permission.RECORD_AUDIO || true
+            adb shell pm grant io.github.nickolas122.trainerbridge android.permission.READ_PHONE_STATE || true
+            adb shell pm grant io.github.nickolas122.trainerbridge android.permission.POST_NOTIFICATIONS || true
 
             # Enable special app ops permissions
-            adb shell appops set org.cagnulen.qdomyoszwift MANAGE_EXTERNAL_STORAGE allow || true
-            adb shell appops set org.cagnulen.qdomyoszwift SYSTEM_ALERT_WINDOW allow || true
-            adb shell appops set org.cagnulen.qdomyoszwift WRITE_SETTINGS allow || true
+            adb shell appops set io.github.nickolas122.trainerbridge MANAGE_EXTERNAL_STORAGE allow || true
+            adb shell appops set io.github.nickolas122.trainerbridge SYSTEM_ALERT_WINDOW allow || true
+            adb shell appops set io.github.nickolas122.trainerbridge WRITE_SETTINGS allow || true
 
             echo "All permissions granted successfully"
 
             # Start the main activity
-            adb shell am start -n org.cagnulen.qdomyoszwift/org.cagnulen.qdomyoszwift.CustomQtActivity
+            adb shell am start -n io.github.nickolas122.trainerbridge/org.cagnulen.qdomyoszwift.CustomQtActivity
 
             # Wait for app to start
             sleep 90
@@ -1287,9 +1287,9 @@ jobs:
             echo "=== Looking for our app ==="
 
             grep -q "qdomyos" process_list.txt || (echo "App process not found in process list" && echo "TEST FAILED: App process not running" && exit 1)
-            adb shell pm list packages | grep org.cagnulen.qdomyoszwift
+            adb shell pm list packages | grep io.github.nickolas122.trainerbridge
             echo "=== Checking app info ==="
-            adb shell dumpsys package org.cagnulen.qdomyoszwift | grep -A5 -B5 "state"
+            adb shell dumpsys package io.github.nickolas122.trainerbridge | grep -A5 -B5 "state"
             echo "=== Logcat output for debugging ==="
             adb logcat -d | grep -i "qdomyos\|crash\|error\|exception\|fatal" | tail -n 50
             echo "=== Full recent logcat ==="
@@ -1313,7 +1313,7 @@ jobs:
             echo "Orientation test completed - 4 screenshots captured"
 
             # Check if the package is installed
-            adb shell pm list packages | grep org.cagnulen.qdomyoszwift
+            adb shell pm list packages | grep io.github.nickolas122.trainerbridge
 
             # Save logcat for debugging
             echo "Saving logcat for analysis..."

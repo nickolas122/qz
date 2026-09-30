@@ -122,7 +122,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--sa-json", required=True)
-    parser.add_argument("--package", default="org.cagnulen.qdomyoszwift")
+    parser.add_argument("--package", default="io.github.nickolas122.trainerbridge")
     args = parser.parse_args()
 
     print(next_version_code(args.sa_json, args.package))

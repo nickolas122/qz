@@ -130,13 +130,13 @@ The most reliable way to set toggles is to write the Qt INI file directly while 
 set_qz_setting() {
   local key="$1"
   local value="$2"
-  local conf_path="/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola/qDomyos-Zwift.conf"
+  local conf_path="/data/data/io.github.nickolas122.trainerbridge/files/.config/Roberto Viola/qDomyos-Zwift.conf"
 
-  $ADB shell am force-stop org.cagnulen.qdomyoszwift
+  $ADB shell am force-stop io.github.nickolas122.trainerbridge
   sleep 1
 
   # Read the current configuration.
-  $ADB shell "run-as org.cagnulen.qdomyoszwift sh -c 'cat \"$conf_path\" 2>/dev/null'" > /tmp/qz_cfg.conf
+  $ADB shell "run-as io.github.nickolas122.trainerbridge sh -c 'cat \"$conf_path\" 2>/dev/null'" > /tmp/qz_cfg.conf
 
   if grep -q "^$key=" /tmp/qz_cfg.conf; then
     # Update an existing value.
@@ -152,8 +152,8 @@ $key=$value" /tmp/qz_cfg.conf
 
   # Write the updated file.
   local content=$(cat /tmp/qz_cfg.conf)
-  $ADB shell "run-as org.cagnulen.qdomyoszwift sh -c '
-    mkdir -p \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola\"
+  $ADB shell "run-as io.github.nickolas122.trainerbridge sh -c '
+    mkdir -p \"/data/data/io.github.nickolas122.trainerbridge/files/.config/Roberto Viola\"
     printf \"%s\n\" \"$(echo "$content" | sed "s/\"/\\\\\"/g")\" \
       > \"$conf_path\"
   '"
@@ -206,16 +206,16 @@ fi
 
 # 1. Configure QZ.
 echo "Configuring QZ..."
-$ADB shell am force-stop org.cagnulen.qdomyoszwift
-$ADB shell "run-as org.cagnulen.qdomyoszwift sh -c '
-  mkdir -p \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola\"
+$ADB shell am force-stop io.github.nickolas122.trainerbridge
+$ADB shell "run-as io.github.nickolas122.trainerbridge sh -c '
+  mkdir -p \"/data/data/io.github.nickolas122.trainerbridge/files/.config/Roberto Viola\"
   printf \"[General]\nandroid_notification=true\nsimulated_bike=true\n\" \
-    > \"/data/data/org.cagnulen.qdomyoszwift/files/.config/Roberto Viola/qDomyos-Zwift.conf\"
+    > \"/data/data/io.github.nickolas122.trainerbridge/files/.config/Roberto Viola/qDomyos-Zwift.conf\"
 '"
 
 # 2. Start QZ.
 echo "Starting QZ..."
-$ADB shell am start -n org.cagnulen.qdomyoszwift/.CustomQtActivity
+$ADB shell am start -n io.github.nickolas122.trainerbridge/org.cagnulen.qdomyoszwift.CustomQtActivity
 sleep 6
 
 # 3. Verify the foreground notification.
