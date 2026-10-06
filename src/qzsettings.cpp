@@ -288,8 +288,15 @@ const QString QZSettings::gamepad_hid_map = QStringLiteral("gamepad_hid_map");
 const QString QZSettings::default_gamepad_hid_map = QStringLiteral("");
 const QString QZSettings::gamepad_hid_map_pad = QStringLiteral("gamepad_hid_map_pad");
 const QString QZSettings::default_gamepad_hid_map_pad = QStringLiteral("");
+const QString QZSettings::erg_manual = QStringLiteral("erg_manual");
+const QString QZSettings::erg_manual_target_power = QStringLiteral("erg_manual_target_power");
+const QString QZSettings::erg_manual_saved_gear = QStringLiteral("erg_manual_saved_gear");
+const QString QZSettings::gamepad_power_up_fine = QStringLiteral("gamepad_power_up_fine");
+const QString QZSettings::default_gamepad_power_up_fine = QStringLiteral("dpad_up");
+const QString QZSettings::gamepad_power_down_fine = QStringLiteral("gamepad_power_down_fine");
+const QString QZSettings::default_gamepad_power_down_fine = QStringLiteral("dpad_down");
 
-const uint32_t allSettingsCount = 199;
+const uint32_t allSettingsCount = 204;
 
 QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::cryptoKeySettingsProfiles, QZSettings::default_cryptoKeySettingsProfiles},
@@ -508,6 +515,11 @@ QVariant allSettings[allSettingsCount][2] = {
     {QZSettings::osd_window_y, QZSettings::default_osd_window_y},
     {QZSettings::gamepad_hid_map, QZSettings::default_gamepad_hid_map},
     {QZSettings::gamepad_hid_map_pad, QZSettings::default_gamepad_hid_map_pad},
+    {QZSettings::erg_manual, QZSettings::default_erg_manual},
+    {QZSettings::erg_manual_target_power, QZSettings::default_erg_manual_target_power},
+    {QZSettings::gamepad_power_up_fine, QZSettings::default_gamepad_power_up_fine},
+    {QZSettings::gamepad_power_down_fine, QZSettings::default_gamepad_power_down_fine},
+    {QZSettings::erg_manual_saved_gear, QZSettings::default_erg_manual_saved_gear},
 };
 
 void QZSettings::qDebugAllSettings(bool showDefaults) {

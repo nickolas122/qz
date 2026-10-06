@@ -29,13 +29,50 @@ void RideState::restoreGear(bluetoothdevice *device) {
     // nothing because gears() clamps the reported value up to 1 either way.
     if (!device || device->deviceType() != BIKE)
         return;
+    bike *b = static_cast<bike *>(device);
     QSettings settings;
-    if (!settings.value(QZSettings::gears_restore_value, QZSettings::default_gears_restore_value).toBool() &&
-        !settings.value(QZSettings::restore_specific_gear, QZSettings::default_restore_specific_gear).toBool())
-        return;
-    static_cast<bike *>(device)->setGears(
-        settings.value(QZSettings::gears_current_value, QZSettings::default_gears_current_value).toDouble());
+    if (settings.value(QZSettings::gears_restore_value, QZSettings::default_gears_restore_value).toBool() ||
+        settings.value(QZSettings::restore_specific_gear, QZSettings::default_restore_specific_gear).toBool())
+        b->setGears(
+            settings.value(QZSettings::gears_current_value, QZSettings::default_gears_current_value).toDouble());
+    // ERG Manual survives a restart like the gear does, so the bike has to be put back in it:
+    // the neutral gear, and the target - nothing else will send one, the app's requests being
+    // exactly what is ignored.
+    if (bike::ergManualActive()) {
+        holdNeutralGear(b);
+        b->changePower(targetPower());
+    }
     emit changed();
+}
+
+void RideState::holdNeutralGear(bike *b) {
+    // No neutral gear configured means none to move to - gearsModifier() already ignores the
+    // gear in ERG Manual, so the bike rides as if it were in one regardless.
+    const int neutral = b ? b->gearsNeutral() : 0;
+    if (neutral == 0)
+        return;
+    QSettings settings;
+    // Only the first time: after a restart in ERG Manual the gear is already the neutral one,
+    // and saving it would lose the gear the rider actually left.
+    if (settings.value(QZSettings::erg_manual_saved_gear, QZSettings::default_erg_manual_saved_gear).toDouble() ==
+        QZSettings::default_erg_manual_saved_gear)
+        settings.setValue(QZSettings::erg_manual_saved_gear, b->gears());
+    if (qRound(b->gears()) != neutral)
+        b->setGears(neutral);
+}
+
+void RideState::restoreSavedGear(bike *b) {
+    QSettings settings;
+    const double saved =
+        settings.value(QZSettings::erg_manual_saved_gear, QZSettings::default_erg_manual_saved_gear).toDouble();
+    if (saved == QZSettings::default_erg_manual_saved_gear)
+        return;
+    settings.setValue(QZSettings::erg_manual_saved_gear, QZSettings::default_erg_manual_saved_gear);
+    if (b)
+        b->setGears(saved);
+    else
+        // No bike to shift: leave it where restoreGear() will find it on the next connect.
+        settings.setValue(QZSettings::gears_current_value, saved);
 }
 
 bike *RideState::currentBike() const {
@@ -182,12 +219,42 @@ double RideState::heartRate() const {
     return b ? b->currentHeart().value() : 0.0;
 }
 
-bool RideState::ergMode() const {
+QString RideState::rideMode() const {
     QSettings settings;
-    return settings.value(QZSettings::zwift_erg, QZSettings::default_zwift_erg).toBool();
+    if (!settings.value(QZSettings::zwift_erg, QZSettings::default_zwift_erg).toBool())
+        return QStringLiteral("sim");
+    return settings.value(QZSettings::erg_manual, QZSettings::default_erg_manual).toBool()
+               ? QStringLiteral("manual")
+               : QStringLiteral("erg");
+}
+
+int RideState::targetPower() const {
+    QSettings settings;
+    return settings.value(QZSettings::erg_manual_target_power, QZSettings::default_erg_manual_target_power).toInt();
+}
+
+void RideState::applyTargetPower() {
+    // The same door a training app's target comes through, so the gear offset, the ERG
+    // clamps and ftmsbike's continuous-ERG loop all treat it as they would Zwift's.
+    if (bike *b = currentBike())
+        b->changePower(targetPower());
+}
+
+void RideState::nudgeTargetPower(int watts) {
+    if (!bike::ergManualActive())
+        return;
+    QSettings settings;
+    settings.setValue(QZSettings::erg_manual_target_power,
+                      qBound(TARGET_POWER_MIN, targetPower() + watts, TARGET_POWER_MAX));
+    applyTargetPower();
+    emit changed();
 }
 
 void RideState::gearUp() {
+    if (bike::ergManualActive()) {
+        nudgeTargetPower(TARGET_POWER_STEP);
+        return;
+    }
     if (bike *b = currentBike()) {
         b->gearUp();
         emit changed();
@@ -195,6 +262,10 @@ void RideState::gearUp() {
 }
 
 void RideState::gearDown() {
+    if (bike::ergManualActive()) {
+        nudgeTargetPower(-TARGET_POWER_STEP);
+        return;
+    }
     if (bike *b = currentBike()) {
         b->gearDown();
         emit changed();
@@ -253,9 +324,33 @@ void RideState::toggleAutoResistance() {
     }
 }
 
-void RideState::toggleErg() {
+void RideState::setRideMode(const QString &mode) {
+    if (mode != QStringLiteral("sim") && mode != QStringLiteral("erg") && mode != QStringLiteral("manual"))
+        return;
+    const bool wasManual = rideMode() == QStringLiteral("manual");
+    const bool manual = mode == QStringLiteral("manual");
+
     QSettings settings;
-    settings.setValue(QZSettings::zwift_erg,
-                      !settings.value(QZSettings::zwift_erg, QZSettings::default_zwift_erg).toBool());
+    settings.setValue(QZSettings::zwift_erg, mode != QStringLiteral("sim"));
+    settings.setValue(QZSettings::erg_manual, manual);
+
+    bike *b = currentBike();
+    if (manual && !wasManual) {
+        holdNeutralGear(b);
+        applyTargetPower();
+    } else if (wasManual && !manual) {
+        // The rider's target is not the app's to inherit: retire it now rather than leave
+        // the continuous-ERG loop holding it until the app's next request lands.
+        if (b)
+            b->controlledBySimulation();
+        restoreSavedGear(b);
+    }
     emit changed();
+}
+
+void RideState::cycleMode() {
+    const QString mode = rideMode();
+    setRideMode(mode == QStringLiteral("sim")   ? QStringLiteral("erg")
+                : mode == QStringLiteral("erg") ? QStringLiteral("manual")
+                                                : QStringLiteral("sim"));
 }

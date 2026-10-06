@@ -35,7 +35,9 @@ Rectangle {
         switch (action) {
         case "gearUp":   return qsTr("Shift up")
         case "gearDown": return qsTr("Shift down")
-        case "erg":      return qsTr("ERG mode")
+        case "erg":      return qsTr("Ride mode")
+        case "powerUpFine":   return qsTr("Target power +1")
+        case "powerDownFine": return qsTr("Target power −1")
         default:         return action
         }
     }
@@ -191,6 +193,8 @@ Rectangle {
                         boundButtons: gamepad.gearUpButtons
                                       .concat(gamepad.gearDownButtons)
                                       .concat(gamepad.ergButtons)
+                                      .concat(gamepad.powerUpFineButtons)
+                                      .concat(gamepad.powerDownFineButtons)
                         pressedButtons: gamepad.pressedButtons
                         selectable: screen.layoutMode && gamepad.remappable
                         highlight: screen.remapping
@@ -289,7 +293,10 @@ Rectangle {
                     model: [
                         { action: "gearUp",   note: qsTr("repeats") },
                         { action: "gearDown", note: qsTr("repeats") },
-                        { action: "erg",      note: qsTr("single press") }
+                        { action: "erg",      note: qsTr("single press") },
+                        // The shift buttons move it by 10; these are the fine steps.
+                        { action: "powerUpFine",   note: qsTr("repeats · ERG Manual") },
+                        { action: "powerDownFine", note: qsTr("repeats · ERG Manual") }
                     ]
 
                     RowLayout {
@@ -305,8 +312,10 @@ Rectangle {
                         // shadows modelData with the button name.
                         readonly property string actionName: modelData.action
                         readonly property var buttons: actionName === "gearUp" ? gamepad.gearUpButtons
-                                    : (actionName === "gearDown" ? gamepad.gearDownButtons
-                                                                 : gamepad.ergButtons)
+                                    : actionName === "gearDown" ? gamepad.gearDownButtons
+                                    : actionName === "powerUpFine" ? gamepad.powerUpFineButtons
+                                    : actionName === "powerDownFine" ? gamepad.powerDownFineButtons
+                                    : gamepad.ergButtons
 
                         ColumnLayout {
                             Layout.preferredWidth: unit * 9.7

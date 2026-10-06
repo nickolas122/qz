@@ -818,8 +818,9 @@ class QZSettings {
     static const QString default_gamepad_gear_down;
 
     /**
-     *@brief gamepad_erg_mode Buttons that toggle ERG mode, the same action as the ERG tile. Never
-     *repeats while held, whatever the repeat settings say.
+     *@brief gamepad_erg_mode Buttons that cycle the ride mode - Simulation, ERG Auto, ERG Manual -
+     *the same action as the mode button on the ride screen. Never repeats while held, whatever
+     *the repeat settings say.
      */
     static const QString gamepad_erg_mode;
     static const QString default_gamepad_erg_mode;
@@ -875,14 +876,15 @@ class QZSettings {
     static constexpr bool default_osd_enabled = true;
 
     /**
-     *@brief osd_line_gear Show the "Gear: n" line. Only a bike has one, so this is
-     *ignored when the connected device is not a bike.
+     *@brief osd_line_gear Show the "Gear: n" line - "Target power: n W" in ERG Manual, where
+     *the shift buttons move the target instead. Only a bike has one, so this is ignored when
+     *the connected device is not a bike.
      */
     static const QString osd_line_gear;
     static constexpr bool default_osd_line_gear = true;
 
     /**
-     *@brief osd_line_erg Show the "ERG: ON/OFF" line.
+     *@brief osd_line_erg Show the "ERG: OFF/AUTO/MANUAL" line.
      */
     static const QString osd_line_erg;
     static constexpr bool default_osd_line_erg = true;
@@ -951,6 +953,42 @@ class QZSettings {
      */
     static const QString gamepad_hid_map_pad;
     static const QString default_gamepad_hid_map_pad;
+
+    /**
+     *@brief erg_manual The third ride mode, read together with zwift_erg: off is simulation,
+     *zwift_erg alone is ERG Auto (the training app sets the target power), and zwift_erg with
+     *this is ERG Manual - the rider sets the target power and the app's slope and power
+     *requests are both ignored. Meant for routes, Rouvy's in particular, ridden at a held power.
+     */
+    static const QString erg_manual;
+    static constexpr bool default_erg_manual = false;
+
+    /**
+     *@brief erg_manual_target_power The target power, in watts, ERG Manual holds. Remembered
+     *between rides, so entering the mode picks up where the rider left it.
+     */
+    static const QString erg_manual_target_power;
+    static constexpr int default_erg_manual_target_power = 100;
+
+    /**
+     *@brief erg_manual_saved_gear The gear the rider was in when ERG Manual moved the bike to its
+     *neutral gear, given back when the mode is left. The default means "nothing saved".
+     */
+    static const QString erg_manual_saved_gear;
+    static constexpr double default_erg_manual_saved_gear = -10000.0;
+
+    /**
+     *@brief gamepad_power_up_fine Buttons that raise the ERG Manual target by 1 W. Same names as
+     *gamepad_gear_up; the shift buttons move it by 10 W. Does nothing outside ERG Manual.
+     */
+    static const QString gamepad_power_up_fine;
+    static const QString default_gamepad_power_up_fine;
+
+    /**
+     *@brief gamepad_power_down_fine Buttons that lower the ERG Manual target by 1 W.
+     */
+    static const QString gamepad_power_down_fine;
+    static const QString default_gamepad_power_down_fine;
 
     /**
      * @brief Write the QSettings values using the constants from this namespace.

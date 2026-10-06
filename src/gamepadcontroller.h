@@ -67,6 +67,8 @@ class gamepadcontroller : public QObject {
     Q_PROPERTY(QStringList gearUpButtons READ gearUpButtons NOTIFY bindingsChanged)
     Q_PROPERTY(QStringList gearDownButtons READ gearDownButtons NOTIFY bindingsChanged)
     Q_PROPERTY(QStringList ergButtons READ ergButtons NOTIFY bindingsChanged)
+    Q_PROPERTY(QStringList powerUpFineButtons READ powerUpFineButtons NOTIFY bindingsChanged)
+    Q_PROPERTY(QStringList powerDownFineButtons READ powerDownFineButtons NOTIFY bindingsChanged)
     Q_PROPERTY(int repeatDelay READ repeatDelay NOTIFY bindingsChanged)
     Q_PROPERTY(int repeatRate READ repeatRate NOTIFY bindingsChanged)
 
@@ -87,6 +89,8 @@ class gamepadcontroller : public QObject {
     QStringList gearUpButtons() const;
     QStringList gearDownButtons() const;
     QStringList ergButtons() const;
+    QStringList powerUpFineButtons() const;
+    QStringList powerDownFineButtons() const;
     int repeatDelay() const { return repeatDelayMs; }
     int repeatRate() const { return repeatRateMs; }
 
@@ -149,6 +153,9 @@ class gamepadcontroller : public QObject {
     void gearUp();
     void gearDown();
     void ergToggle();
+    /** @brief The ERG Manual target's 1 W steps. The shift buttons carry the 10 W ones. */
+    void powerUpFine();
+    void powerDownFine();
 
     /** @brief Pad presence, pressed buttons or capture mode changed. */
     void statusChanged();
@@ -193,6 +200,8 @@ class gamepadcontroller : public QObject {
     action gearUpAction;
     action gearDownAction;
     action ergAction;
+    action powerUpFineAction;
+    action powerDownFineAction;
 
     int repeatDelayMs = 0;
     int repeatRateMs = 0;

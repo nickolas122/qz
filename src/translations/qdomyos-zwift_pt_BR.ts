@@ -14,148 +14,164 @@
         <translation>Descer marcha</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="38"/>
-        <source>ERG mode</source>
-        <translation>Modo ERG</translation>
-    </message>
-    <message>
-        <location filename="../ui/GamepadScreen.qml" line="74"/>
+        <location filename="../ui/GamepadScreen.qml" line="76"/>
         <source>Settings</source>
         <translation>Ajustes</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="99"/>
+        <location filename="../ui/GamepadScreen.qml" line="101"/>
         <source>Gamepad</source>
         <translation>Controle</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="141"/>
+        <location filename="../ui/GamepadScreen.qml" line="143"/>
         <source>Gamepad not supported here</source>
         <translation>Controle não suportado aqui</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="143"/>
+        <location filename="../ui/GamepadScreen.qml" line="145"/>
         <source>Press the button your pad calls %1</source>
         <translation>Aperte o botão que o seu controle chama de %1</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="145"/>
+        <location filename="../ui/GamepadScreen.qml" line="147"/>
         <source>Press a button for %1</source>
         <translation>Pressione um botão para %1</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="146"/>
+        <location filename="../ui/GamepadScreen.qml" line="148"/>
         <source>Controller connected</source>
         <translation>Controle conectado</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="147"/>
+        <location filename="../ui/GamepadScreen.qml" line="149"/>
         <source>No pad detected</source>
         <translation>Nenhum controle detectado</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="151"/>
+        <location filename="../ui/GamepadScreen.qml" line="153"/>
         <source>No gamepad backend on this platform</source>
         <translation>Sem suporte a controle nesta plataforma</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="156"/>
+        <location filename="../ui/GamepadScreen.qml" line="158"/>
         <source>Got %1 · release to name it</source>
         <translation>Chegou %1 · solte para dar o nome</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="157"/>
+        <location filename="../ui/GamepadScreen.qml" line="159"/>
         <source>Listening · press it on the pad</source>
         <translation>Ouvindo · aperte no controle</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="228"/>
+        <location filename="../ui/GamepadScreen.qml" line="232"/>
         <source>Pad layout</source>
         <translation>Layout do controle</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="234"/>
+        <location filename="../ui/GamepadScreen.qml" line="238"/>
         <source>Rename the buttons</source>
         <translation>Renomear os botões</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="235"/>
+        <location filename="../ui/GamepadScreen.qml" line="239"/>
         <source>Tap one on the drawing, then press it on your pad</source>
         <translation>Toque em um no desenho e depois aperte no controle</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="253"/>
+        <location filename="../ui/GamepadScreen.qml" line="257"/>
         <source>This pad reports numbered buttons rather than names, so QZ starts from a guess. Where the guess is wrong, tap the button on the drawing and press the one you meant. Naming a button takes it away from wherever it was.</source>
         <translation>Este controle informa botões numerados em vez de nomes, então o QZ parte de um palpite. Onde o palpite estiver errado, toque no botão do desenho e aperte o que você quis dizer. Dar um nome a um botão o tira de onde ele estava.</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="270"/>
+        <location filename="../ui/GamepadScreen.qml" line="274"/>
         <source>Back to the guess</source>
         <translation>Voltar ao palpite</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="430"/>
+        <location filename="../ui/GamepadScreen.qml" line="298"/>
+        <location filename="../ui/GamepadScreen.qml" line="299"/>
+        <source>repeats · ERG Manual</source>
+        <translation>repete · ERG Manual</translation>
+    </message>
+    <message>
+        <location filename="../ui/GamepadScreen.qml" line="439"/>
         <source>Any pad Android recognises works, in whatever mode it pairs in. Android gives input to the app on screen, though, so shifting from the pad works while QZ is in front - not while the training app is.</source>
         <translation>Qualquer controle que o Android reconheça funciona, no modo em que ele parear. Só que o Android entrega a entrada ao app que está na tela, então trocar marcha pelo controle funciona enquanto o QZ estiver na frente - não enquanto o app de treino estiver.</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="434"/>
+        <location filename="../ui/GamepadScreen.qml" line="443"/>
         <source>Xbox pads are read through XInput, wired or Bluetooth, as is any pad in X-input mode, and their buttons carry their own names. A pad with no X-input mode - an 8BitDo in D-input, a DualSense, a Switch Pro - is read as a plain HID pad instead, which reports numbers rather than names. QZ guesses; Pad layout above is where you correct it.</source>
         <translation>Controles Xbox são lidos pelo XInput, com fio ou Bluetooth, assim como qualquer controle em modo X-input, e seus botões carregam os próprios nomes. Um controle sem modo X-input - um 8BitDo em D-input, um DualSense, um Switch Pro - é lido como um controle HID comum, que informa números em vez de nomes. O QZ chuta; o Layout do controle acima é onde você corrige.</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="160"/>
+        <location filename="../ui/GamepadScreen.qml" line="162"/>
         <source>Listening · release to bind</source>
         <translation>Ouvindo · solte para vincular</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="162"/>
+        <location filename="../ui/GamepadScreen.qml" line="38"/>
+        <source>Ride mode</source>
+        <translation>Modo de pedalada</translation>
+    </message>
+    <message>
+        <location filename="../ui/GamepadScreen.qml" line="39"/>
+        <source>Target power +1</source>
+        <translation>Potência alvo +1</translation>
+    </message>
+    <message>
+        <location filename="../ui/GamepadScreen.qml" line="40"/>
+        <source>Target power −1</source>
+        <translation>Potência alvo −1</translation>
+    </message>
+    <message>
+        <location filename="../ui/GamepadScreen.qml" line="164"/>
         <source>Looking for a controller</source>
         <translation>Procurando um controle</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="166"/>
+        <location filename="../ui/GamepadScreen.qml" line="168"/>
         <source>XInput slot %1</source>
         <translation>Slot XInput %1</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="170"/>
+        <location filename="../ui/GamepadScreen.qml" line="172"/>
         <source>Cancel</source>
         <translation>Cancelar</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="216"/>
+        <location filename="../ui/GamepadScreen.qml" line="220"/>
         <source>Turn a controller on, or plug one in. The bindings below are kept either way.</source>
         <translation>Ligue um controle, ou conecte um por cabo. Os vínculos abaixo são mantidos de qualquer forma.</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="286"/>
+        <location filename="../ui/GamepadScreen.qml" line="290"/>
         <source>Actions</source>
         <translation>Ações</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="290"/>
-        <location filename="../ui/GamepadScreen.qml" line="291"/>
+        <location filename="../ui/GamepadScreen.qml" line="294"/>
+        <location filename="../ui/GamepadScreen.qml" line="295"/>
         <source>repeats</source>
         <translation>repete</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="292"/>
+        <location filename="../ui/GamepadScreen.qml" line="296"/>
         <source>single press</source>
         <translation>toque único</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="408"/>
+        <location filename="../ui/GamepadScreen.qml" line="417"/>
         <source>Hold to keep shifting</source>
         <translation>Segurar para trocar em sequência</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="411"/>
+        <location filename="../ui/GamepadScreen.qml" line="420"/>
         <source>Wait before repeating (ms)</source>
         <translation>Esperar antes de repetir (ms)</translation>
     </message>
     <message>
-        <location filename="../ui/GamepadScreen.qml" line="417"/>
+        <location filename="../ui/GamepadScreen.qml" line="426"/>
         <source>Then one shift every (ms)</source>
         <translation>Depois, uma troca a cada (ms)</translation>
     </message>
@@ -187,194 +203,212 @@
     </message>
 </context>
 <context>
+    <name>QzOsd</name>
+    <message>
+        <location filename="../ui/qzosd.cpp" line="59"/>
+        <source>Target power: %1 W</source>
+        <translation>Potência alvo: %1 W</translation>
+    </message>
+</context>
+<context>
     <name>RideScreen</name>
     <message>
-        <location filename="../ui/RideScreen.qml" line="38"/>
+        <location filename="../ui/RideScreen.qml" line="40"/>
         <source>Searching for trainer</source>
         <translation>Procurando a bike</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="39"/>
+        <location filename="../ui/RideScreen.qml" line="41"/>
         <source>Trainer</source>
         <translation>Bike</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="44"/>
+        <location filename="../ui/RideScreen.qml" line="46"/>
         <source>Scanning</source>
         <translation>Buscando</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="45"/>
+        <location filename="../ui/RideScreen.qml" line="47"/>
         <source>Connecting</source>
         <translation>Conectando</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="46"/>
+        <location filename="../ui/RideScreen.qml" line="48"/>
         <source>Reading services</source>
         <translation>Lendo serviços</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="47"/>
+        <location filename="../ui/RideScreen.qml" line="49"/>
         <source>Live</source>
         <translation>Ao vivo</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="48"/>
+        <location filename="../ui/RideScreen.qml" line="50"/>
         <source>No data for %1 s</source>
         <translation>Sem dados há %1 s</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="54"/>
+        <location filename="../ui/RideScreen.qml" line="56"/>
         <source>Lost %1 min ago · retrying in %2 s</source>
         <translation>Perdido há %1 min · nova tentativa em %2 s</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="57"/>
+        <location filename="../ui/RideScreen.qml" line="59"/>
         <source>Lost · retrying in %1 s</source>
         <translation>Perdido · nova tentativa em %1 s</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="58"/>
+        <location filename="../ui/RideScreen.qml" line="60"/>
         <source>Lost · reconnecting</source>
         <translation>Perdido · reconectando</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="59"/>
+        <location filename="../ui/RideScreen.qml" line="61"/>
         <source>Gave up after 5 min</source>
         <translation>Desistiu após 5 min</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="66"/>
+        <location filename="../ui/RideScreen.qml" line="68"/>
         <source>Training app</source>
         <translation>App de treino</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="66"/>
+        <location filename="../ui/RideScreen.qml" line="68"/>
         <source>No training app</source>
         <translation>Nenhum app de treino</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="71"/>
+        <location filename="../ui/RideScreen.qml" line="73"/>
         <source>Live · %1</source>
         <translation>Ao vivo · %1</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="72"/>
+        <location filename="../ui/RideScreen.qml" line="74"/>
         <source>No frames for a moment</source>
         <translation>Sem pacotes por um instante</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="75"/>
+        <location filename="../ui/RideScreen.qml" line="77"/>
         <source>%1 client left</source>
         <translation>Cliente %1 saiu</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="76"/>
+        <location filename="../ui/RideScreen.qml" line="78"/>
         <source>Waiting for a connection</source>
         <translation>Aguardando uma conexão</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="98"/>
+        <location filename="../ui/RideScreen.qml" line="100"/>
         <source>Retry now</source>
         <translation>Tentar agora</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="99"/>
+        <location filename="../ui/RideScreen.qml" line="101"/>
         <source>Search</source>
         <translation>Procurar</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="160"/>
+        <location filename="../ui/RideScreen.qml" line="149"/>
+        <source>Target power · W</source>
+        <translation>Potência alvo · W</translation>
+    </message>
+    <message>
+        <location filename="../ui/RideScreen.qml" line="181"/>
         <source>res %1 / %2</source>
         <translation>res %1 / %2</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="162"/>
+        <location filename="../ui/RideScreen.qml" line="183"/>
         <source>res %1</source>
         <translation>res %1</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="165"/>
+        <location filename="../ui/RideScreen.qml" line="186"/>
         <source>res %1 · held</source>
         <translation>res %1 · mantida</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="168"/>
+        <location filename="../ui/RideScreen.qml" line="189"/>
         <source>res ––</source>
         <translation>res ––</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="212"/>
+        <location filename="../ui/RideScreen.qml" line="233"/>
         <source>Power</source>
         <translation>Potência</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="212"/>
+        <location filename="../ui/RideScreen.qml" line="233"/>
         <source>w</source>
         <translation>w</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="218"/>
+        <location filename="../ui/RideScreen.qml" line="239"/>
         <source>Cad</source>
         <translation>Cad</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="218"/>
+        <location filename="../ui/RideScreen.qml" line="239"/>
         <source>rpm</source>
         <translation>rpm</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="224"/>
+        <location filename="../ui/RideScreen.qml" line="245"/>
         <source>Speed</source>
         <translation>Vel</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="225"/>
+        <location filename="../ui/RideScreen.qml" line="246"/>
         <source>mph</source>
         <translation>mph</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="225"/>
+        <location filename="../ui/RideScreen.qml" line="246"/>
         <source>km/h</source>
         <translation>km/h</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="233"/>
+        <location filename="../ui/RideScreen.qml" line="254"/>
         <source>HR</source>
         <translation>FC</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="233"/>
+        <location filename="../ui/RideScreen.qml" line="254"/>
         <source>bpm</source>
         <translation>bpm</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="267"/>
+        <location filename="../ui/RideScreen.qml" line="291"/>
         <source>ERG</source>
         <translation>ERG</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="275"/>
-        <source>ON</source>
-        <translation>LIG</translation>
+        <location filename="../ui/RideScreen.qml" line="299"/>
+        <source>MANUAL</source>
+        <translation>MANUAL</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="275"/>
+        <location filename="../ui/RideScreen.qml" line="300"/>
         <source>OFF</source>
         <translation>DESL</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="304"/>
+        <location filename="../ui/RideScreen.qml" line="300"/>
+        <source>AUTO</source>
+        <translation>AUTO</translation>
+    </message>
+    <message>
+        <location filename="../ui/RideScreen.qml" line="330"/>
         <source>Hold to change ERG</source>
         <translation>Segure para mudar o ERG</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="304"/>
+        <location filename="../ui/RideScreen.qml" line="330"/>
         <source>Hold to change</source>
         <translation>Segure para mudar</translation>
     </message>
     <message>
-        <location filename="../ui/RideScreen.qml" line="305"/>
+        <location filename="../ui/RideScreen.qml" line="331"/>
         <source>Needs the trainer</source>
         <translation>Precisa da bike</translation>
     </message>
@@ -503,132 +537,147 @@
         <translation>Link de marchas do MyWhoosh</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="167"/>
-        <source>ERG mode</source>
-        <translation>Modo ERG</translation>
+        <location filename="../ui/SettingsScreen.qml" line="169"/>
+        <source>Ride mode</source>
+        <translation>Modo de pedalada</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="172"/>
+        <location filename="../ui/SettingsScreen.qml" line="171"/>
+        <source>Simulation</source>
+        <translation>Simulação</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="171"/>
+        <source>ERG Auto</source>
+        <translation>ERG Auto</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="171"/>
+        <source>ERG Manual</source>
+        <translation>ERG Manual</translation>
+    </message>
+    <message>
+        <location filename="../ui/SettingsScreen.qml" line="176"/>
         <source>Accessories</source>
         <translation>Acessórios</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="175"/>
+        <location filename="../ui/SettingsScreen.qml" line="179"/>
         <source>Gamepad shifting</source>
         <translation>Marchas pelo controle</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="182"/>
+        <location filename="../ui/SettingsScreen.qml" line="188"/>
         <source>No gamepad support on this platform</source>
         <translation>Sem suporte a controle nesta plataforma</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="195"/>
+        <location filename="../ui/SettingsScreen.qml" line="201"/>
         <source>Volume keys shift</source>
         <translation>Marchas pelas teclas de volume</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="196"/>
+        <location filename="../ui/SettingsScreen.qml" line="202"/>
         <source>Works while the training app is in front</source>
         <translation>Funciona com o app de treino na frente</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="202"/>
+        <location filename="../ui/SettingsScreen.qml" line="208"/>
         <source>Zwift Play</source>
         <translation>Zwift Play</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="208"/>
+        <location filename="../ui/SettingsScreen.qml" line="214"/>
         <source>Zwift Click</source>
         <translation>Zwift Click</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="214"/>
+        <location filename="../ui/SettingsScreen.qml" line="220"/>
         <source>Fitmetria fan</source>
         <translation>Ventilador Fitmetria</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="219"/>
+        <location filename="../ui/SettingsScreen.qml" line="225"/>
         <source>Display</source>
         <translation>Exibição</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="226"/>
+        <location filename="../ui/SettingsScreen.qml" line="232"/>
         <source>Language</source>
         <translation>Idioma</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="234"/>
+        <location filename="../ui/SettingsScreen.qml" line="240"/>
         <source>Miles instead of kilometres</source>
         <translation>Milhas em vez de quilômetros</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="240"/>
+        <location filename="../ui/SettingsScreen.qml" line="246"/>
         <source>Verbose log</source>
         <translation>Log detalhado</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="251"/>
+        <location filename="../ui/SettingsScreen.qml" line="257"/>
         <source>OSD overlay</source>
         <translation>Sobreposição OSD</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="256"/>
+        <location filename="../ui/SettingsScreen.qml" line="262"/>
         <source>Show the overlay</source>
         <translation>Mostrar a sobreposição</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="260"/>
+        <location filename="../ui/SettingsScreen.qml" line="266"/>
         <source>Trainer warnings always show while it is on.</source>
         <translation>Avisos da bike aparecem sempre que ela está ligada.</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="269"/>
+        <location filename="../ui/SettingsScreen.qml" line="275"/>
         <source>Draw it in RivaTuner (RTSS)</source>
         <translation>Desenhar no RivaTuner (RTSS)</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="270"/>
+        <location filename="../ui/SettingsScreen.qml" line="276"/>
         <source>The only one that survives exclusive fullscreen. Needs RTSS running.</source>
         <translation>O único que sobrevive à tela cheia exclusiva. Exige o RTSS em execução.</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="278"/>
+        <location filename="../ui/SettingsScreen.qml" line="284"/>
         <source>Draw it in a floating window</source>
         <translation>Desenhar em uma janela flutuante</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="279"/>
+        <location filename="../ui/SettingsScreen.qml" line="285"/>
         <source>No RivaTuner needed, but a training app in exclusive fullscreen covers it.</source>
         <translation>Não precisa do RivaTuner, mas um app de treino em tela cheia exclusiva a encobre.</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="287"/>
+        <location filename="../ui/SettingsScreen.qml" line="293"/>
         <source>Lock the window in place</source>
         <translation>Travar a janela no lugar</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="288"/>
+        <location filename="../ui/SettingsScreen.qml" line="294"/>
         <source>Unlock it to drag it. Locked, clicks go through it to the training app.</source>
         <translation>Destrave para arrastá-la. Travada, os cliques a atravessam até o app de treino.</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="296"/>
+        <location filename="../ui/SettingsScreen.qml" line="302"/>
         <source>Gear line</source>
         <translation>Linha da marcha</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="304"/>
+        <location filename="../ui/SettingsScreen.qml" line="310"/>
         <source>ERG line</source>
         <translation>Linha do ERG</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="312"/>
+        <location filename="../ui/SettingsScreen.qml" line="318"/>
         <source>Resistance line</source>
         <translation>Linha da resistência</translation>
     </message>
     <message>
-        <location filename="../ui/SettingsScreen.qml" line="327"/>
+        <location filename="../ui/SettingsScreen.qml" line="333"/>
         <source>Changes to the connection settings take effect when QZ restarts.</source>
         <translation>As mudanças nos ajustes de conexão passam a valer quando o QZ reinicia.</translation>
     </message>

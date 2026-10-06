@@ -52,14 +52,14 @@ const QSet<QString> kProperties = {
     // Ride
     QStringLiteral("gear"), QStringLiteral("resistance"), QStringLiteral("resistanceLevels"),
     QStringLiteral("power"), QStringLiteral("cadence"), QStringLiteral("speed"),
-    QStringLiteral("heartRate"), QStringLiteral("ergMode"),
-    QStringLiteral("autoResistance"),
+    QStringLiteral("heartRate"), QStringLiteral("rideMode"),
+    QStringLiteral("targetPower"), QStringLiteral("autoResistance"),
 };
 
 const QSet<QString> kInvokables = {
     QStringLiteral("gearUp"), QStringLiteral("gearDown"), QStringLiteral("setGear"),
-    QStringLiteral("toggleErg"), QStringLiteral("toggleAutoResistance"),
-    QStringLiteral("retryNow"),
+    QStringLiteral("setRideMode"), QStringLiteral("nudgeTargetPower"),
+    QStringLiteral("toggleAutoResistance"), QStringLiteral("retryNow"),
 };
 
 /**
@@ -80,12 +80,16 @@ const QSet<QString> kAppStates = {
     QStringLiteral("idle"), QStringLiteral("live"), QStringLiteral("stale"), QStringLiteral("past"),
 };
 
+const QSet<QString> kRideModes = {
+    QStringLiteral("sim"), QStringLiteral("erg"), QStringLiteral("manual"),
+};
+
 class RideStateContractTest : public ::testing::Test {
   protected:
     void SetUp() override {
         // The test binary sets no QSettings scope, so an unqualified QSettings writes
         // nowhere on Windows and every toggle silently reads back its default. Give the
-        // suite its own scope rather than the app's: ergMode() is a setting, and a test
+        // suite its own scope rather than the app's: rideMode() is a setting, and a test
         // that flips it must not reach into the settings of whoever is running it.
         savedOrg = QCoreApplication::organizationName();
         savedApp = QCoreApplication::applicationName();
@@ -120,8 +124,8 @@ TEST_F(RideStateContractTest, ExposesExactlyTheContractedInvokables) {
  * back into the bridge. Failing here is not a licence to raise the number - it is the
  * moment to ask what the new member is really for.
  *
- * It was 20 until 2026-08-24, when the connection work moved it to 22. That is the only
- * time it has moved, and the argument was this: the five members added were a trainer
+ * It was 20 until 2026-08-24, when the connection work moved it to 22, and the argument
+ * was this: the five members added were a trainer
  * state, a training-app state, the trainer's battery, its resistance range and the
  * reconnect countdown - every one a fact about the bridge that a rider has to be able to
  * see, and none of them the tile-rendering plumbing the ceiling exists to keep out. It
@@ -131,11 +135,15 @@ TEST_F(RideStateContractTest, ExposesExactlyTheContractedInvokables) {
  * clock does the work that "how stale" and "how long lost" would otherwise have needed
  * two of.
  *
+ * It moved to 24 on 2026-10-06 for ERG Manual: a target power the rider sets mid-ride and
+ * the 1 W step that sets it. The third mode itself cost nothing - ergMode and toggleErg
+ * were replaced by rideMode and setRideMode, not joined by them.
+ *
  * The next member to arrive gets the same treatment or it does not go in.
  */
 TEST_F(RideStateContractTest, SurfaceHasNotGrownPastTheCeiling) {
     const int members = propertyNames(state->metaObject()).size() + invokableNames(state->metaObject()).size();
-    EXPECT_LE(members, 22) << "RideState is up to " << members
+    EXPECT_LE(members, 24) << "RideState is up to " << members
                            << " members. See STRIP-SPEC.md section 9.2 before raising this.";
 }
 
@@ -165,6 +173,8 @@ TEST_F(RideStateContractTest, StatesComeFromTheContractedVocabularies) {
         << "trainerState returned '" << state->trainerState().toStdString() << "'";
     EXPECT_TRUE(kAppStates.contains(state->appState()))
         << "appState returned '" << state->appState().toStdString() << "'";
+    EXPECT_TRUE(kRideModes.contains(state->rideMode()))
+        << "rideMode returned '" << state->rideMode().toStdString() << "'";
 }
 
 /**
@@ -204,18 +214,97 @@ TEST_F(RideStateContractTest, ShiftingWithoutADeviceIsANoOp) {
 }
 
 /**
- * ERG is a setting rather than a device property, so it is the one thing that does work
- * with nothing connected - and the ride screen colours its button from it.
+ * The mode is a setting rather than a device property, so it is one of the things that do
+ * work with nothing connected - and the ride screen colours its button from it.
  */
-TEST_F(RideStateContractTest, TogglingErgFlipsTheSetting) {
+TEST_F(RideStateContractTest, CyclingWalksTheThreeModes) {
+    EXPECT_EQ(state->rideMode(), QStringLiteral("sim"));
+
+    state->cycleMode();
+    EXPECT_EQ(state->rideMode(), QStringLiteral("erg"));
+
+    state->cycleMode();
+    EXPECT_EQ(state->rideMode(), QStringLiteral("manual"));
+
+    state->cycleMode();
+    EXPECT_EQ(state->rideMode(), QStringLiteral("sim"));
+}
+
+/**
+ * zwift_erg is still what the slope and resistance paths read, so it has to be on in both
+ * ERG modes and off in simulation - ERG Manual is ERG Auto plus the rider owning the target.
+ */
+TEST_F(RideStateContractTest, SettingTheModeWritesBothSettings) {
     QSettings settings;
-    const bool before = settings.value(QZSettings::zwift_erg, QZSettings::default_zwift_erg).toBool();
 
-    state->toggleErg();
-    EXPECT_NE(state->ergMode(), before);
+    state->setRideMode(QStringLiteral("manual"));
+    EXPECT_TRUE(settings.value(QZSettings::zwift_erg).toBool());
+    EXPECT_TRUE(settings.value(QZSettings::erg_manual).toBool());
 
-    state->toggleErg();
-    EXPECT_EQ(state->ergMode(), before);
+    state->setRideMode(QStringLiteral("erg"));
+    EXPECT_TRUE(settings.value(QZSettings::zwift_erg).toBool());
+    EXPECT_FALSE(settings.value(QZSettings::erg_manual).toBool());
+
+    state->setRideMode(QStringLiteral("sim"));
+    EXPECT_FALSE(settings.value(QZSettings::zwift_erg).toBool());
+    EXPECT_FALSE(settings.value(QZSettings::erg_manual).toBool());
+
+    state->setRideMode(QStringLiteral("bogus"));
+    EXPECT_EQ(state->rideMode(), QStringLiteral("sim"));
+}
+
+TEST_F(RideStateContractTest, ShiftingInErgManualMovesTheTargetByTen) {
+    state->setRideMode(QStringLiteral("manual"));
+    const int before = state->targetPower();
+
+    state->gearUp();
+    EXPECT_EQ(state->targetPower(), before + 10);
+
+    state->gearDown();
+    state->gearDown();
+    EXPECT_EQ(state->targetPower(), before - 10);
+}
+
+TEST_F(RideStateContractTest, NudgingMovesTheTargetByOneAndStaysInRange) {
+    state->setRideMode(QStringLiteral("manual"));
+    const int before = state->targetPower();
+
+    state->nudgeTargetPower(1);
+    EXPECT_EQ(state->targetPower(), before + 1);
+
+    state->nudgeTargetPower(-100000);
+    EXPECT_EQ(state->targetPower(), 0);
+
+    state->nudgeTargetPower(100000);
+    EXPECT_EQ(state->targetPower(), 1500);
+}
+
+/** The fine step is an ERG Manual control; anywhere else a stray press must not move it. */
+TEST_F(RideStateContractTest, NudgingOutsideErgManualDoesNothing) {
+    const int before = state->targetPower();
+
+    state->nudgeTargetPower(5);
+    EXPECT_EQ(state->targetPower(), before);
+
+    state->setRideMode(QStringLiteral("erg"));
+    state->nudgeTargetPower(5);
+    state->gearUp();
+    EXPECT_EQ(state->targetPower(), before);
+}
+
+/**
+ * ERG Manual parks the bike in its neutral gear and owes the rider's gear back on the way out.
+ * With no bike to shift, it goes where restoreGear() will pick it up on the next connect.
+ */
+TEST_F(RideStateContractTest, LeavingErgManualGivesTheSavedGearBack) {
+    QSettings settings;
+    state->setRideMode(QStringLiteral("manual"));
+    settings.setValue(QZSettings::erg_manual_saved_gear, 7.0);
+
+    state->setRideMode(QStringLiteral("sim"));
+    EXPECT_DOUBLE_EQ(settings.value(QZSettings::gears_current_value).toDouble(), 7.0);
+    EXPECT_DOUBLE_EQ(settings.value(QZSettings::erg_manual_saved_gear).toDouble(),
+                     QZSettings::default_erg_manual_saved_gear);
 }
 
 TEST_F(RideStateContractTest, EmitsChangedWhenTheRiderShifts) {
@@ -224,7 +313,7 @@ TEST_F(RideStateContractTest, EmitsChangedWhenTheRiderShifts) {
 
     // No device, so nothing moves - but the signal is what the QML bindings hang off,
     // and a shift that never announces itself leaves the gear numeral stale.
-    state->toggleErg();
+    state->cycleMode();
     EXPECT_GE(fired, 1);
 }
 

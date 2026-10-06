@@ -997,10 +997,11 @@ void ftmsbike::update() {
         // 2. VirtualBike not connected to FTMS: route directly to bike  
         // 3. ZwiftPlay with gear ratio: route directly to bike
         // 4. ErgMode supported + power sensor: use delta power system (bypass FTMS routing)
+        // 5. ERG Manual: the target is the rider's, so no app packet will carry it to the bike
         bool power_sensor = !settings.value(QZSettings::power_sensor_name, QZSettings::default_power_sensor_name)
                                 .toString()
                                 .startsWith(QStringLiteral("Disabled"));
-        if (requestPower != -1 && (!virtualBike || !virtualBike->ftmsDeviceConnected() || (zwiftPlayService != nullptr && gears_zwift_ratio) || (ergModeSupported && power_sensor))) {
+        if (requestPower != -1 && (!virtualBike || !virtualBike->ftmsDeviceConnected() || (zwiftPlayService != nullptr && gears_zwift_ratio) || (ergModeSupported && power_sensor) || ergManualActive())) {
             qDebug() << QStringLiteral("writing power") << requestPower;
             init();
             forcePower(requestPower);
@@ -2365,6 +2366,16 @@ void ftmsbike::ftmsCharacteristicChanged(const QLowEnergyCharacteristic &charact
     
     bool ergModeNotSupported = (requestPower > 0 && !ergModeSupported);
     bool isPowerCommand = (newValue.length() > 0 && (uint8_t)newValue.at(0) == FTMS_SET_TARGET_POWER);
+
+    // ERG Manual: the rider sets the target, so none of the app's load requests - power, slope
+    // or resistance level - may reach the trainer: forwarded raw, any one would overwrite it.
+    if (newValue.length() > 0 &&
+        (isPowerCommand || (uint8_t)newValue.at(0) == FTMS_SET_INDOOR_BIKE_SIMULATION_PARAMS ||
+         (uint8_t)newValue.at(0) == FTMS_SET_TARGET_RESISTANCE_LEVEL) &&
+        ergManualActive()) {
+        qDebug() << "ERG manual: not routing the app's FTMS packet to the bike" << newValue.toHex(' ');
+        return;
+    }
     
     // FTMS routing filter logic:
     // - Block simulation commands (0x11) when resistance_lvl_mode=true

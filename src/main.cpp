@@ -796,7 +796,9 @@ int main(int argc, char *argv[]) {
         gamepadcontroller *pad = new gamepadcontroller(&rideState);
         QObject::connect(pad, &gamepadcontroller::gearUp, &rideState, &RideState::gearUp);
         QObject::connect(pad, &gamepadcontroller::gearDown, &rideState, &RideState::gearDown);
-        QObject::connect(pad, &gamepadcontroller::ergToggle, &rideState, &RideState::toggleErg);
+        QObject::connect(pad, &gamepadcontroller::ergToggle, &rideState, &RideState::cycleMode);
+        QObject::connect(pad, &gamepadcontroller::powerUpFine, &rideState, [&rideState]() { rideState.nudgeTargetPower(1); });
+        QObject::connect(pad, &gamepadcontroller::powerDownFine, &rideState, [&rideState]() { rideState.nudgeTargetPower(-1); });
         engine.rootContext()->setContextProperty("gamepad", pad);
 
         // The volume keys, which on Android are the only input that survives losing focus - the

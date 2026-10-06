@@ -257,7 +257,13 @@ double bike::currentGearForModifier() {
     return m_gears;
 }
 
-double bike::gearsModifier() { return gearsModifier(currentGearForModifier()); }
+double bike::gearsModifier() {
+    // ERG Manual rides the neutral gear whatever the gear reads: the rider's target power is
+    // the whole demand, and a gear offset on top would make the bike miss it by that much.
+    if (ergManualActive())
+        return 0;
+    return gearsModifier(currentGearForModifier());
+}
 
 double bike::gearsIndexOffset() {
     // Grade is measured in gears, not in resistance levels, so the paths that steer the
@@ -425,6 +431,11 @@ void bike::controlledBySimulation() {
     // until the next update() converts it, so without this the stray packet still gets one
     // free write - a level chosen for a target the app has already stopped asking for.
     requestPower = -1;
+}
+bool bike::ergManualActive() {
+    QSettings settings;
+    return settings.value(QZSettings::zwift_erg, QZSettings::default_zwift_erg).toBool() &&
+           settings.value(QZSettings::erg_manual, QZSettings::default_erg_manual).toBool();
 }
 metric bike::currentResistance() { return Resistance; }
 uint8_t bike::fanSpeed() { return FanSpeed; }
