@@ -163,10 +163,14 @@ Item {
                 onToggled: qzSettings.mywhoosh_link_enabled = checked
             }
 
-            SettingsSwitch {
-                label: qsTr("ERG mode")
-                checked: qzSettings.zwift_erg
-                onToggled: qzSettings.zwift_erg = checked
+            // Through rideState rather than qzSettings: the ride screen and the gamepad
+            // change the mode from C++, which a Qt.labs Settings property never hears about.
+            SettingsChoice {
+                label: qsTr("Ride mode")
+                values: ["sim", "erg", "manual"]
+                names: [qsTr("Simulation"), qsTr("ERG Auto"), qsTr("ERG Manual")]
+                value: rideState.rideMode
+                onPicked: rideState.setRideMode(newValue)
             }
 
             SettingsGroup { title: qsTr("Accessories") }
@@ -178,6 +182,8 @@ Item {
                 note: gamepad.available
                       ? gamepad.gearUpButtons.concat(gamepad.gearDownButtons)
                                              .concat(gamepad.ergButtons)
+                                             .concat(gamepad.powerUpFineButtons)
+                                             .concat(gamepad.powerDownFineButtons)
                                              .join(" · ").toUpperCase()
                       : qsTr("No gamepad support on this platform")
                 hasDetail: gamepad.available

@@ -51,11 +51,21 @@ QString QzOsd::compose() const {
     // newline with it and the remaining ones do not end up separated by a blank row.
     QStringList lines;
 
+    const QString mode = ride->rideMode();
+
+    // In ERG Manual the shift buttons move the target power, so that is what this line shows.
     if (settings.value(QZSettings::osd_line_gear, QZSettings::default_osd_line_gear).toBool()) {
-        lines << QStringLiteral("Gear: %1").arg(ride->gear());
+        if (mode == QStringLiteral("manual")) {
+            lines << tr("Target power: %1 W").arg(ride->targetPower());
+        } else {
+            lines << QStringLiteral("Gear: %1").arg(ride->gear());
+        }
     }
     if (settings.value(QZSettings::osd_line_erg, QZSettings::default_osd_line_erg).toBool()) {
-        lines << QStringLiteral("ERG: %1").arg(ride->ergMode() ? QStringLiteral("ON") : QStringLiteral("OFF"));
+        lines << QStringLiteral("ERG: %1")
+                     .arg(mode == QStringLiteral("manual") ? QStringLiteral("MANUAL")
+                          : mode == QStringLiteral("erg")  ? QStringLiteral("AUTO")
+                                                           : QStringLiteral("OFF"));
     }
     if (settings.value(QZSettings::osd_line_resistance, QZSettings::default_osd_line_resistance).toBool()) {
         lines << QStringLiteral("Resistance: %1").arg(ride->resistance());

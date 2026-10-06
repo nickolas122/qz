@@ -571,16 +571,16 @@ refresh loop go away.
 
 QML must not talk to `homeform`. A single new object carries the ride:
 
-`src/ui/ridestate.{h,cpp}` — 16 properties and 6 invokables, wrapping the bridge core and
+`src/ui/ridestate.{h,cpp}` — 17 properties and 7 invokables, wrapping the bridge core and
 nothing else:
 
 | Kind | Members |
 | --- | --- |
 | Connection | `trainerState`, `trainerName`, `appState`, `transport` (BLE/DIRCON), `batteryLevel`, `retrySeconds`, `dataAgeSeconds` |
-| Ride | `gear`, `resistance`, `resistanceLevels`, `power`, `cadence`, `speed`, `heartRate`, `ergMode`, `autoResistance` |
-| Actions | `gearUp()`, `gearDown()`, `setGear(int)`, `toggleErg()`, `toggleAutoResistance()`, `retryNow()` |
+| Ride | `gear`, `resistance`, `resistanceLevels`, `power`, `cadence`, `speed`, `heartRate`, `rideMode` (sim/erg/manual), `targetPower`, `autoResistance` |
+| Actions | `gearUp()`, `gearDown()`, `setGear(int)`, `setRideMode(mode)`, `nudgeTargetPower(int)`, `toggleAutoResistance()`, `retryNow()` |
 
-**The ceiling moved from ~20 to 22 on 2026-08-24**, the only time it has moved, and the
+**The ceiling moved from ~20 to 22 on 2026-08-24**, and the
 argument is in [UI-INSTRUMENT-CLUSTER.md](UI-INSTRUMENT-CLUSTER.md) section 6 and beside the
 assertion in `TestRideState`. In short: the five members the connection work added are all
 bridge facts a rider must be able to see — what the radio link is doing, how old the numbers
@@ -589,7 +589,13 @@ keep out. It cost five rather than ten because two booleans were *replaced* by t
 properties, `appName` was deleted outright (it returned an empty string unconditionally), and
 one data-age clock does the work that staleness and time-since-lost would otherwise need two of.
 
-Keeping this surface small is the point of the exercise. **If it grows past 22 members,
+**It moved again, to 24, on 2026-10-06 for ERG Manual** — the third ride mode, where the
+rider sets the target power and the shift buttons move it by 10 W. The two members it added
+are the target itself and its 1 W step, both things a rider does through QZ mid-ride. The
+mode cost nothing: `ergMode` and `toggleErg()` were replaced by `rideMode` and
+`setRideMode()`, not joined by them.
+
+Keeping this surface small is the point of the exercise. **If it grows past 24 members,
 something UI-shaped has leaked back into the bridge**, and that is the signal to stop and
 reconsider.
 

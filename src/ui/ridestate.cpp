@@ -29,6 +29,10 @@ void RideState::restoreGear(bluetoothdevice *device) {
     // nothing because gears() clamps the reported value up to 1 either way.
     if (!device || device->deviceType() != BIKE)
         return;
+    // ERG Manual survives a restart like the gear does, so the bike has to hear the target
+    // again: nothing else will send it one, the app's requests being exactly what is ignored.
+    if (bike::ergManualActive())
+        static_cast<bike *>(device)->changePower(targetPower());
     QSettings settings;
     if (!settings.value(QZSettings::gears_restore_value, QZSettings::default_gears_restore_value).toBool() &&
         !settings.value(QZSettings::restore_specific_gear, QZSettings::default_restore_specific_gear).toBool())
@@ -182,12 +186,42 @@ double RideState::heartRate() const {
     return b ? b->currentHeart().value() : 0.0;
 }
 
-bool RideState::ergMode() const {
+QString RideState::rideMode() const {
     QSettings settings;
-    return settings.value(QZSettings::zwift_erg, QZSettings::default_zwift_erg).toBool();
+    if (!settings.value(QZSettings::zwift_erg, QZSettings::default_zwift_erg).toBool())
+        return QStringLiteral("sim");
+    return settings.value(QZSettings::erg_manual, QZSettings::default_erg_manual).toBool()
+               ? QStringLiteral("manual")
+               : QStringLiteral("erg");
+}
+
+int RideState::targetPower() const {
+    QSettings settings;
+    return settings.value(QZSettings::erg_manual_target_power, QZSettings::default_erg_manual_target_power).toInt();
+}
+
+void RideState::applyTargetPower() {
+    // The same door a training app's target comes through, so the gear offset, the ERG
+    // clamps and ftmsbike's continuous-ERG loop all treat it as they would Zwift's.
+    if (bike *b = currentBike())
+        b->changePower(targetPower());
+}
+
+void RideState::nudgeTargetPower(int watts) {
+    if (!bike::ergManualActive())
+        return;
+    QSettings settings;
+    settings.setValue(QZSettings::erg_manual_target_power,
+                      qBound(TARGET_POWER_MIN, targetPower() + watts, TARGET_POWER_MAX));
+    applyTargetPower();
+    emit changed();
 }
 
 void RideState::gearUp() {
+    if (bike::ergManualActive()) {
+        nudgeTargetPower(TARGET_POWER_STEP);
+        return;
+    }
     if (bike *b = currentBike()) {
         b->gearUp();
         emit changed();
@@ -195,6 +229,10 @@ void RideState::gearUp() {
 }
 
 void RideState::gearDown() {
+    if (bike::ergManualActive()) {
+        nudgeTargetPower(-TARGET_POWER_STEP);
+        return;
+    }
     if (bike *b = currentBike()) {
         b->gearDown();
         emit changed();
@@ -253,9 +291,30 @@ void RideState::toggleAutoResistance() {
     }
 }
 
-void RideState::toggleErg() {
+void RideState::setRideMode(const QString &mode) {
+    if (mode != QStringLiteral("sim") && mode != QStringLiteral("erg") && mode != QStringLiteral("manual"))
+        return;
+    const bool wasManual = rideMode() == QStringLiteral("manual");
+    const bool manual = mode == QStringLiteral("manual");
+
     QSettings settings;
-    settings.setValue(QZSettings::zwift_erg,
-                      !settings.value(QZSettings::zwift_erg, QZSettings::default_zwift_erg).toBool());
+    settings.setValue(QZSettings::zwift_erg, mode != QStringLiteral("sim"));
+    settings.setValue(QZSettings::erg_manual, manual);
+
+    if (manual && !wasManual) {
+        applyTargetPower();
+    } else if (wasManual && !manual) {
+        // The rider's target is not the app's to inherit: retire it now rather than leave
+        // the continuous-ERG loop holding it until the app's next request lands.
+        if (bike *b = currentBike())
+            b->controlledBySimulation();
+    }
     emit changed();
+}
+
+void RideState::cycleMode() {
+    const QString mode = rideMode();
+    setRideMode(mode == QStringLiteral("sim")   ? QStringLiteral("erg")
+                : mode == QStringLiteral("erg") ? QStringLiteral("manual")
+                                                : QStringLiteral("sim"));
 }

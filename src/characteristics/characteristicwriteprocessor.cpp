@@ -6,7 +6,15 @@ CharacteristicWriteProcessor::CharacteristicWriteProcessor(double bikeResistance
                                                            bluetoothdevice *bike, QObject *parent)
     : QObject(parent), bikeResistanceOffset(bikeResistanceOffset), bikeResistanceGain(bikeResistanceGain), Bike(bike) {}
 
-void CharacteristicWriteProcessor::changePower(uint16_t power) { Bike->changePower(power); }
+void CharacteristicWriteProcessor::changePower(uint16_t power) {
+    // ERG Manual: the rider's target is the only one. This is also the path virtualbike's
+    // keep-alive re-sends the last request on, which is the rider's own target anyway.
+    if (Bike->deviceType() == BIKE && bike::ergManualActive()) {
+        qDebug() << QStringLiteral("ERG manual: ignoring the app's target power") << power;
+        return;
+    }
+    Bike->changePower(power);
+}
 
 void CharacteristicWriteProcessor::changeSlope(int16_t iresistance, uint8_t crr, uint8_t cw) {
     BLUETOOTH_TYPE dt = Bike->deviceType();
@@ -63,7 +71,11 @@ void CharacteristicWriteProcessor::changeSlope(int16_t iresistance, uint8_t crr,
 
     qDebug() << "changeSlope CRR = " << fCRR << CRR_offset << "CW = " << fCW;
 
-    if (dt == BIKE) {
+    if (dt == BIKE && bike::ergManualActive()) {
+        // ERG Manual holds the rider's target power, and a route sends gradient all ride long:
+        // letting it through would retire that target in controlledBySimulation() below.
+        qDebug() << QStringLiteral("ERG manual: ignoring the app's slope");
+    } else if (dt == BIKE) {
 
         // The app is steering by gradient, so it is not in ERG: any power target still on
         // record belongs to a mode that ended. Retiring it here, at the packet that proves

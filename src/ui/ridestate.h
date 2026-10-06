@@ -14,7 +14,7 @@ class bluetooth;
  * the trainer's connection, the numbers coming off it, and the things a rider does
  * through QZ mid-ride. See STRIP-SPEC.md section 9.2.
  *
- * Keeping the surface small is the point of the exercise. The ceiling is 22 members and
+ * Keeping the surface small is the point of the exercise. The ceiling is 24 members and
  * TestRideState asserts it. It was 20 until 2026-08-24, and the reason it moved is worth
  * knowing before moving it again: section 9.2's limit exists to keep *tile-rendering
  * plumbing* out of the bridge, and the members that pushed it over are not that - they
@@ -23,6 +23,11 @@ class bluetooth;
  * rather than being joined by them, one always-empty property was deleted outright, and
  * one clock does the work of two. A member that cannot survive that kind of scrutiny is
  * the leak the test was written to catch.
+ *
+ * It moved again, to 24, on 2026-10-06 for ERG Manual: the target power is something the
+ * rider sets through QZ mid-ride, which is what this object is for, and its 1 W step is
+ * an action a rider takes. The mode itself cost nothing - ergMode became rideMode and
+ * toggleErg became setRideMode rather than being joined by them.
  */
 class RideState : public QObject {
     Q_OBJECT
@@ -75,7 +80,17 @@ class RideState : public QObject {
     Q_PROPERTY(double cadence READ cadence NOTIFY changed)
     Q_PROPERTY(double speed READ speed NOTIFY changed)
     Q_PROPERTY(double heartRate READ heartRate NOTIFY changed)
-    Q_PROPERTY(bool ergMode READ ergMode NOTIFY changed)
+    /**
+     * @brief Who sets the load: "sim" (the app's slope, through the gears), "erg" (ERG Auto,
+     * the app's target power) or "manual" (ERG Manual, the rider's target power).
+     *
+     * Replaced the ergMode bool rather than joining it when the third mode arrived, so the
+     * surface grew by the target and its fine step only. A string for the reason
+     * trainerState is one; TestRideState pins the vocabulary.
+     */
+    Q_PROPERTY(QString rideMode READ rideMode NOTIFY changed)
+    /** @brief The watts ERG Manual holds. Remembered outside the mode, so it reads in any. */
+    Q_PROPERTY(int targetPower READ targetPower NOTIFY changed)
     /**
      * @brief Whether QZ is applying the training app's resistance requests.
      *
@@ -105,13 +120,18 @@ class RideState : public QObject {
     double cadence() const;
     double speed() const;
     double heartRate() const;
-    bool ergMode() const;
+    QString rideMode() const;
+    int targetPower() const;
     bool autoResistance() const;
 
+    /** @brief Shift - or, in ERG Manual, move the target power by 10 W. */
     Q_INVOKABLE void gearUp();
     Q_INVOKABLE void gearDown();
     Q_INVOKABLE void setGear(int gear);
-    Q_INVOKABLE void toggleErg();
+    /** @brief Switch to "sim", "erg" or "manual"; anything else is ignored. */
+    Q_INVOKABLE void setRideMode(const QString &mode);
+    /** @brief Move the ERG Manual target by @p watts. Does nothing in the other two modes. */
+    Q_INVOKABLE void nudgeTargetPower(int watts);
 
     /**
      * @brief Abandon the backoff and try the trainer again now.
@@ -120,6 +140,14 @@ class RideState : public QObject {
      * ceiling as well as the delay - see bluetoothdevice::retryNow().
      */
     Q_INVOKABLE void retryNow();
+
+    /**
+     * @brief Simulation -> ERG Auto -> ERG Manual -> Simulation, for the gamepad's mode button.
+     *
+     * Plain C++ rather than invokable: QML has setRideMode, and the ride screen's button
+     * names the next mode itself.
+     */
+    void cycleMode();
 
     /** @brief Also a slot: the QZWS `autoResistance` command lands here. */
     Q_INVOKABLE void toggleAutoResistance();
@@ -150,12 +178,20 @@ class RideState : public QObject {
     static constexpr int APP_STALE_MS = 5000;
     /** Past this, it has gone rather than paused - the ride is over, not faulty. */
     static constexpr int APP_GONE_MS = 30000;
+    /** ERG Manual's range. Zero lets the trainer go free; the ceiling is past any rider. */
+    static constexpr int TARGET_POWER_MIN = 0;
+    static constexpr int TARGET_POWER_MAX = 1500;
+    /** What one press of a shift button moves the ERG Manual target by. */
+    static constexpr int TARGET_POWER_STEP = 10;
 
     bluetooth *bluetoothManager = nullptr;
     QTimer poll;
 
     /** @return the connected bike, or nullptr when there is none. */
     class bike *currentBike() const;
+
+    /** Hand the ERG Manual target to the bike, as a training app's target would be. */
+    void applyTargetPower();
 };
 
 #endif // RIDESTATE_H

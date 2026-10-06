@@ -426,6 +426,11 @@ void bike::controlledBySimulation() {
     // free write - a level chosen for a target the app has already stopped asking for.
     requestPower = -1;
 }
+bool bike::ergManualActive() {
+    QSettings settings;
+    return settings.value(QZSettings::zwift_erg, QZSettings::default_zwift_erg).toBool() &&
+           settings.value(QZSettings::erg_manual, QZSettings::default_erg_manual).toBool();
+}
 metric bike::currentResistance() { return Resistance; }
 uint8_t bike::fanSpeed() { return FanSpeed; }
 bool bike::connected() { return false; }

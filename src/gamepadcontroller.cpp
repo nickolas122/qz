@@ -155,6 +155,10 @@ QString gamepadcontroller::settingKeyFor(const QString &action) {
         return QZSettings::gamepad_gear_down;
     if (action == QStringLiteral("erg"))
         return QZSettings::gamepad_erg_mode;
+    if (action == QStringLiteral("powerUpFine"))
+        return QZSettings::gamepad_power_up_fine;
+    if (action == QStringLiteral("powerDownFine"))
+        return QZSettings::gamepad_power_down_fine;
     return QString();
 }
 
@@ -169,6 +173,10 @@ QStringList gamepadcontroller::boundButtons(const QString &action) {
         value = settings.value(key, QZSettings::default_gamepad_gear_up).toString();
     else if (key == QZSettings::gamepad_gear_down)
         value = settings.value(key, QZSettings::default_gamepad_gear_down).toString();
+    else if (key == QZSettings::gamepad_power_up_fine)
+        value = settings.value(key, QZSettings::default_gamepad_power_up_fine).toString();
+    else if (key == QZSettings::gamepad_power_down_fine)
+        value = settings.value(key, QZSettings::default_gamepad_power_down_fine).toString();
     else
         value = settings.value(key, QZSettings::default_gamepad_erg_mode).toString();
 
@@ -185,6 +193,8 @@ QStringList gamepadcontroller::boundButtons(const QString &action) {
 QStringList gamepadcontroller::gearUpButtons() const { return boundButtons(QStringLiteral("gearUp")); }
 QStringList gamepadcontroller::gearDownButtons() const { return boundButtons(QStringLiteral("gearDown")); }
 QStringList gamepadcontroller::ergButtons() const { return boundButtons(QStringLiteral("erg")); }
+QStringList gamepadcontroller::powerUpFineButtons() const { return boundButtons(QStringLiteral("powerUpFine")); }
+QStringList gamepadcontroller::powerDownFineButtons() const { return boundButtons(QStringLiteral("powerDownFine")); }
 
 QStringList gamepadcontroller::pressedButtons() const {
     QStringList out;
@@ -231,6 +241,10 @@ QString gamepadcontroller::actionFor(const QString &button) const {
         return QStringLiteral("gearDown");
     if (ergButtons().contains(name))
         return QStringLiteral("erg");
+    if (powerUpFineButtons().contains(name))
+        return QStringLiteral("powerUpFine");
+    if (powerDownFineButtons().contains(name))
+        return QStringLiteral("powerDownFine");
     return QString();
 }
 
@@ -472,12 +486,19 @@ void gamepadcontroller::refreshSettings() {
         settings.value(QZSettings::gamepad_gear_down, QZSettings::default_gamepad_gear_down).toString());
     ergAction.mask = buttonMask(
         settings.value(QZSettings::gamepad_erg_mode, QZSettings::default_gamepad_erg_mode).toString());
+    powerUpFineAction.mask = buttonMask(
+        settings.value(QZSettings::gamepad_power_up_fine, QZSettings::default_gamepad_power_up_fine).toString());
+    powerDownFineAction.mask = buttonMask(
+        settings.value(QZSettings::gamepad_power_down_fine, QZSettings::default_gamepad_power_down_fine).toString());
 
     // Shifting repeats while the paddle is held; ERG never does, because a toggle that repeats just
     // flickers the mode on and off.
     gearUpAction.repeats = true;
     gearDownAction.repeats = true;
     ergAction.repeats = false;
+    // The 1 W steps repeat like shifting does: holding one is how a rider walks the target.
+    powerUpFineAction.repeats = true;
+    powerDownFineAction.repeats = true;
 
 #ifdef Q_OS_WIN
     // Cheap and idempotent: gamepadhid ignores a map it already has, so this can ride the ordinary
@@ -509,6 +530,8 @@ void gamepadcontroller::releaseAll() {
     gearUpAction.down = false;
     gearDownAction.down = false;
     ergAction.down = false;
+    powerUpFineAction.down = false;
+    powerDownFineAction.down = false;
 }
 
 bool gamepadcontroller::fired(action &a, quint32 buttons, qint64 now) {
@@ -710,5 +733,13 @@ void gamepadcontroller::poll() {
     if (fired(ergAction, buttons, now)) {
         qDebug() << QStringLiteral("gamepadcontroller: erg toggle");
         emit ergToggle();
+    }
+    if (fired(powerUpFineAction, buttons, now)) {
+        qDebug() << QStringLiteral("gamepadcontroller: target power +1");
+        emit powerUpFine();
+    }
+    if (fired(powerDownFineAction, buttons, now)) {
+        qDebug() << QStringLiteral("gamepadcontroller: target power -1");
+        emit powerDownFine();
     }
 }

@@ -20,6 +20,8 @@ Item {
     readonly property bool usable: link === "live" || link === "stale"
     readonly property bool metricsStale: link === "stale" || link === "lost" || link === "gaveup"
     readonly property int dataAge: rideState.dataAgeSeconds
+    /** ERG Manual: the rider sets the target power, and the gear controls move it. */
+    readonly property bool manual: rideState.rideMode === "manual"
 
     // How full the countdown bar is, between the last attempt and the next. The delay
     // doubles 1-2-4-8-16-30, so the bar is drawn against whichever step is running
@@ -109,7 +111,8 @@ Item {
 
         Item { Layout.fillHeight: true }
 
-        // The gear, and the two controls that change it.
+        // The gear, and the two controls that change it. In ERG Manual the same three show
+        // the target power instead, and the buttons move it by 10 W - see RideState::gearUp.
         RowLayout {
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignHCenter
@@ -121,17 +124,35 @@ Item {
                 onClicked: rideState.gearDown()
             }
 
-            Label {
+            ColumnLayout {
                 Layout.alignment: Qt.AlignVCenter
-                horizontalAlignment: Text.AlignHCenter
                 Layout.preferredWidth: unit * 9.3
-                text: ride.usable ? rideState.gear : "–"
-                font.family: theme.fontDisplay
-                // A dash set at the numeral's own size is a 100px bar, not a
-                // placeholder. Only a digit earns the full size.
-                font.pixelSize: ride.usable ? unit * 8.7 : unit * 4
-                font.weight: Font.DemiBold
-                color: ride.usable ? theme.accent : theme.ghost
+                spacing: 0
+
+                Label {
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                    text: ride.usable ? (ride.manual ? rideState.targetPower : rideState.gear) : "–"
+                    font.family: theme.fontDisplay
+                    // A dash set at the numeral's own size is a 100px bar, not a
+                    // placeholder. Only a digit earns the full size - and a target
+                    // power runs to four of them, so it gets a smaller one.
+                    font.pixelSize: ride.usable ? (ride.manual ? unit * 5.2 : unit * 8.7) : unit * 4
+                    font.weight: Font.DemiBold
+                    color: ride.usable ? theme.accent : theme.ghost
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    visible: ride.manual
+                    horizontalAlignment: Text.AlignHCenter
+                    text: qsTr("Target power · W")
+                    font.family: theme.fontMono
+                    font.pixelSize: unit * 0.83
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: unit * 0.12
+                    color: ride.usable ? theme.muted : theme.ghost
+                }
             }
 
             GearButton {
@@ -239,8 +260,9 @@ Item {
             }
         }
 
-        // ERG changes how the bike behaves mid-effort, so it must not be reachable by
-        // accident: this one takes a press and hold, and says so.
+        // The ride mode changes how the bike behaves mid-effort, so it must not be reachable
+        // by accident: this one takes a press and hold, and says so. Each hold moves one
+        // step along Simulation -> ERG Auto -> ERG Manual -> Simulation.
         ColumnLayout {
             Layout.fillWidth: true
             Layout.topMargin: unit / 2
@@ -254,9 +276,11 @@ Item {
                 enabled: ride.usable
                 opacity: enabled ? 1.0 : 0.32
 
+                readonly property bool erg: rideState.rideMode !== "sim"
+
                 background: Rectangle {
-                    color: rideState.ergMode ? theme.accentLo : theme.surface
-                    border.color: rideState.ergMode ? theme.accent : theme.line
+                    color: ergButton.erg ? theme.accentLo : theme.surface
+                    border.color: ergButton.erg ? theme.accent : theme.line
                     border.width: 1
                     radius: theme.radius
                 }
@@ -269,15 +293,16 @@ Item {
                         font.pixelSize: unit * 1.6
                         font.weight: Font.DemiBold
                         font.letterSpacing: unit * 0.2
-                        color: rideState.ergMode ? theme.ink : theme.muted
+                        color: ergButton.erg ? theme.ink : theme.muted
                     }
                     Label {
-                        text: rideState.ergMode ? qsTr("ON") : qsTr("OFF")
+                        text: rideState.rideMode === "manual" ? qsTr("MANUAL")
+                              : rideState.rideMode === "erg" ? qsTr("AUTO") : qsTr("OFF")
                         font.family: theme.fontDisplay
                         font.pixelSize: unit * 1.6
                         font.weight: Font.DemiBold
                         font.letterSpacing: unit * 0.1
-                        color: rideState.ergMode ? theme.accent : theme.dim
+                        color: ergButton.erg ? theme.accent : theme.dim
                     }
                 }
 
@@ -289,7 +314,8 @@ Item {
                     pressAndHoldInterval: 600
                     onPressAndHold: {
                         ergHint.showHint = false
-                        rideState.toggleErg()
+                        rideState.setRideMode(rideState.rideMode === "sim" ? "erg"
+                                              : rideState.rideMode === "erg" ? "manual" : "sim")
                     }
                     onClicked: ergHint.showHint = true
                 }

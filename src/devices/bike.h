@@ -48,6 +48,15 @@ class bike : public bluetoothdevice {
      * target it belonged to is stale by definition.
      */
     void controlledBySimulation();
+
+    /**
+     * @brief Whether the rider, not the training app, owns the target power (ERG Manual).
+     *
+     * While it holds, every slope or power request the app sends is dropped on the way in:
+     * a Rouvy route keeps sending gradient the whole ride, and each one would otherwise
+     * retire the rider's target through controlledBySimulation().
+     */
+    static bool ergManualActive();
     metric currentResistance() override;
     uint8_t fanSpeed() override;
     double currentCrankRevolutions() override;
