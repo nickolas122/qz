@@ -29,17 +29,50 @@ void RideState::restoreGear(bluetoothdevice *device) {
     // nothing because gears() clamps the reported value up to 1 either way.
     if (!device || device->deviceType() != BIKE)
         return;
-    // ERG Manual survives a restart like the gear does, so the bike has to hear the target
-    // again: nothing else will send it one, the app's requests being exactly what is ignored.
-    if (bike::ergManualActive())
-        static_cast<bike *>(device)->changePower(targetPower());
+    bike *b = static_cast<bike *>(device);
     QSettings settings;
-    if (!settings.value(QZSettings::gears_restore_value, QZSettings::default_gears_restore_value).toBool() &&
-        !settings.value(QZSettings::restore_specific_gear, QZSettings::default_restore_specific_gear).toBool())
-        return;
-    static_cast<bike *>(device)->setGears(
-        settings.value(QZSettings::gears_current_value, QZSettings::default_gears_current_value).toDouble());
+    if (settings.value(QZSettings::gears_restore_value, QZSettings::default_gears_restore_value).toBool() ||
+        settings.value(QZSettings::restore_specific_gear, QZSettings::default_restore_specific_gear).toBool())
+        b->setGears(
+            settings.value(QZSettings::gears_current_value, QZSettings::default_gears_current_value).toDouble());
+    // ERG Manual survives a restart like the gear does, so the bike has to be put back in it:
+    // the neutral gear, and the target - nothing else will send one, the app's requests being
+    // exactly what is ignored.
+    if (bike::ergManualActive()) {
+        holdNeutralGear(b);
+        b->changePower(targetPower());
+    }
     emit changed();
+}
+
+void RideState::holdNeutralGear(bike *b) {
+    // No neutral gear configured means none to move to - gearsModifier() already ignores the
+    // gear in ERG Manual, so the bike rides as if it were in one regardless.
+    const int neutral = b ? b->gearsNeutral() : 0;
+    if (neutral == 0)
+        return;
+    QSettings settings;
+    // Only the first time: after a restart in ERG Manual the gear is already the neutral one,
+    // and saving it would lose the gear the rider actually left.
+    if (settings.value(QZSettings::erg_manual_saved_gear, QZSettings::default_erg_manual_saved_gear).toDouble() ==
+        QZSettings::default_erg_manual_saved_gear)
+        settings.setValue(QZSettings::erg_manual_saved_gear, b->gears());
+    if (qRound(b->gears()) != neutral)
+        b->setGears(neutral);
+}
+
+void RideState::restoreSavedGear(bike *b) {
+    QSettings settings;
+    const double saved =
+        settings.value(QZSettings::erg_manual_saved_gear, QZSettings::default_erg_manual_saved_gear).toDouble();
+    if (saved == QZSettings::default_erg_manual_saved_gear)
+        return;
+    settings.setValue(QZSettings::erg_manual_saved_gear, QZSettings::default_erg_manual_saved_gear);
+    if (b)
+        b->setGears(saved);
+    else
+        // No bike to shift: leave it where restoreGear() will find it on the next connect.
+        settings.setValue(QZSettings::gears_current_value, saved);
 }
 
 bike *RideState::currentBike() const {
@@ -301,13 +334,16 @@ void RideState::setRideMode(const QString &mode) {
     settings.setValue(QZSettings::zwift_erg, mode != QStringLiteral("sim"));
     settings.setValue(QZSettings::erg_manual, manual);
 
+    bike *b = currentBike();
     if (manual && !wasManual) {
+        holdNeutralGear(b);
         applyTargetPower();
     } else if (wasManual && !manual) {
         // The rider's target is not the app's to inherit: retire it now rather than leave
         // the continuous-ERG loop holding it until the app's next request lands.
-        if (bike *b = currentBike())
+        if (b)
             b->controlledBySimulation();
+        restoreSavedGear(b);
     }
     emit changed();
 }

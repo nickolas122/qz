@@ -292,6 +292,21 @@ TEST_F(RideStateContractTest, NudgingOutsideErgManualDoesNothing) {
     EXPECT_EQ(state->targetPower(), before);
 }
 
+/**
+ * ERG Manual parks the bike in its neutral gear and owes the rider's gear back on the way out.
+ * With no bike to shift, it goes where restoreGear() will pick it up on the next connect.
+ */
+TEST_F(RideStateContractTest, LeavingErgManualGivesTheSavedGearBack) {
+    QSettings settings;
+    state->setRideMode(QStringLiteral("manual"));
+    settings.setValue(QZSettings::erg_manual_saved_gear, 7.0);
+
+    state->setRideMode(QStringLiteral("sim"));
+    EXPECT_DOUBLE_EQ(settings.value(QZSettings::gears_current_value).toDouble(), 7.0);
+    EXPECT_DOUBLE_EQ(settings.value(QZSettings::erg_manual_saved_gear).toDouble(),
+                     QZSettings::default_erg_manual_saved_gear);
+}
+
 TEST_F(RideStateContractTest, EmitsChangedWhenTheRiderShifts) {
     int fired = 0;
     QObject::connect(state, &RideState::changed, [&fired]() { fired++; });

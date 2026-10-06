@@ -257,7 +257,13 @@ double bike::currentGearForModifier() {
     return m_gears;
 }
 
-double bike::gearsModifier() { return gearsModifier(currentGearForModifier()); }
+double bike::gearsModifier() {
+    // ERG Manual rides the neutral gear whatever the gear reads: the rider's target power is
+    // the whole demand, and a gear offset on top would make the bike miss it by that much.
+    if (ergManualActive())
+        return 0;
+    return gearsModifier(currentGearForModifier());
+}
 
 double bike::gearsIndexOffset() {
     // Grade is measured in gears, not in resistance levels, so the paths that steer the

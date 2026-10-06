@@ -971,6 +971,13 @@ class QZSettings {
     static constexpr int default_erg_manual_target_power = 100;
 
     /**
+     *@brief erg_manual_saved_gear The gear the rider was in when ERG Manual moved the bike to its
+     *neutral gear, given back when the mode is left. The default means "nothing saved".
+     */
+    static const QString erg_manual_saved_gear;
+    static constexpr double default_erg_manual_saved_gear = -10000.0;
+
+    /**
      *@brief gamepad_power_up_fine Buttons that raise the ERG Manual target by 1 W. Same names as
      *gamepad_gear_up; the shift buttons move it by 10 W. Does nothing outside ERG Manual.
      */

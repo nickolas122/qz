@@ -192,6 +192,10 @@ class RideState : public QObject {
 
     /** Hand the ERG Manual target to the bike, as a training app's target would be. */
     void applyTargetPower();
+    /** ERG Manual rides the neutral gear: remember the rider's gear and move to it. */
+    void holdNeutralGear(class bike *b);
+    /** Leaving ERG Manual: give back the gear holdNeutralGear() took. @p b may be null. */
+    void restoreSavedGear(class bike *b);
 };
 
 #endif // RIDESTATE_H
